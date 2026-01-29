@@ -1,0 +1,878 @@
+definitions:
+  handler.ChatCompletionRequest:
+    description: OpenAI聊天补全请求结构
+    properties:
+      frequency_penalty:
+        type: number
+      max_tokens:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/handler.ChatMessage'
+        type: array
+      model:
+        type: string
+      presence_penalty:
+        type: number
+      stop:
+        items:
+          type: string
+        type: array
+      stream:
+        type: boolean
+      temperature:
+        type: number
+      top_p:
+        type: number
+      user:
+        type: string
+    required:
+    - messages
+    - model
+    type: object
+  handler.ChatCompletionResponse:
+    description: OpenAI聊天补全响应结构
+    properties:
+      choices:
+        items:
+          properties:
+            finish_reason:
+              type: string
+            index:
+              type: integer
+            message:
+              $ref: '#/definitions/handler.ChatMessage'
+          type: object
+        type: array
+      created:
+        type: integer
+      id:
+        type: string
+      model:
+        type: string
+      object:
+        type: string
+      usage:
+        properties:
+          completion_tokens:
+            type: integer
+          prompt_tokens:
+            type: integer
+          total_tokens:
+            type: integer
+        type: object
+    type: object
+  handler.ChatMessage:
+    description: 单条聊天消息
+    properties:
+      content:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+    required:
+    - content
+    - role
+    type: object
+  handler.CompletionRequest:
+    description: OpenAI文本补全请求结构
+    properties:
+      frequency_penalty:
+        type: number
+      max_tokens:
+        type: integer
+      model:
+        type: string
+      presence_penalty:
+        type: number
+      prompt:
+        type: string
+      stop:
+        items:
+          type: string
+        type: array
+      stream:
+        type: boolean
+      temperature:
+        type: number
+      top_p:
+        type: number
+      user:
+        type: string
+    required:
+    - model
+    - prompt
+    type: object
+  handler.CompletionResponse:
+    properties:
+      choices:
+        items:
+          properties:
+            finish_reason:
+              type: string
+            index:
+              type: integer
+            text:
+              type: string
+          type: object
+        type: array
+      created:
+        type: integer
+      id:
+        type: string
+      model:
+        type: string
+      object:
+        type: string
+      usage:
+        properties:
+          completion_tokens:
+            type: integer
+          prompt_tokens:
+            type: integer
+          total_tokens:
+            type: integer
+        type: object
+    type: object
+  handler.ModelsResponse:
+    properties:
+      data:
+        items:
+          properties:
+            created:
+              type: integer
+            id:
+              type: string
+            object:
+              type: string
+            owned_by:
+              type: string
+          type: object
+        type: array
+      object:
+        type: string
+    type: object
+  storage.Endpoint:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      method:
+        type: string
+      path:
+        type: string
+      provider_id:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  storage.Model:
+    properties:
+      capabilities:
+        description: '模型能力: text-generation, code-completion, image-analysis, etc.'
+        items:
+          type: string
+        type: array
+      category:
+        description: '模型分类: gpt, claude, gemini, llama, etc.'
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      features:
+        allOf:
+        - $ref: '#/definitions/storage.ModelFeatures'
+        description: 功能特性
+      id:
+        type: string
+      limits:
+        allOf:
+        - $ref: '#/definitions/storage.ModelLimits'
+        description: 使用限制
+      metadata:
+        additionalProperties: true
+        description: 扩展元数据
+        type: object
+      model_id:
+        description: 提供商内部的模型标识
+        type: string
+      name:
+        type: string
+      parameters:
+        allOf:
+        - $ref: '#/definitions/storage.ModelParameters'
+        description: 默认参数
+      pricing:
+        allOf:
+        - $ref: '#/definitions/storage.ModelPricing'
+        description: 定价信息
+      provider_id:
+        type: string
+      status:
+        description: active, inactive, deprecated
+        type: string
+      type:
+        description: '模型类型: chat, completion, embedding, image'
+        type: string
+      updated_at:
+        type: string
+      version:
+        description: 模型版本
+        type: string
+    type: object
+  storage.ModelFeatures:
+    properties:
+      code_completion:
+        description: 是否支持代码补全
+        type: boolean
+      embeddings:
+        description: 是否支持嵌入
+        type: boolean
+      fine_tuning:
+        description: 是否支持微调
+        type: boolean
+      function_calling:
+        description: 是否支持函数调用
+        type: boolean
+      moderation:
+        description: 是否支持内容审核
+        type: boolean
+      multilingual:
+        description: 是否支持多语言
+        type: boolean
+      streaming:
+        description: 是否支持流式响应
+        type: boolean
+      vision:
+        description: 是否支持视觉理解
+        type: boolean
+    type: object
+  storage.ModelLimits:
+    properties:
+      context_window:
+        description: 上下文窗口大小
+        type: integer
+      max_frequency_penalty:
+        type: number
+      max_input_tokens:
+        description: 最大输入token数
+        type: integer
+      max_output_tokens:
+        description: 最大输出token数
+        type: integer
+      max_presence_penalty:
+        type: number
+      max_temperature:
+        description: 最大温度值
+        type: number
+      max_tokens:
+        description: 最大token数
+        type: integer
+      max_top_p:
+        description: 最大top-p值
+        type: number
+      min_temperature:
+        description: 最小温度值
+        type: number
+    type: object
+  storage.ModelParameters:
+    properties:
+      frequency_penalty:
+        type: number
+      max_tokens:
+        type: integer
+      presence_penalty:
+        type: number
+      stop_sequences:
+        items:
+          type: string
+        type: array
+      system_prompt:
+        type: string
+      temperature:
+        type: number
+      top_p:
+        type: number
+    type: object
+  storage.ModelPricing:
+    properties:
+      audio_price:
+        description: 每分钟音频的价格（美元）
+        type: number
+      currency:
+        description: 货币单位
+        type: string
+      image_price:
+        description: 每张图片的价格（美元）
+        type: number
+      input_token_price:
+        description: 每1000个输入token的价格（美元）
+        type: number
+      output_token_price:
+        description: 每1000个输出token的价格（美元）
+        type: number
+    type: object
+  storage.Provider:
+    properties:
+      api_key:
+        type: string
+      base_url:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/v1/endpoints:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all API endpoints
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of endpoints
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List all endpoints
+      tags:
+      - endpoints
+    post:
+      consumes:
+      - application/json
+      description: Create a new API endpoint configuration
+      parameters:
+      - description: Endpoint configuration
+        in: body
+        name: endpoint
+        required: true
+        schema:
+          $ref: '#/definitions/storage.Endpoint'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created endpoint
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new endpoint
+      tags:
+      - endpoints
+  /api/v1/endpoints/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific endpoint by ID
+      parameters:
+      - description: Endpoint ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Endpoint details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Endpoint not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get endpoint by ID
+      tags:
+      - endpoints
+  /api/v1/health:
+    get:
+      consumes:
+      - application/json
+      description: Check if the LingProxy service is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service status
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check endpoint
+      tags:
+      - health
+  /api/v1/models:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all AI models with filtering options
+      parameters:
+      - description: Filter by provider ID
+        in: query
+        name: provider
+        type: string
+      - description: Filter by model type (chat, completion, embedding, image)
+        in: query
+        name: type
+        type: string
+      - description: Filter by model category
+        in: query
+        name: category
+        type: string
+      - description: Filter by status (active, inactive, deprecated)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of models
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List all models
+      tags:
+      - models
+    post:
+      consumes:
+      - application/json
+      description: Create a new AI model configuration with detailed parameters
+      parameters:
+      - description: Model configuration
+        in: body
+        name: model
+        required: true
+        schema:
+          $ref: '#/definitions/storage.Model'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created model
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new model
+      tags:
+      - models
+  /api/v1/models/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a model by ID
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete model
+      tags:
+      - models
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific model
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Model details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Model not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get model by ID
+      tags:
+      - models
+    put:
+      consumes:
+      - application/json
+      description: Update an existing model configuration
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated model configuration
+        in: body
+        name: model
+        required: true
+        schema:
+          $ref: '#/definitions/storage.Model'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated model
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update model
+      tags:
+      - models
+  /api/v1/models/{id}/pricing:
+    get:
+      consumes:
+      - application/json
+      description: Get pricing information for a specific model
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Model pricing
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get model pricing
+      tags:
+      - models
+  /api/v1/models/types:
+    get:
+      consumes:
+      - application/json
+      description: Get available model types and categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Model types and categories
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List model types
+      tags:
+      - models
+  /api/v1/providers:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all AI service providers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of providers
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List all providers
+      tags:
+      - providers
+    post:
+      consumes:
+      - application/json
+      description: Create a new AI service provider configuration
+      parameters:
+      - description: Provider configuration
+        in: body
+        name: provider
+        required: true
+        schema:
+          $ref: '#/definitions/storage.Provider'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created provider
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new provider
+      tags:
+      - providers
+  /api/v1/providers/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific AI service provider by ID
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Provider details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Provider not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get provider by ID
+      tags:
+      - providers
+  /api/v1/providers/{provider_id}/models:
+    get:
+      consumes:
+      - application/json
+      description: Get all models for a specific provider
+      parameters:
+      - description: Provider ID
+        in: path
+        name: provider_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of models
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List models by provider
+      tags:
+      - models
+  /api/v1/requests:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of API request records with optional limit
+      parameters:
+      - description: 'Limit number of results (default: 100)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of requests
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List all requests
+      tags:
+      - requests
+  /api/v1/users:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List all users
+      tags:
+      - users
+  /v1/chat/completions:
+    post:
+      consumes:
+      - application/json
+      description: Create a chat completion using OpenAI-compatible API
+      parameters:
+      - description: Chat completion request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ChatCompletionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Chat completion response
+          schema:
+            $ref: '#/definitions/handler.ChatCompletionResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create chat completion
+      tags:
+      - openai
+  /v1/completions:
+    post:
+      consumes:
+      - application/json
+      description: Create a text completion using OpenAI-compatible API
+      parameters:
+      - description: Completion request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CompletionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Completion response
+          schema:
+            $ref: '#/definitions/handler.CompletionResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create completion
+      tags:
+      - openai
+  /v1/models:
+    get:
+      consumes:
+      - application/json
+      description: List all available AI models
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Models list
+          schema:
+            $ref: '#/definitions/handler.ModelsResponse'
+      summary: List models
+      tags:
+      - openai
+  /v1/models/{model}:
+    get:
+      consumes:
+      - application/json
+      description: Get information about a specific model
+      parameters:
+      - description: Model ID
+        in: path
+        name: model
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Model information
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get model
+      tags:
+      - openai
+swagger: "2.0"

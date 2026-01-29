@@ -1,0 +1,46 @@
+# LingProxy 配置文件
+
+app:
+  name: "LingProxy"
+  version: "1.0.0"
+  environment: "development"
+  port: 8080
+  host: "0.0.0.0"
+
+storage:
+  type: "gorm"
+  gorm:
+    driver: "sqlite"
+    dsn: "lingproxy.db"
+    # 或者使用MySQL
+    # driver: "mysql"
+    # dsn: "user:password@tcp(localhost:3306)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+    # 或者使用PostgreSQL
+    # driver: "postgres"
+    # dsn: "host=localhost user=user password=password dbname=lingproxy port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+
+log:
+  level: "info"
+  format: "json"
+  output: "stdout"
+
+security:
+  cors:
+    enabled: true
+    allow_origins:
+      - "*"
+    allow_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allow_headers:
+      - "*"
+
+load_balancer:
+  default_strategy: "round_robin"
+
+provider:
+  timeout: "30s"
+  max_retries: 3

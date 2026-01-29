@@ -1,0 +1,1 @@
+// Vue 3 global build placeholder
