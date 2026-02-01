@@ -203,6 +203,24 @@ func (g *GormStorage) GetEndpoint(id string) (*Endpoint, error) {
 	return &endpoint, nil
 }
 
+func (g *GormStorage) UpdateEndpoint(endpoint *Endpoint) error {
+	endpoint.UpdatedAt = time.Now()
+	if err := g.db.Save(endpoint).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (g *GormStorage) DeleteEndpoint(id string) error {
+	if err := g.db.Where("id = ?", id).Delete(&Endpoint{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func (g *GormStorage) ListEndpoints() ([]*Endpoint, error) {
 	var endpoints []*Endpoint
 	if err := g.db.Find(&endpoints).Error; err != nil {

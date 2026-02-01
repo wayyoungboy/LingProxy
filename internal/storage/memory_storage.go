@@ -256,6 +256,31 @@ func (m *MemoryStorage) GetEndpoint(id string) (*Endpoint, error) {
 	return nil, ErrNotFound
 }
 
+func (m *MemoryStorage) UpdateEndpoint(endpoint *Endpoint) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.endpoints[endpoint.ID]; !exists {
+		return ErrNotFound
+	}
+
+	endpoint.UpdatedAt = time.Now()
+	m.endpoints[endpoint.ID] = endpoint
+	return nil
+}
+
+func (m *MemoryStorage) DeleteEndpoint(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.endpoints[id]; !exists {
+		return ErrNotFound
+	}
+
+	delete(m.endpoints, id)
+	return nil
+}
+
 func (m *MemoryStorage) ListEndpoints() ([]*Endpoint, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

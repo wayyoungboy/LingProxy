@@ -52,4 +52,7 @@ lingproxy
 # Docker volumes
 docker-compose.override.yml
 
+# test report
+test_report/
+
 设计方案*

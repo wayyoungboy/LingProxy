@@ -151,16 +151,15 @@ async function loadUsers() {
     try {
         // 模拟数据
         const users = [
-            { id: 1, username: 'admin', email: 'admin@example.com', status: 'active', created_at: '2024-01-01' },
-            { id: 2, username: 'user1', email: 'user1@example.com', status: 'active', created_at: '2024-01-15' },
-            { id: 3, username: 'user2', email: 'user2@example.com', status: 'inactive', created_at: '2024-01-20' }
+            { id: 1, username: 'admin', status: 'active', created_at: '2024-01-01' },
+            { id: 2, username: 'user1', status: 'active', created_at: '2024-01-15' },
+            { id: 3, username: 'user2', status: 'inactive', created_at: '2024-01-20' }
         ];
         
         tbody.innerHTML = users.map(user => `
             <tr>
                 <td>${user.id}</td>
                 <td>${user.username}</td>
-                <td>${user.email}</td>
                 <td><span class="status ${user.status}">${user.status}</span></td>
                 <td>${user.created_at}</td>
                 <td>
@@ -182,10 +181,6 @@ function addUser() {
                 <input type="text" id="newUsername" required>
             </div>
             <div class="form-group">
-                <label>邮箱:</label>
-                <input type="email" id="newEmail" required>
-            </div>
-            <div class="form-group">
                 <label>密码:</label>
                 <input type="password" id="newPassword" required>
             </div>
@@ -197,7 +192,6 @@ function addUser() {
 function createUser(event) {
     event.preventDefault();
     const username = document.getElementById('newUsername').value;
-    const email = document.getElementById('newEmail').value;
     const password = document.getElementById('newPassword').value;
     
     // 模拟创建用户
@@ -212,10 +206,6 @@ function editUser(id) {
             <div class="form-group">
                 <label>用户名:</label>
                 <input type="text" id="editUsername" value="user${id}" required>
-            </div>
-            <div class="form-group">
-                <label>邮箱:</label>
-                <input type="email" id="editEmail" value="user${id}@example.com" required>
             </div>
             <button type="submit" class="btn primary">更新用户</button>
         </form>
@@ -342,6 +332,9 @@ async function editLLMResource(id) {
         // 获取LLM资源详情
         const response = await fetch(`/api/v1/llm-resources/${id}`);
         if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('LLM资源不存在');
+            }
             throw new Error('获取资源信息失败');
         }
         const data = await response.json();
@@ -352,23 +345,23 @@ async function editLLMResource(id) {
             <form onsubmit="updateLLMResource(${id}, event)">
                 <div class="form-group">
                     <label>名称:</label>
-                    <input type="text" id="editResourceName" value="${resource.name}" required>
+                    <input type="text" id="editResourceName" value="${resource.name || ''}" required>
                 </div>
                 <div class="form-group">
                     <label>类型:</label>
-                    <input type="text" id="editResourceType" value="${resource.type}" required>
+                    <input type="text" id="editResourceType" value="${resource.type || ''}" required>
                 </div>
                 <div class="form-group">
                     <label>模型:</label>
-                    <input type="text" id="editResourceModel" value="${resource.model}" required placeholder="例如: gpt-3.5-turbo, glm-4.5-flash">
+                    <input type="text" id="editResourceModel" value="${resource.model || ''}" required placeholder="例如: gpt-3.5-turbo, glm-4.5-flash">
                 </div>
                 <div class="form-group">
                     <label>Base URL:</label>
-                    <input type="text" id="editResourceBaseURL" value="${resource.base_url}" required>
+                    <input type="text" id="editResourceBaseURL" value="${resource.base_url || ''}" required>
                 </div>
                 <div class="form-group">
                     <label>API Key:</label>
-                    <input type="password" id="editResourceAPIKey" value="${resource.api_key}" required>
+                    <input type="password" id="editResourceAPIKey" value="${resource.api_key || ''}" required>
                 </div>
                 <div class="form-group">
                     <label>状态:</label>
@@ -382,7 +375,7 @@ async function editLLMResource(id) {
         `);
     } catch (error) {
         console.error('加载资源信息失败:', error);
-        showMessage('加载资源信息失败', 'error');
+        showMessage(error.message, 'error');
         closeModal();
     }
 }

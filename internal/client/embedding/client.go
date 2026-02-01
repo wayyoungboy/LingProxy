@@ -1,6 +1,8 @@
 package embedding
 
 import (
+	"context"
+	"fmt"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -59,7 +61,7 @@ func (c *Client) CreateEmbedding(ctx context.Context, input interface{}) (*opena
 	if !ok {
 		return nil, fmt.Errorf("unsupported input type: %T, only string is supported", input)
 	}
-	
+
 	// 创建嵌入请求
 	response, err := c.client.Embeddings.New(ctx, openai.EmbeddingNewParams{
 		Model: c.model,
@@ -67,6 +69,6 @@ func (c *Client) CreateEmbedding(ctx context.Context, input interface{}) (*opena
 			OfString: openai.String(inputStr),
 		},
 	})
-	
+
 	return response, err
 }

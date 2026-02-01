@@ -86,6 +86,8 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		api.GET("/endpoints", endpointHandler.ListEndpoints)
 		api.GET("/endpoints/:id", endpointHandler.GetEndpoint)
 		api.POST("/endpoints", endpointHandler.CreateEndpoint)
+		api.PUT("/endpoints/:id", endpointHandler.UpdateEndpoint)
+		api.DELETE("/endpoints/:id", endpointHandler.DeleteEndpoint)
 
 		// 请求路由
 		logger.Debug("Adding request management routes")
@@ -112,24 +114,7 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		}
 	}
 
-	// Web界面路由
-	logger.Info("Adding web interface routes")
-	logger.Debug("Adding static files route")
-	r.Static("/static", "./web/static")
-	logger.Debug("Loading HTML templates")
-	r.LoadHTMLGlob("./web/templates/*")
-	logger.Debug("Adding root redirect route")
-	r.GET("/", func(c *gin.Context) {
-		c.Redirect(302, "/admin")
-	})
-	logger.Debug("Adding admin interface route")
-	r.GET("/admin", func(c *gin.Context) {
-		c.HTML(200, "index.html", nil)
-	})
-	logger.Debug("Adding login interface route")
-	r.GET("/login", func(c *gin.Context) {
-		c.HTML(200, "login.html", nil)
-	})
+
 
 	logger.Info("Route setup completed successfully")
 }

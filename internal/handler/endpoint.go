@@ -81,3 +81,54 @@ func (h *EndpointHandler) CreateEndpoint(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"data": endpoint})
 }
+
+// UpdateEndpoint godoc
+// @Summary Update an endpoint
+// @Description Update an existing API endpoint configuration
+// @Tags endpoints
+// @Accept json
+// @Produce json
+// @Param id path string true "Endpoint ID"
+// @Param endpoint body storage.Endpoint true "Endpoint configuration"
+// @Success 200 {object} map[string]interface{} "Updated endpoint"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 404 {object} map[string]string "Endpoint not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/endpoints/{id} [put]
+func (h *EndpointHandler) UpdateEndpoint(c *gin.Context) {
+	id := c.Param("id")
+	var endpoint storage.Endpoint
+	if err := c.ShouldBindJSON(&endpoint); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	endpoint.ID = id
+	if err := h.storage.UpdateEndpoint(&endpoint); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": endpoint})
+}
+
+// DeleteEndpoint godoc
+// @Summary Delete an endpoint
+// @Description Delete an existing API endpoint
+// @Tags endpoints
+// @Accept json
+// @Produce json
+// @Param id path string true "Endpoint ID"
+// @Success 200 {object} map[string]string "Endpoint deleted"
+// @Failure 404 {object} map[string]string "Endpoint not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/endpoints/{id} [delete]
+func (h *EndpointHandler) DeleteEndpoint(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.storage.DeleteEndpoint(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "endpoint deleted"})
+}

@@ -13,7 +13,6 @@ var (
 type User struct {
 	ID        string    `json:"id"`
 	Username  string    `json:"username"`
-	Email     string    `json:"email"`
 	APIKey    string    `json:"api_key"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
