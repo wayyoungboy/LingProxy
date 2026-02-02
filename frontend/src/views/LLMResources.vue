@@ -346,11 +346,11 @@ const getProviderLabel = (provider) => {
 
 // 服务提供商到BaseURL的映射
 const providerToBaseURL = {
-  openai: 'https://api.openai.com/v1',
-  zai: 'https://api.zai.com/v1',
-  anthropic: 'https://api.anthropic.com/v1',
-  google: 'https://generativelanguage.googleapis.com/v1',
-  azure: 'https://your-resource-name.openai.azure.com',
+  openai: 'https://api.openai.com/v1',  // 公开API端点
+  zai: 'https://api.zai.com/v1',  // 公开API端点
+  anthropic: 'https://api.anthropic.com/v1',  // 公开API端点
+  google: 'https://generativelanguage.googleapis.com/v1',  // 公开API端点
+  azure: 'https://your-resource-name.openai.azure.com',  // 占位符，需要用户替换
   custom: ''
 }
 
