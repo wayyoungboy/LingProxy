@@ -5,7 +5,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	_ "github.com/lingproxy/lingproxy/docs"
+	_ "github.com/lingproxy/lingproxy/docs/swagger"
 	"github.com/lingproxy/lingproxy/internal/config"
 	"github.com/lingproxy/lingproxy/internal/handler"
 	"github.com/lingproxy/lingproxy/internal/middleware"
