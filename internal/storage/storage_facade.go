@@ -109,3 +109,74 @@ func (f *StorageFacade) ListModels() ([]*Model, error) {
 func (f *StorageFacade) ListModelsByLLMResource(llmResourceID string) ([]*Model, error) {
 	return f.storage.ListModelsByLLMResource(llmResourceID)
 }
+
+// Token methods
+func (f *StorageFacade) CreateToken(token *Token) error {
+	return f.storage.CreateToken(token)
+}
+
+func (f *StorageFacade) GetToken(id string) (*Token, error) {
+	return f.storage.GetToken(id)
+}
+
+func (f *StorageFacade) GetTokenByValue(tokenValue string) (*Token, error) {
+	return f.storage.GetTokenByValue(tokenValue)
+}
+
+func (f *StorageFacade) UpdateToken(token *Token) error {
+	return f.storage.UpdateToken(token)
+}
+
+func (f *StorageFacade) DeleteToken(id string) error {
+	return f.storage.DeleteToken(id)
+}
+
+func (f *StorageFacade) ListTokens() ([]*Token, error) {
+	return f.storage.ListTokens()
+}
+
+// PolicyTemplate methods
+func (f *StorageFacade) CreatePolicyTemplate(template *PolicyTemplate) error {
+	return f.storage.CreatePolicyTemplate(template)
+}
+
+func (f *StorageFacade) GetPolicyTemplate(id string) (*PolicyTemplate, error) {
+	return f.storage.GetPolicyTemplate(id)
+}
+
+func (f *StorageFacade) GetPolicyTemplateByType(policyType string) (*PolicyTemplate, error) {
+	return f.storage.GetPolicyTemplateByType(policyType)
+}
+
+func (f *StorageFacade) UpdatePolicyTemplate(template *PolicyTemplate) error {
+	return f.storage.UpdatePolicyTemplate(template)
+}
+
+func (f *StorageFacade) DeletePolicyTemplate(id string) error {
+	return f.storage.DeletePolicyTemplate(id)
+}
+
+func (f *StorageFacade) ListPolicyTemplates() ([]*PolicyTemplate, error) {
+	return f.storage.ListPolicyTemplates()
+}
+
+// Policy methods
+func (f *StorageFacade) CreatePolicy(policy *Policy) error {
+	return f.storage.CreatePolicy(policy)
+}
+
+func (f *StorageFacade) GetPolicy(id string) (*Policy, error) {
+	return f.storage.GetPolicy(id)
+}
+
+func (f *StorageFacade) UpdatePolicy(policy *Policy) error {
+	return f.storage.UpdatePolicy(policy)
+}
+
+func (f *StorageFacade) DeletePolicy(id string) error {
+	return f.storage.DeletePolicy(id)
+}
+
+func (f *StorageFacade) ListPolicies() ([]*Policy, error) {
+	return f.storage.ListPolicies()
+}

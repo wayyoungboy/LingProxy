@@ -19,6 +19,7 @@ type Config struct {
 	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
 	Provider       ProviderConfig       `mapstructure:"provider"`
 	Cache          CacheConfig          `mapstructure:"cache"`
+	Admin          AdminConfig          `mapstructure:"admin"`
 }
 
 // AppConfig 应用配置
@@ -62,9 +63,15 @@ type LogConfig struct {
 
 // SecurityConfig 安全配置
 type SecurityConfig struct {
+	Auth      AuthConfig      `mapstructure:"auth"`
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	CORS      CORSConfig      `mapstructure:"cors"`
 	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+}
+
+// AuthConfig 认证配置
+type AuthConfig struct {
+	Enabled bool `mapstructure:"enabled"` // 是否启用认证
 }
 
 // JWTConfig JWT配置
@@ -118,6 +125,14 @@ type ProviderConfig struct {
 	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
 	MaxConnsPerHost int           `mapstructure:"max_conns_per_host"`
 	IdleConnTimeout time.Duration `mapstructure:"idle_conn_timeout"`
+}
+
+// AdminConfig 管理员配置
+type AdminConfig struct {
+	Username   string `mapstructure:"username"`
+	Password   string `mapstructure:"password"`
+	APIKey     string `mapstructure:"api_key"`
+	AutoCreate bool   `mapstructure:"auto_create"`
 }
 
 var (
@@ -200,6 +215,7 @@ func setDefaults() {
 	viper.SetDefault("log.compress", true)
 
 	// 安全默认配置
+	viper.SetDefault("security.auth.enabled", true)
 	viper.SetDefault("security.jwt.secret", "your-jwt-secret-key-change-this")
 	viper.SetDefault("security.jwt.expire_hours", "24h")
 	viper.SetDefault("security.cors.enabled", true)
@@ -222,6 +238,13 @@ func setDefaults() {
 	viper.SetDefault("circuit_breaker.timeout", "30s")
 	viper.SetDefault("circuit_breaker.max_requests", 3)
 	viper.SetDefault("circuit_breaker.interval", "10s")
+
+	// 管理员默认配置
+	viper.SetDefault("admin.username", "admin")
+	// 注意：默认密码应该通过配置文件或环境变量设置，不在代码中硬编码
+	viper.SetDefault("admin.password", "")
+	viper.SetDefault("admin.api_key", "")
+	viper.SetDefault("admin.auto_create", true)
 
 	// Provider默认配置
 	viper.SetDefault("provider.timeout", "30s")

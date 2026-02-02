@@ -11,19 +11,24 @@ var (
 
 // User 用户模型
 type User struct {
-	ID        string    `json:"id"`
-	Username  string    `json:"username"`
-	APIKey    string    `json:"api_key"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID           string     `json:"id"`
+	Username     string     `json:"username"`
+	Password     string     `json:"-" gorm:"-"` // 不序列化到JSON，不存储到数据库（存储哈希值）
+	PasswordHash string     `json:"-"`          // 密码哈希值
+	APIKey       string     `json:"api_key"`
+	Role         string     `json:"role"`   // admin, user
+	Status       string     `json:"status"` // active, inactive, suspended
+	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 // LLMResource LLM资源模型
 type LLMResource struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
-	Type      string    `json:"type"`
+	Type      string    `json:"type"`     // 模型类别: chat(对话), image(生图), embedding(嵌入), rerank(重排序), audio(语音), video(视频)
+	Provider  string    `json:"provider"` // 服务提供商: openai, zai, anthropic, google, azure, custom等
 	Model     string    `json:"model"`
 	BaseURL   string    `json:"base_url"`
 	APIKey    string    `json:"api_key"`
@@ -93,4 +98,43 @@ type Statistics struct {
 	LastRequestAt time.Time `json:"last_request_at"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// Token Token模型（用于API请求认证）
+type Token struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`                // Token名称/描述
+	Token      string     `json:"token"`               // Token值（API Key）
+	Prefix     string     `json:"prefix"`              // Token前缀（用于显示）
+	Status     string     `json:"status"`              // active/inactive
+	PolicyID   string     `json:"policy_id,omitempty"` // 关联的策略ID
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+}
+
+// PolicyTemplate 策略模板模型
+type PolicyTemplate struct {
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	Type              string    `json:"type"` // random, round_robin, weighted, model_match, regex_match, priority, failover
+	Description       string    `json:"description"`
+	ParametersSchema  string    `json:"parameters_schema"`  // JSON Schema
+	DefaultParameters string    `json:"default_parameters"` // JSON
+	Builtin           bool      `json:"builtin"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+// Policy 策略实例模型
+type Policy struct {
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	TemplateID string    `json:"template_id"`
+	Type       string    `json:"type"`
+	Parameters string    `json:"parameters"` // JSON
+	Enabled    bool      `json:"enabled"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }

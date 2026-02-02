@@ -770,7 +770,7 @@ paths:
       summary: List all users
       tags:
       - users
-  /v1/chat/completions:
+  /llm/v1/chat/completions:
     post:
       consumes:
       - application/json
@@ -804,7 +804,7 @@ paths:
       summary: Create chat completion
       tags:
       - openai
-  /v1/completions:
+  /llm/v1/completions:
     post:
       consumes:
       - application/json
@@ -838,7 +838,7 @@ paths:
       summary: Create completion
       tags:
       - openai
-  /v1/models:
+  /llm/v1/models:
     get:
       consumes:
       - application/json
@@ -853,7 +853,7 @@ paths:
       summary: List models
       tags:
       - openai
-  /v1/models/{model}:
+  /llm/v1/models/{model}:
     get:
       consumes:
       - application/json

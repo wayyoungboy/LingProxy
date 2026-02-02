@@ -1,16 +1,17 @@
-# LingProxy 配置文件
+# LingProxy 配置文件示例
+# 复制此文件为 config.yaml 并根据实际情况修改配置
 
 app:
   name: "LingProxy"
   version: "1.0.0"
-  environment: "development"
+  environment: "development"  # development, staging, production
   port: 8080
   host: "0.0.0.0"
 
 storage:
-  type: "gorm"
+  type: "gorm"  # memory 或 gorm
   gorm:
-    driver: "sqlite"
+    driver: "sqlite"  # sqlite, mysql, postgres
     dsn: "lingproxy.db"
     # MySQL 示例（请修改为实际值）
     # driver: "mysql"
@@ -20,9 +21,9 @@ storage:
     # dsn: "host=localhost user=username password=password dbname=lingproxy port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 
 log:
-  level: "info"
-  format: "json"
-  output: "stdout"
+  level: "info"  # debug, info, warn, error, fatal
+  format: "json"  # text, json
+  output: "stdout"  # stdout, file
 
 security:
   auth:

@@ -102,15 +102,70 @@ deps-update:
 	@go get -u ./...
 	@go mod tidy
 
-# 运行应用
+# 启动服务（后台运行）
+start:
+	@echo "Starting services in background..."
+	@echo "Backend: http://localhost:8080"
+	@echo "Frontend: http://localhost:3000"
+	@echo "Use 'make stop' to stop services"
+	@(cd frontend && npm run dev > /dev/null 2>&1 &) && \
+	(go run ./cmd/main.go > /dev/null 2>&1 &) && \
+	echo "Services started in background. PIDs:" && \
+	pgrep -f "npm run dev" && pgrep -f "go run.*cmd/main.go"
+
+# 启动后端服务（后台运行）
+start-backend:
+	@echo "Starting backend service in background..."
+	@go run ./cmd/main.go > /dev/null 2>&1 &
+	@echo "Backend started. PID: $$(pgrep -f 'go run.*cmd/main.go')"
+
+# 启动前端服务（后台运行）
+start-frontend:
+	@echo "Starting frontend service in background..."
+	@cd frontend && npm run dev > /dev/null 2>&1 &
+	@echo "Frontend started. PID: $$(pgrep -f 'npm run dev')"
+
+# 停止所有服务
+stop:
+	@echo "Stopping all services..."
+	@echo "Stopping frontend services..."
+	@pkill -f "npm run dev" 2>/dev/null || true
+	@pkill -f "vite" 2>/dev/null || true
+	@echo "Stopping backend services..."
+	@pkill -f "go run.*cmd/main.go" 2>/dev/null || true
+	@pkill -f "lingproxy" 2>/dev/null || true
+	@pkill -f "/tmp/go-build.*exe/main" 2>/dev/null || true
+	@echo "Releasing ports..."
+	@lsof -ti:8080 2>/dev/null | xargs kill -9 2>/dev/null || true
+	@lsof -ti:3000 2>/dev/null | xargs kill -9 2>/dev/null | grep -v "Cursor" || true
+	@sleep 1
+	@echo "All services stopped"
+
+# 重启所有服务（前台运行）
+restart: stop
+	@echo "Waiting for services to stop..."
+	@sleep 2
+	@$(MAKE) run
+
+# 运行应用（前后端同时启动，前台运行）
 run:
-	@echo "Running application..."
+	@echo "Starting both frontend and backend..."
+	@echo "Backend: http://localhost:8080"
+	@echo "Frontend: http://localhost:3000"
+	@echo "Press Ctrl+C to stop both services"
+	@trap 'kill 0' EXIT; \
+	(cd frontend && npm run dev &) && \
+	go run ./cmd/main.go
+
+# 仅启动后端（前台运行）
+run-backend:
+	@echo "Running backend service..."
 	@go run ./cmd/main.go
 
-# 开发模式运行
-dev:
-	@echo "Running in development mode..."
-	@AIR_ENV=dev go run ./cmd/main.go
+# 仅启动前端（前台运行）
+run-frontend:
+	@echo "Running frontend development server..."
+	@cd frontend && npm run dev
 
 # Docker 相关
 docker-build:
@@ -169,8 +224,14 @@ help:
 	@echo "  vet              - 运行静态分析"
 	@echo "  deps             - 下载依赖"
 	@echo "  deps-update      - 更新依赖"
-	@echo "  run              - 运行应用"
-	@echo "  dev              - 开发模式运行"
+	@echo "  start            - 启动前后端服务（后台运行）"
+	@echo "  start-backend    - 启动后端服务（后台运行）"
+	@echo "  start-frontend   - 启动前端服务（后台运行）"
+	@echo "  run              - 启动前后端服务（前台运行，推荐）"
+	@echo "  run-backend      - 仅启动后端服务（前台运行）"
+	@echo "  run-frontend     - 仅启动前端服务（前台运行）"
+	@echo "  stop             - 停止所有服务"
+	@echo "  restart          - 重启所有服务"
 	@echo "  docker-build     - 构建Docker镜像"
 	@echo "  docker-run       - 运行Docker容器"
 	@echo "  docs             - 生成API文档"

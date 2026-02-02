@@ -6,6 +6,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "github.com/lingproxy/lingproxy/docs"
+	"github.com/lingproxy/lingproxy/internal/config"
 	"github.com/lingproxy/lingproxy/internal/handler"
 	"github.com/lingproxy/lingproxy/internal/middleware"
 	"github.com/lingproxy/lingproxy/internal/service"
@@ -14,28 +15,41 @@ import (
 )
 
 // SetupRoutes 设置路由
-func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *service.UserService, policyService *service.PolicyService) {
+func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *service.UserService, policyService *service.PolicyService, cfg *config.Config) {
 	logger.Info("Starting route setup")
 
 	// 创建处理器
 	logger.Info("Initializing handlers")
-	userHandler := handler.NewUserHandler(storage)
+	tokenService := service.NewTokenService(storage)
+	templateService := service.NewPolicyTemplateService(storage)
+	settingsService := service.NewSettingsService("configs/config.yaml")
+	// policyService 已通过参数传入
+	adminHandler := handler.NewAdminHandler(storage)
+	tokenHandler := handler.NewTokenHandler(tokenService)
+	policyHandler := handler.NewPolicyHandler(policyService, templateService)
+	settingsHandler := handler.NewSettingsHandler(settingsService)
+	systemHandler := handler.NewSystemHandler()
 	llmResourceHandler := handler.NewLLMResourceHandler(storage)
 	modelHandler := handler.NewModelHandler(storage)
-	endpointHandler := handler.NewEndpointHandler(storage)
 	requestHandler := handler.NewRequestHandler(storage)
 	statsHandler := handler.NewStatsHandler(storage)
-	openaiHandler := handler.NewOpenAIHandler(storage)
-	authMiddleware := middleware.NewAuthMiddleware(storage)
+	openaiHandler := handler.NewOpenAIHandler(storage, policyService, tokenService)
+	authMiddleware := middleware.NewAuthMiddleware(storage, tokenService, cfg)
 	logger.Info("Handlers initialized successfully")
 
 	// Swagger文档
 	logger.Debug("Adding Swagger documentation route")
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// OpenAI兼容API路由组
+	// OpenAI兼容API路由组（根据认证开关决定是否需要认证）
 	logger.Info("Adding OpenAI compatible API routes")
-	openai := r.Group("/v1")
+	openai := r.Group("/llm/v1")
+	if cfg.Security.Auth.Enabled {
+		openai.Use(authMiddleware.RequireAuth())
+		logger.Info("OpenAI API routes require authentication")
+	} else {
+		logger.Warn("OpenAI API routes do NOT require authentication (auth disabled)")
+	}
 	{
 		logger.Debug("Adding OpenAI models routes")
 		openai.GET("/models", openaiHandler.ListModels)
@@ -54,67 +68,113 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		logger.Debug("Adding health check route")
 		api.GET("/health", handler.HealthHandler)
 
-		// 用户路由
-		logger.Debug("Adding user management routes")
-		api.GET("/users", userHandler.ListUsers)
-		api.GET("/users/:id", userHandler.GetUser)
-		api.POST("/users", userHandler.CreateUser)
-		api.PUT("/users/:id", userHandler.UpdateUser)
-		api.DELETE("/users/:id", userHandler.DeleteUser)
-
-		// LLM资源路由
-		logger.Debug("Adding LLM resource management routes")
-		api.GET("/llm-resources", llmResourceHandler.ListLLMResources)
-		api.GET("/llm-resources/:id", llmResourceHandler.GetLLMResource)
-		api.POST("/llm-resources", llmResourceHandler.CreateLLMResource)
-		api.PUT("/llm-resources/:id", llmResourceHandler.UpdateLLMResource)
-		api.DELETE("/llm-resources/:id", llmResourceHandler.DeleteLLMResource)
-
-		// 模型路由
-		logger.Debug("Adding model management routes")
-		api.GET("/models", modelHandler.ListModels)
-		api.GET("/models/types", modelHandler.ListModelTypes)
-		api.GET("/models/:id", modelHandler.GetModel)
-		api.POST("/models", modelHandler.CreateModel)
-		api.PUT("/models/:id", modelHandler.UpdateModel)
-		api.DELETE("/models/:id", modelHandler.DeleteModel)
-		api.GET("/models/:id/pricing", modelHandler.GetModelPricing)
-		api.GET("/llm-resources/:id/models", modelHandler.ListModelsByLLMResource)
-
-		// 端点路由
-		logger.Debug("Adding endpoint management routes")
-		api.GET("/endpoints", endpointHandler.ListEndpoints)
-		api.GET("/endpoints/:id", endpointHandler.GetEndpoint)
-		api.POST("/endpoints", endpointHandler.CreateEndpoint)
-		api.PUT("/endpoints/:id", endpointHandler.UpdateEndpoint)
-		api.DELETE("/endpoints/:id", endpointHandler.DeleteEndpoint)
-
-		// 请求路由
-		logger.Debug("Adding request management routes")
-		api.GET("/requests", requestHandler.ListRequests)
-		api.GET("/requests/:id", requestHandler.GetRequest)
-		api.POST("/requests", requestHandler.CreateRequest)
-
-		// 统计路由
-		logger.Debug("Adding statistics routes")
-		api.GET("/stats/system", statsHandler.GetSystemStats)
-		api.GET("/stats/llm-resources/:id", statsHandler.GetLLMResourceStats)
-		api.GET("/stats/users/:id", statsHandler.GetUserStats)
+		// 认证路由（不需要认证）
+		logger.Debug("Adding auth routes")
+		userHandler := handler.NewUserHandler(storage, userService)
+		api.POST("/auth/login", userHandler.Login)
 
 		// 需要认证的路由
 		logger.Debug("Adding authenticated routes")
 		auth := api.Group("")
 		auth.Use(authMiddleware.RequireAuth())
 		{
+			// 管理员路由
+			logger.Debug("Adding admin routes")
+			auth.GET("/admin/info", adminHandler.GetAdminInfo)
+			auth.PUT("/admin/api-key", adminHandler.ResetAPIKey)
+
+			// Token管理路由
+			logger.Debug("Adding token management routes")
+			auth.GET("/tokens", tokenHandler.ListTokens)
+			auth.GET("/tokens/:id", tokenHandler.GetToken)
+			auth.POST("/tokens", tokenHandler.CreateToken)
+			auth.PUT("/tokens/:id", tokenHandler.UpdateToken)
+			auth.DELETE("/tokens/:id", tokenHandler.DeleteToken)
+			auth.POST("/tokens/:id/reset", tokenHandler.ResetToken)
+			auth.PUT("/tokens/:id/policy", tokenHandler.SetTokenPolicy)
+			auth.DELETE("/tokens/:id/policy", tokenHandler.RemoveTokenPolicy)
+
+			// 策略模板路由
+			logger.Debug("Adding policy template routes")
+			auth.GET("/policy-templates", policyHandler.ListPolicyTemplates)
+			auth.GET("/policy-templates/:id", policyHandler.GetPolicyTemplate)
+
+			// 策略管理路由
+			logger.Debug("Adding policy management routes")
+			auth.GET("/policies", policyHandler.ListPolicies)
+			auth.GET("/policies/:id", policyHandler.GetPolicy)
+			auth.POST("/policies", policyHandler.CreatePolicy)
+			auth.PUT("/policies/:id", policyHandler.UpdatePolicy)
+			auth.DELETE("/policies/:id", policyHandler.DeletePolicy)
+
+			// 系统设置路由
+			logger.Debug("Adding settings routes")
+			auth.GET("/settings", settingsHandler.GetSettings)
+			auth.PUT("/settings", settingsHandler.UpdateSettings)
+
+			// 系统信息路由
+			logger.Debug("Adding system info routes")
+			auth.GET("/system/info", systemHandler.GetSystemInfo)
+
 			// 代理路由
 			logger.Debug("Adding proxy endpoint route")
 			auth.Any("/proxy/*path", func(c *gin.Context) {
 				c.JSON(200, gin.H{"message": "proxy endpoint", "path": c.Param("path")})
 			})
 		}
+
+		// LLM资源路由（根据认证开关决定是否需要认证）
+		logger.Debug("Adding LLM resource management routes")
+		llmResourceRoutes := api.Group("/llm-resources")
+		if cfg.Security.Auth.Enabled {
+			llmResourceRoutes.Use(authMiddleware.RequireAuth())
+		}
+		llmResourceRoutes.GET("", llmResourceHandler.ListLLMResources)
+		llmResourceRoutes.GET("/:id", llmResourceHandler.GetLLMResource)
+		llmResourceRoutes.POST("", llmResourceHandler.CreateLLMResource)
+		llmResourceRoutes.PUT("/:id", llmResourceHandler.UpdateLLMResource)
+		llmResourceRoutes.DELETE("/:id", llmResourceHandler.DeleteLLMResource)
+
+		// 模型路由（根据认证开关决定是否需要认证）
+		logger.Debug("Adding model management routes")
+		modelRoutes := api.Group("/models")
+		if cfg.Security.Auth.Enabled {
+			modelRoutes.Use(authMiddleware.RequireAuth())
+		}
+		modelRoutes.GET("", modelHandler.ListModels)
+		modelRoutes.GET("/types", modelHandler.ListModelTypes)
+		modelRoutes.GET("/:id", modelHandler.GetModel)
+		modelRoutes.POST("", modelHandler.CreateModel)
+		modelRoutes.PUT("/:id", modelHandler.UpdateModel)
+		modelRoutes.DELETE("/:id", modelHandler.DeleteModel)
+		modelRoutes.GET("/:id/pricing", modelHandler.GetModelPricing)
+		// 注意：这个路由在llm-resources组下，需要单独处理
+		if cfg.Security.Auth.Enabled {
+			api.GET("/llm-resources/:id/models", authMiddleware.RequireAuth(), modelHandler.ListModelsByLLMResource)
+		} else {
+			api.GET("/llm-resources/:id/models", modelHandler.ListModelsByLLMResource)
+		}
+
+		// 请求路由（根据认证开关决定是否需要认证）
+		logger.Debug("Adding request management routes")
+		requestRoutes := api.Group("/requests")
+		if cfg.Security.Auth.Enabled {
+			requestRoutes.Use(authMiddleware.RequireAuth())
+		}
+		requestRoutes.GET("", requestHandler.ListRequests)
+		requestRoutes.GET("/:id", requestHandler.GetRequest)
+		requestRoutes.POST("", requestHandler.CreateRequest)
+
+		// 统计路由（根据认证开关决定是否需要认证）
+		logger.Debug("Adding statistics routes")
+		statsRoutes := api.Group("/stats")
+		if cfg.Security.Auth.Enabled {
+			statsRoutes.Use(authMiddleware.RequireAuth())
+		}
+		statsRoutes.GET("/system", statsHandler.GetSystemStats)
+		statsRoutes.GET("/llm-resources/:id", statsHandler.GetLLMResourceStats)
+		statsRoutes.GET("/users/:id", statsHandler.GetUserStats)
 	}
-
-
 
 	logger.Info("Route setup completed successfully")
 }

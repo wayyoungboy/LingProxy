@@ -87,8 +87,13 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 		return
 	}
 	if resource.Type == "" {
-		logger.Warn("创建LLM资源失败：类型为空")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "类型是必填项"})
+		logger.Warn("创建LLM资源失败：模型类别为空")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "模型类别是必填项"})
+		return
+	}
+	if resource.Provider == "" {
+		logger.Warn("创建LLM资源失败：服务提供商为空")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "服务提供商是必填项"})
 		return
 	}
 	if resource.Model == "" {
@@ -146,8 +151,13 @@ func (h *LLMResourceHandler) UpdateLLMResource(c *gin.Context) {
 		return
 	}
 	if resource.Type == "" {
-		logger.Warn("更新LLM资源失败：类型为空", "id", id)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "类型是必填项"})
+		logger.Warn("更新LLM资源失败：模型类别为空", "id", id)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "模型类别是必填项"})
+		return
+	}
+	if resource.Provider == "" {
+		logger.Warn("更新LLM资源失败：服务提供商为空", "id", id)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "服务提供商是必填项"})
 		return
 	}
 	if resource.Model == "" {

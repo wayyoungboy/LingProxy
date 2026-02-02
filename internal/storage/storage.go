@@ -30,4 +30,27 @@ type Storage interface {
 	CreateRequest(request *Request) error
 	GetRequest(id string) (*Request, error)
 	ListRequests(limit int) ([]*Request, error)
+
+	// Token methods
+	CreateToken(token *Token) error
+	GetToken(id string) (*Token, error)
+	GetTokenByValue(tokenValue string) (*Token, error)
+	UpdateToken(token *Token) error
+	DeleteToken(id string) error
+	ListTokens() ([]*Token, error)
+
+	// PolicyTemplate methods
+	CreatePolicyTemplate(template *PolicyTemplate) error
+	GetPolicyTemplate(id string) (*PolicyTemplate, error)
+	GetPolicyTemplateByType(policyType string) (*PolicyTemplate, error)
+	UpdatePolicyTemplate(template *PolicyTemplate) error
+	DeletePolicyTemplate(id string) error
+	ListPolicyTemplates() ([]*PolicyTemplate, error)
+
+	// Policy methods
+	CreatePolicy(policy *Policy) error
+	GetPolicy(id string) (*Policy, error)
+	UpdatePolicy(policy *Policy) error
+	DeletePolicy(id string) error
+	ListPolicies() ([]*Policy, error)
 }

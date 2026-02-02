@@ -21,15 +21,16 @@
         ></el-input>
         <el-select
           v-model="typeFilter"
-          placeholder="筛选类型"
-          style="width: 120px; margin-right: 10px"
+          placeholder="筛选模型类别"
+          style="width: 140px; margin-right: 10px"
         >
           <el-option label="全部" value=""></el-option>
-          <el-option label="OpenAI" value="openai"></el-option>
-          <el-option label="Anthropic" value="anthropic"></el-option>
-          <el-option label="Google" value="google"></el-option>
-          <el-option label="Azure" value="azure"></el-option>
-          <el-option label="自定义" value="custom"></el-option>
+          <el-option label="对话" value="chat"></el-option>
+          <el-option label="生图" value="image"></el-option>
+          <el-option label="嵌入" value="embedding"></el-option>
+          <el-option label="重排序" value="rerank"></el-option>
+          <el-option label="语音" value="audio"></el-option>
+          <el-option label="视频" value="video"></el-option>
         </el-select>
         <el-select
           v-model="statusFilter"
@@ -51,9 +52,20 @@
       >
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="name" label="资源名称" />
-        <el-table-column prop="type" label="资源类型" width="120">
+        <el-table-column prop="type" label="模型类别" width="120">
           <template #default="scope">
-            <el-tag>{{ scope.row.type }}</el-tag>
+            <el-tag>{{ getTypeLabel(scope.row.type) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="provider" label="服务提供商" width="120">
+          <template #default="scope">
+            <el-tag type="info">{{ getProviderLabel(scope.row.provider) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="model" label="默认模型" width="150">
+          <template #default="scope">
+            <el-tag type="warning" v-if="scope.row.model">{{ scope.row.model }}</el-tag>
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column prop="base_url" label="基础URL" />
@@ -129,17 +141,44 @@
         <el-form-item label="资源名称" prop="name">
           <el-input v-model="resourceForm.name" placeholder="请输入资源名称"></el-input>
         </el-form-item>
-        <el-form-item label="资源类型" prop="type">
-          <el-select v-model="resourceForm.type" placeholder="请选择资源类型">
+        <el-form-item label="模型类别" prop="type">
+          <el-select 
+            v-model="resourceForm.type" 
+            placeholder="请选择模型类别"
+          >
+            <el-option label="对话" value="chat"></el-option>
+            <el-option label="生图" value="image"></el-option>
+            <el-option label="嵌入" value="embedding"></el-option>
+            <el-option label="重排序" value="rerank"></el-option>
+            <el-option label="语音" value="audio"></el-option>
+            <el-option label="视频" value="video"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="服务提供商" prop="provider">
+          <el-select 
+            v-model="resourceForm.provider" 
+            placeholder="请选择服务提供商"
+            @change="handleProviderChange"
+          >
             <el-option label="OpenAI" value="openai"></el-option>
+            <el-option label="Zai" value="zai"></el-option>
             <el-option label="Anthropic" value="anthropic"></el-option>
             <el-option label="Google" value="google"></el-option>
             <el-option label="Azure" value="azure"></el-option>
             <el-option label="自定义" value="custom"></el-option>
           </el-select>
         </el-form-item>
+        <el-form-item label="默认模型" prop="model">
+          <el-input 
+            v-model="resourceForm.model" 
+            placeholder="请输入默认模型名称，如：gpt-4, gpt-3.5-turbo"
+          ></el-input>
+        </el-form-item>
         <el-form-item label="基础URL" prop="base_url">
-          <el-input v-model="resourceForm.base_url" placeholder="请输入基础URL"></el-input>
+          <el-input 
+            v-model="resourceForm.base_url" 
+            placeholder="选择服务提供商后将自动填充"
+          ></el-input>
         </el-form-item>
         <el-form-item label="API密钥" prop="api_key">
           <el-input
@@ -197,7 +236,9 @@ const apiKeyVisible = ref(false)
 const resourceForm = reactive({
   id: '',
   name: '',
-  type: 'openai',
+  type: 'chat',
+  provider: 'openai',
+  model: '',
   base_url: '',
   api_key: '',
   status: 'active'
@@ -209,7 +250,13 @@ const resourceRules = {
     { required: true, message: '请输入资源名称', trigger: 'blur' }
   ],
   type: [
-    { required: true, message: '请选择资源类型', trigger: 'change' }
+    { required: true, message: '请选择模型类别', trigger: 'change' }
+  ],
+  provider: [
+    { required: true, message: '请选择服务提供商', trigger: 'change' }
+  ],
+  model: [
+    { required: true, message: '请输入默认模型名称', trigger: 'blur' }
   ],
   base_url: [
     { required: true, message: '请输入基础URL', trigger: 'blur' }
@@ -267,6 +314,69 @@ const filteredResources = computed(() => {
   return result.slice(startIndex, endIndex)
 })
 
+// 模型类别标签映射
+const typeLabels = {
+  chat: '对话',
+  image: '生图',
+  embedding: '嵌入',
+  rerank: '重排序',
+  audio: '语音',
+  video: '视频'
+}
+
+// 获取模型类别标签
+const getTypeLabel = (type) => {
+  return typeLabels[type] || type
+}
+
+// 服务提供商标签映射
+const providerLabels = {
+  openai: 'OpenAI',
+  zai: 'Zai',
+  anthropic: 'Anthropic',
+  google: 'Google',
+  azure: 'Azure',
+  custom: '自定义'
+}
+
+// 获取服务提供商标签
+const getProviderLabel = (provider) => {
+  return providerLabels[provider] || provider
+}
+
+// 服务提供商到BaseURL的映射
+const providerToBaseURL = {
+  openai: 'https://api.openai.com/v1',
+  zai: 'https://api.zai.com/v1',
+  anthropic: 'https://api.anthropic.com/v1',
+  google: 'https://generativelanguage.googleapis.com/v1',
+  azure: 'https://your-resource-name.openai.azure.com',
+  custom: ''
+}
+
+// 处理服务提供商变化
+const handleProviderChange = (provider) => {
+  if (!provider) return
+  
+  if (provider === 'custom') {
+    // 自定义提供商时，不清空base_url，让用户自己填写或保留原有值
+    // 如果是添加模式，清空；如果是编辑模式，保留原值
+    if (isAddMode.value) {
+      resourceForm.base_url = ''
+    }
+  } else {
+    // 选择预设提供商时，自动填充对应的base_url
+    const defaultURL = providerToBaseURL[provider]
+    if (defaultURL) {
+      // 如果当前base_url为空或者是其他预设提供商的URL，则替换
+      // 如果用户已经手动修改过，则询问是否替换（这里简化处理，直接替换）
+      if (isAddMode.value || !resourceForm.base_url || Object.values(providerToBaseURL).includes(resourceForm.base_url)) {
+        resourceForm.base_url = defaultURL
+      }
+    }
+  }
+}
+
 // 处理添加资源
 const handleAddResource = () => {
   isAddMode.value = true
@@ -275,8 +385,10 @@ const handleAddResource = () => {
   Object.assign(resourceForm, {
     id: '',
     name: '',
-    type: 'openai',
-    base_url: '',
+    type: 'chat',
+    provider: 'openai',
+    model: '',
+    base_url: providerToBaseURL['openai'], // 默认填充OpenAI的URL
     api_key: '',
     status: 'active'
   })

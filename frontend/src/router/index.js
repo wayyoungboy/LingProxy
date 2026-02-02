@@ -21,10 +21,10 @@ const routes = [
         meta: { title: '仪表盘' }
       },
       {
-        path: 'users',
-        name: 'Users',
-        component: () => import('../views/Users.vue'),
-        meta: { title: '用户管理' }
+        path: 'tokens',
+        name: 'Tokens',
+        component: () => import('../views/Tokens.vue'),
+        meta: { title: 'Token管理' }
       },
       {
         path: 'llm-resources',
@@ -39,16 +39,16 @@ const routes = [
         meta: { title: '模型管理' }
       },
       {
-        path: 'endpoints',
-        name: 'Endpoints',
-        component: () => import('../views/Endpoints.vue'),
-        meta: { title: '端点管理' }
-      },
-      {
         path: 'requests',
         name: 'Requests',
         component: () => import('../views/Requests.vue'),
         meta: { title: '请求管理' }
+      },
+      {
+        path: 'policies',
+        name: 'Policies',
+        component: () => import('../views/Policies.vue'),
+        meta: { title: '策略管理' }
       },
       {
         path: 'settings',

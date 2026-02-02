@@ -16,7 +16,6 @@ func TestStorageFacade(t *testing.T) {
 		// 创建用户
 		user := &User{
 			Username: "facade-test-user",
-			Email:    "facade-test@example.com",
 			APIKey:   "facade-test-api-key",
 			Status:   "active",
 		}
@@ -44,7 +43,8 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 更新用户
-		retrievedUser.Email = "facade-updated@example.com"
+		retrievedUser.Username = "facade-updated-user"
+		retrievedUser.Status = "inactive"
 		if err := facade.UpdateUser(retrievedUser); err != nil {
 			t.Errorf("UpdateUser failed: %v", err)
 		}
@@ -53,8 +53,11 @@ func TestStorageFacade(t *testing.T) {
 		if err != nil {
 			t.Errorf("GetUser after update failed: %v", err)
 		}
-		if updatedUser.Email != "facade-updated@example.com" {
-			t.Errorf("Expected email facade-updated@example.com, got %s", updatedUser.Email)
+		if updatedUser.Username != "facade-updated-user" {
+			t.Errorf("Expected username facade-updated-user, got %s", updatedUser.Username)
+		}
+		if updatedUser.Status != "inactive" {
+			t.Errorf("Expected status inactive, got %s", updatedUser.Status)
 		}
 
 		// 列出用户
@@ -82,12 +85,13 @@ func TestStorageFacade(t *testing.T) {
 	t.Run("LLM Resource Management", func(t *testing.T) {
 		// 创建LLM资源
 		resource := &LLMResource{
-			Name:    "Facade Test Resource",
-			Type:    "openai",
-			Model:   "gpt-3.5-turbo",
-			BaseURL: "https://api.openai.com/v1",
-			APIKey:  "facade-test-api-key",
-			Status:  "active",
+			Name:     "Facade Test Resource",
+			Type:     "chat",
+			Provider:  "openai",
+			Model:    "gpt-3.5-turbo",
+			BaseURL:  "https://api.openai.com/v1",
+			APIKey:   "facade-test-api-key",
+			Status:   "active",
 		}
 
 		if err := facade.CreateLLMResource(resource); err != nil {

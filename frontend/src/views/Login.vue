@@ -67,14 +67,15 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
+import api from '../api'
 
 const router = useRouter()
 const loginFormRef = ref(null)
 const loading = ref(false)
 
 const loginForm = reactive({
-  username: 'admin',
-  password: 'admin123'
+  username: '',
+  password: ''
 })
 
 const loginRules = {
@@ -94,31 +95,26 @@ const handleLogin = async () => {
     
     loading.value = true
     
-    // 模拟登录请求
-    setTimeout(() => {
-      // 模拟登录成功
-      if (loginForm.username === 'admin' && loginForm.password === 'admin123') {
-        // 存储token
-        localStorage.setItem('token', 'mock-token-' + Date.now())
-        // 存储用户信息
-        localStorage.setItem('userInfo', JSON.stringify({
-          username: loginForm.username,
-          role: 'admin'
-        }))
-        
-        ElMessage.success('登录成功')
-        // 跳转到首页
-        router.push('/')
-      } else {
-        ElMessage.error('用户名或密码错误')
-      }
-      
-      loading.value = false
-    }, 1000)
+    // 调用真实登录API
+    const response = await api.login({
+      username: loginForm.username,
+      password: loginForm.password
+    })
     
+    if (response && response.data) {
+      // 存储token和用户信息
+      localStorage.setItem('token', response.data.token)
+      localStorage.setItem('userInfo', JSON.stringify(response.data.user))
+      
+      ElMessage.success('登录成功')
+      // 跳转到首页
+      router.push('/')
+    }
   } catch (error) {
     console.error('登录失败:', error)
-    ElMessage.error('登录失败，请检查表单')
+    const errorMsg = error.response?.data?.error || '登录失败，请检查用户名和密码'
+    ElMessage.error(errorMsg)
+  } finally {
     loading.value = false
   }
 }

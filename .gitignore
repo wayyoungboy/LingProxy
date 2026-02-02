@@ -48,6 +48,10 @@ lingproxy
 .env.local
 .env.*.local
 
+# Configuration files with sensitive data
+configs/config.yaml
+!configs/config.yaml.example
+
 
 # Docker volumes
 docker-compose.override.yml
@@ -55,4 +59,4 @@ docker-compose.override.yml
 # test report
 test_report/
 
-设计方案*
+设计方案*main

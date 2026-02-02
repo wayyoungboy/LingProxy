@@ -91,7 +91,7 @@
               </div>
               <div class="metric-item">
                 <div class="metric-label">运行时间</div>
-                <div class="metric-value">{{ uptime }}</div>
+                <div class="metric-value">{{ uptime || '--' }}</div>
               </div>
             </div>
           </div>
@@ -183,13 +183,19 @@ const recentRequests = ref([])
 
 // 计算属性
 const todayRequests = computed(() => {
-  // 模拟今日请求数
-  return Math.floor(Math.random() * 100) + 10
+  // 从最近请求中计算今日请求数
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return recentRequests.value.filter(req => {
+    const reqDate = new Date(req.created_at)
+    return reqDate >= today
+  }).length
 })
 
 const uptime = computed(() => {
-  // 模拟运行时间
-  return '24d 12h 34m'
+  // 从系统启动时间计算运行时间（如果有的话）
+  // 暂时返回空，等待后端提供启动时间信息
+  return ''
 })
 
 // 格式化日期
@@ -210,10 +216,10 @@ const getSystemStats = async () => {
     }
     
     // 获取最近的请求记录
-    const requestsResponse = await api.getRequests({ page: 1, page_size: 10 })
+    const requestsResponse = await api.getRequests({ limit: 10 })
     if (requestsResponse && requestsResponse.data) {
       // 只显示最近10条
-      recentRequests.value = requestsResponse.data.items || []
+      recentRequests.value = Array.isArray(requestsResponse.data) ? requestsResponse.data : []
     }
     
   } catch (error) {

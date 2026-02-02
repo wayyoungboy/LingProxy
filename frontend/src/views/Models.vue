@@ -50,9 +50,20 @@
       >
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="name" label="模型名称" />
-        <el-table-column prop="type" label="模型类型" width="100">
+        <el-table-column prop="model_id" label="模型ID" width="150">
+          <template #default="scope">
+            <el-tag type="info">{{ scope.row.model_id }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="type" label="类型" width="100">
           <template #default="scope">
             <el-tag>{{ scope.row.type }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="category" label="分类" width="100">
+          <template #default="scope">
+            <el-tag type="success" v-if="scope.row.category">{{ scope.row.category }}</el-tag>
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column prop="llm_resource_id" label="LLM资源" width="180">
@@ -60,12 +71,12 @@
             {{ getLLMResourceName(scope.row.llm_resource_id) }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态">
+        <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-tag
-              :type="scope.row.status === 'active' ? 'success' : 'danger'"
+              :type="scope.row.status === 'active' ? 'success' : scope.row.status === 'deprecated' ? 'warning' : 'danger'"
             >
-              {{ scope.row.status === 'active' ? '活跃' : '禁用' }}
+              {{ scope.row.status === 'active' ? '活跃' : scope.row.status === 'deprecated' ? '已弃用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -132,12 +143,24 @@
         <el-form-item label="模型名称" prop="name">
           <el-input v-model="modelForm.name" placeholder="请输入模型名称"></el-input>
         </el-form-item>
+        <el-form-item label="模型ID" prop="model_id">
+          <el-input v-model="modelForm.model_id" placeholder="提供商内部的模型标识，如 gpt-3.5-turbo"></el-input>
+        </el-form-item>
         <el-form-item label="模型类型" prop="type">
           <el-select v-model="modelForm.type" placeholder="请选择模型类型">
             <el-option label="聊天" value="chat"></el-option>
             <el-option label="补全" value="completion"></el-option>
             <el-option label="嵌入" value="embedding"></el-option>
             <el-option label="图像" value="image"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="模型分类" prop="category">
+          <el-select v-model="modelForm.category" placeholder="请选择模型分类">
+            <el-option label="GPT" value="gpt"></el-option>
+            <el-option label="Claude" value="claude"></el-option>
+            <el-option label="Gemini" value="gemini"></el-option>
+            <el-option label="Llama" value="llama"></el-option>
+            <el-option label="自定义" value="custom"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="LLM资源" prop="llm_resource_id">
@@ -154,6 +177,7 @@
           <el-select v-model="modelForm.status" placeholder="请选择状态">
             <el-option label="活跃" value="active"></el-option>
             <el-option label="禁用" value="inactive"></el-option>
+            <el-option label="已弃用" value="deprecated"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="描述" prop="description">
@@ -181,23 +205,23 @@
     >
       <el-card v-if="modelPricing" class="pricing-card">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="模型ID">
-            {{ modelPricing.model_id }}
+          <el-descriptions-item label="输入价格" v-if="modelPricing.input_token_price">
+            ${{ modelPricing.input_token_price }} / 1K tokens
           </el-descriptions-item>
-          <el-descriptions-item label="输入价格">
-            {{ modelPricing.input_price }} 元/千 tokens
+          <el-descriptions-item label="输出价格" v-if="modelPricing.output_token_price">
+            ${{ modelPricing.output_token_price }} / 1K tokens
           </el-descriptions-item>
-          <el-descriptions-item label="输出价格">
-            {{ modelPricing.output_price }} 元/千 tokens
+          <el-descriptions-item label="图片价格" v-if="modelPricing.image_price">
+            ${{ modelPricing.image_price }} / image
           </el-descriptions-item>
-          <el-descriptions-item label="上下文窗口">
-            {{ modelPricing.context_window }} tokens
+          <el-descriptions-item label="音频价格" v-if="modelPricing.audio_price">
+            ${{ modelPricing.audio_price }} / minute
           </el-descriptions-item>
-          <el-descriptions-item label="最大输出">
-            {{ modelPricing.max_output }} tokens
+          <el-descriptions-item label="货币单位" v-if="modelPricing.currency">
+            {{ modelPricing.currency }}
           </el-descriptions-item>
-          <el-descriptions-item label="创建时间">
-            {{ formatDate(modelPricing.created_at) }}
+          <el-descriptions-item label="原始数据" v-if="modelPricing.raw">
+            <pre>{{ modelPricing.raw }}</pre>
           </el-descriptions-item>
         </el-descriptions>
       </el-card>
@@ -235,10 +259,16 @@ const modelFormRef = ref(null)
 const modelForm = reactive({
   id: '',
   name: '',
+  model_id: '',
   type: 'chat',
+  category: '',
   llm_resource_id: '',
   status: 'active',
-  description: ''
+  description: '',
+  pricing: '',
+  limits: '',
+  parameters: '',
+  features: ''
 })
 
 // 价格对话框相关
@@ -249,6 +279,9 @@ const modelPricing = ref(null)
 const modelRules = {
   name: [
     { required: true, message: '请输入模型名称', trigger: 'blur' }
+  ],
+  model_id: [
+    { required: true, message: '请输入模型ID', trigger: 'blur' }
   ],
   type: [
     { required: true, message: '请选择模型类型', trigger: 'change' }
@@ -265,10 +298,11 @@ const modelRules = {
 const getModelList = async () => {
   try {
     loading.value = true
-    const response = await api.getModels({ page: currentPage.value, page_size: pageSize.value })
+    const response = await api.getModels()
     if (response && response.data) {
-      models.value = response.data.items || []
-      total.value = response.data.total || 0
+      // 后端返回的是数组，不是分页对象
+      models.value = Array.isArray(response.data) ? response.data : []
+      total.value = models.value.length
     }
   } catch (error) {
     console.error('获取模型列表失败:', error)
@@ -332,10 +366,16 @@ const handleAddModel = () => {
   Object.assign(modelForm, {
     id: '',
     name: '',
+    model_id: '',
     type: 'chat',
+    category: '',
     llm_resource_id: '',
     status: 'active',
-    description: ''
+    description: '',
+    pricing: '',
+    limits: '',
+    parameters: '',
+    features: ''
   })
   dialogVisible.value = true
 }
@@ -405,7 +445,16 @@ const handleViewPricing = async (id) => {
   try {
     const response = await api.getModelPricing(id)
     if (response && response.data) {
-      modelPricing.value = response.data
+      // 如果返回的是对象，直接使用；如果是字符串，尝试解析
+      if (typeof response.data === 'string') {
+        try {
+          modelPricing.value = JSON.parse(response.data)
+        } catch (e) {
+          modelPricing.value = { raw: response.data }
+        }
+      } else {
+        modelPricing.value = response.data
+      }
     } else {
       modelPricing.value = null
     }

@@ -11,27 +11,33 @@ type MemoryStorage struct {
 	mu sync.RWMutex
 
 	// 数据存储
-	users        map[string]*User
-	llmResources map[string]*LLMResource
-	models       map[string]*Model
-	endpoints    map[string]*Endpoint
-	requests     map[string]*Request
-	responses    map[string]*Response
-	quotas       map[string]*Quota
-	statistics   map[string]*Statistics
+	users           map[string]*User
+	tokens          map[string]*Token
+	policyTemplates map[string]*PolicyTemplate
+	policies        map[string]*Policy
+	llmResources    map[string]*LLMResource
+	models          map[string]*Model
+	endpoints       map[string]*Endpoint
+	requests        map[string]*Request
+	responses       map[string]*Response
+	quotas          map[string]*Quota
+	statistics      map[string]*Statistics
 }
 
 // NewMemoryStorage 创建新的内存存储实例
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
-		users:        make(map[string]*User),
-		llmResources: make(map[string]*LLMResource),
-		models:       make(map[string]*Model),
-		endpoints:    make(map[string]*Endpoint),
-		requests:     make(map[string]*Request),
-		responses:    make(map[string]*Response),
-		quotas:       make(map[string]*Quota),
-		statistics:   make(map[string]*Statistics),
+		users:           make(map[string]*User),
+		tokens:          make(map[string]*Token),
+		policyTemplates: make(map[string]*PolicyTemplate),
+		policies:        make(map[string]*Policy),
+		llmResources:    make(map[string]*LLMResource),
+		models:          make(map[string]*Model),
+		endpoints:       make(map[string]*Endpoint),
+		requests:        make(map[string]*Request),
+		responses:       make(map[string]*Response),
+		quotas:          make(map[string]*Quota),
+		statistics:      make(map[string]*Statistics),
 	}
 }
 
@@ -442,6 +448,204 @@ func (m *MemoryStorage) UpdateStatistics(stats *Statistics) error {
 	stats.UpdatedAt = time.Now()
 	m.statistics[stats.ID] = stats
 	return nil
+}
+
+// Token methods
+func (m *MemoryStorage) CreateToken(token *Token) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	token.ID = generateID()
+	token.CreatedAt = time.Now()
+	token.UpdatedAt = time.Now()
+	m.tokens[token.ID] = token
+	return nil
+}
+
+func (m *MemoryStorage) GetToken(id string) (*Token, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if token, exists := m.tokens[id]; exists {
+		return token, nil
+	}
+	return nil, ErrNotFound
+}
+
+func (m *MemoryStorage) GetTokenByValue(tokenValue string) (*Token, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, token := range m.tokens {
+		if token.Token == tokenValue {
+			return token, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
+func (m *MemoryStorage) UpdateToken(token *Token) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.tokens[token.ID]; !exists {
+		return ErrNotFound
+	}
+
+	token.UpdatedAt = time.Now()
+	m.tokens[token.ID] = token
+	return nil
+}
+
+func (m *MemoryStorage) DeleteToken(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.tokens[id]; !exists {
+		return ErrNotFound
+	}
+
+	delete(m.tokens, id)
+	return nil
+}
+
+func (m *MemoryStorage) ListTokens() ([]*Token, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	tokens := make([]*Token, 0, len(m.tokens))
+	for _, token := range m.tokens {
+		tokens = append(tokens, token)
+	}
+	return tokens, nil
+}
+
+// PolicyTemplate methods
+func (m *MemoryStorage) CreatePolicyTemplate(template *PolicyTemplate) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	template.ID = generateID()
+	template.CreatedAt = time.Now()
+	template.UpdatedAt = time.Now()
+	m.policyTemplates[template.ID] = template
+	return nil
+}
+
+func (m *MemoryStorage) GetPolicyTemplate(id string) (*PolicyTemplate, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if template, exists := m.policyTemplates[id]; exists {
+		return template, nil
+	}
+	return nil, ErrNotFound
+}
+
+func (m *MemoryStorage) GetPolicyTemplateByType(policyType string) (*PolicyTemplate, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, template := range m.policyTemplates {
+		if template.Type == policyType {
+			return template, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
+func (m *MemoryStorage) UpdatePolicyTemplate(template *PolicyTemplate) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.policyTemplates[template.ID]; !exists {
+		return ErrNotFound
+	}
+
+	template.UpdatedAt = time.Now()
+	m.policyTemplates[template.ID] = template
+	return nil
+}
+
+func (m *MemoryStorage) DeletePolicyTemplate(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.policyTemplates[id]; !exists {
+		return ErrNotFound
+	}
+
+	delete(m.policyTemplates, id)
+	return nil
+}
+
+func (m *MemoryStorage) ListPolicyTemplates() ([]*PolicyTemplate, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	templates := make([]*PolicyTemplate, 0, len(m.policyTemplates))
+	for _, template := range m.policyTemplates {
+		templates = append(templates, template)
+	}
+	return templates, nil
+}
+
+// Policy methods
+func (m *MemoryStorage) CreatePolicy(policy *Policy) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	policy.ID = generateID()
+	policy.CreatedAt = time.Now()
+	policy.UpdatedAt = time.Now()
+	m.policies[policy.ID] = policy
+	return nil
+}
+
+func (m *MemoryStorage) GetPolicy(id string) (*Policy, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if policy, exists := m.policies[id]; exists {
+		return policy, nil
+	}
+	return nil, ErrNotFound
+}
+
+func (m *MemoryStorage) UpdatePolicy(policy *Policy) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.policies[policy.ID]; !exists {
+		return ErrNotFound
+	}
+
+	policy.UpdatedAt = time.Now()
+	m.policies[policy.ID] = policy
+	return nil
+}
+
+func (m *MemoryStorage) DeletePolicy(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.policies[id]; !exists {
+		return ErrNotFound
+	}
+
+	delete(m.policies, id)
+	return nil
+}
+
+func (m *MemoryStorage) ListPolicies() ([]*Policy, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	policies := make([]*Policy, 0, len(m.policies))
+	for _, policy := range m.policies {
+		policies = append(policies, policy)
+	}
+	return policies, nil
 }
 
 // 辅助函数

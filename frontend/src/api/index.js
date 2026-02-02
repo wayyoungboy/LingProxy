@@ -47,6 +47,17 @@ const api = {
     return apiClient.get('/health')
   },
 
+  // 认证相关
+  register(userData) {
+    return apiClient.post('/auth/register', userData)
+  },
+  login(credentials) {
+    return apiClient.post('/auth/login', credentials)
+  },
+  getCurrentUser() {
+    return apiClient.get('/users/me')
+  },
+
   // 用户管理
   getUsers(params) {
     return apiClient.get('/users', { params })
@@ -62,6 +73,12 @@ const api = {
   },
   deleteUser(id) {
     return apiClient.delete(`/users/${id}`)
+  },
+  resetAPIKey(id) {
+    return apiClient.post(`/users/${id}/reset-api-key`)
+  },
+  updatePassword(id, passwordData) {
+    return apiClient.put(`/users/${id}/password`, passwordData)
   },
 
   // LLM资源管理
@@ -107,23 +124,6 @@ const api = {
     return apiClient.get('/models/types')
   },
 
-  // 端点管理
-  getEndpoints(params) {
-    return apiClient.get('/endpoints', { params })
-  },
-  getEndpoint(id) {
-    return apiClient.get(`/endpoints/${id}`)
-  },
-  createEndpoint(endpoint) {
-    return apiClient.post('/endpoints', endpoint)
-  },
-  updateEndpoint(id, endpoint) {
-    return apiClient.put(`/endpoints/${id}`, endpoint)
-  },
-  deleteEndpoint(id) {
-    return apiClient.delete(`/endpoints/${id}`)
-  },
-
   // 请求管理
   getRequests(params) {
     return apiClient.get('/requests', { params })
@@ -144,6 +144,63 @@ const api = {
   },
   getUserStats(id) {
     return apiClient.get(`/stats/users/${id}`)
+  },
+
+  // Token管理
+  getTokens() {
+    return apiClient.get('/tokens')
+  },
+  getToken(id) {
+    return apiClient.get(`/tokens/${id}`)
+  },
+  createToken(token) {
+    return apiClient.post('/tokens', token)
+  },
+  updateToken(id, token) {
+    return apiClient.put(`/tokens/${id}`, token)
+  },
+  deleteToken(id) {
+    return apiClient.delete(`/tokens/${id}`)
+  },
+  resetToken(id) {
+    return apiClient.post(`/tokens/${id}/reset`)
+  },
+  setTokenPolicy(id, data) {
+    return apiClient.put(`/tokens/${id}/policy`, data)
+  },
+  removeTokenPolicy(id) {
+    return apiClient.delete(`/tokens/${id}/policy`)
+  },
+
+  // 管理员
+  getAdminInfo() {
+    return apiClient.get('/admin/info')
+  },
+  resetAdminAPIKey() {
+    return apiClient.put('/admin/api-key')
+  },
+
+  // 策略管理
+  getPolicyTemplates() {
+    return apiClient.get('/policy-templates')
+  },
+  getPolicyTemplate(id) {
+    return apiClient.get(`/policy-templates/${id}`)
+  },
+  getPolicies() {
+    return apiClient.get('/policies')
+  },
+  getPolicy(id) {
+    return apiClient.get(`/policies/${id}`)
+  },
+  createPolicy(policy) {
+    return apiClient.post('/policies', policy)
+  },
+  updatePolicy(id, policy) {
+    return apiClient.put(`/policies/${id}`, policy)
+  },
+  deletePolicy(id) {
+    return apiClient.delete(`/policies/${id}`)
   },
 
   // 系统设置

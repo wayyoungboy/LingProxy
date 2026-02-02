@@ -3,9 +3,11 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lingproxy/lingproxy/internal/service"
 	"github.com/lingproxy/lingproxy/internal/storage"
 )
 
@@ -14,28 +16,71 @@ import (
 // @version 1.0.0
 // @description OpenAI标准API接口，支持聊天补全、文本补全、嵌入等功能
 // @host localhost:8080
-// @BasePath /v1
+// @BasePath /llm/v1
 // @schemes http https
 
 type OpenAIHandler struct {
-	storage *storage.StorageFacade
+	storage       *storage.StorageFacade
+	policyService *service.PolicyService
+	tokenService  *service.TokenService
 }
 
 // NewOpenAIHandler 创建新的OpenAI处理器
-func NewOpenAIHandler(storage *storage.StorageFacade) *OpenAIHandler {
-	return &OpenAIHandler{storage: storage}
+func NewOpenAIHandler(storage *storage.StorageFacade, policyService *service.PolicyService, tokenService *service.TokenService) *OpenAIHandler {
+	return &OpenAIHandler{
+		storage:       storage,
+		policyService: policyService,
+		tokenService:  tokenService,
+	}
 }
 
-// findLLMResourceByModel 根据模型名称查找对应的LLM资源
-func (h *OpenAIHandler) findLLMResourceByModel(modelName string) (*storage.LLMResource, error) {
+// findLLMResourceByModel 根据模型名称和Token查找对应的LLM资源
+func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string) (*storage.LLMResource, error) {
 	// 获取所有LLM资源
 	resources, err := h.storage.ListLLMResources()
 	if err != nil {
 		return nil, err
 	}
 
-	// 简单策略：返回第一个可用的LLM资源
-	// 实际应用中可能需要更复杂的策略，比如根据模型名称匹配、负载均衡等
+	if len(resources) == 0 {
+		return nil, fmt.Errorf("no LLM resources available")
+	}
+
+	// 从上下文获取Token（由认证中间件设置）
+	tokenValue := h.getTokenFromContext(c)
+	if tokenValue == "" {
+		// 没有Token，使用默认策略
+		return h.selectResourceWithDefaultPolicy(modelName, resources)
+	}
+
+	// 获取Token信息
+	token, err := h.tokenService.ValidateToken(tokenValue)
+	if err != nil {
+		// Token验证失败，使用默认策略
+		return h.selectResourceWithDefaultPolicy(modelName, resources)
+	}
+
+	// 检查Token是否有策略
+	if token.PolicyID == "" {
+		// Token没有配置策略
+		// 如果Token是"ling-"开头，建议配置策略，但这里使用默认策略
+		// 注意：ling-开头的Token建议配置策略，但这里先使用默认策略以保证向后兼容
+		return h.selectResourceWithDefaultPolicy(modelName, resources)
+	}
+
+	// 使用Token的策略选择资源
+	resource, err := h.policyService.ExecutePolicy(token.PolicyID, modelName, resources)
+	if err != nil {
+		// 策略执行失败，降级到默认策略
+		return h.selectResourceWithDefaultPolicy(modelName, resources)
+	}
+
+	return resource, nil
+}
+
+// selectResourceWithDefaultPolicy 使用默认策略选择资源
+func (h *OpenAIHandler) selectResourceWithDefaultPolicy(modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
+	// 默认策略：返回第一个可用的LLM资源
 	for _, resource := range resources {
 		if resource.Status == "active" {
 			return resource, nil
@@ -48,6 +93,34 @@ func (h *OpenAIHandler) findLLMResourceByModel(modelName string) (*storage.LLMRe
 	}
 
 	return nil, fmt.Errorf("no LLM resources available")
+}
+
+// getTokenFromContext 从上下文获取Token
+func (h *OpenAIHandler) getTokenFromContext(c *gin.Context) string {
+	// 尝试从上下文获取Token（由认证中间件设置）
+	if token, exists := c.Get("token"); exists {
+		if t, ok := token.(*storage.Token); ok {
+			return t.Token
+		}
+	}
+
+	// 尝试从User获取APIKey（向后兼容）
+	if user, exists := c.Get("user"); exists {
+		if u, ok := user.(*storage.User); ok {
+			return u.APIKey
+		}
+	}
+
+	// 从请求头获取
+	authHeader := c.GetHeader("Authorization")
+	if authHeader != "" {
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			return parts[1]
+		}
+	}
+
+	return ""
 }
 
 // ChatCompletionRequest 聊天补全请求
@@ -114,7 +187,7 @@ type ChatCompletionResponse struct {
 // @Success 200 {object} ChatCompletionResponse "Chat completion response"
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/chat/completions [post]
+// @Router /llm/v1/chat/completions [post]
 func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 	var req ChatCompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -130,7 +203,7 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 	}
 
 	// 查找对应的LLM资源
-	llmResource, err := h.findLLMResourceByModel(req.Model)
+	llmResource, err := h.findLLMResourceByModel(c, req.Model)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": map[string]interface{}{
@@ -222,7 +295,7 @@ type CompletionResponse struct {
 // @Success 200 {object} CompletionResponse "Completion response"
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /v1/completions [post]
+// @Router /llm/v1/completions [post]
 func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	var req CompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -238,7 +311,7 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	}
 
 	// 查找对应的LLM资源
-	llmResource, err := h.findLLMResourceByModel(req.Model)
+	llmResource, err := h.findLLMResourceByModel(c, req.Model)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": map[string]interface{}{
@@ -301,7 +374,7 @@ type ModelsResponse struct {
 // @Accept json
 // @Produce json
 // @Success 200 {object} ModelsResponse "Models list"
-// @Router /v1/models [get]
+// @Router /llm/v1/models [get]
 func (h *OpenAIHandler) ListModels(c *gin.Context) {
 	response := ModelsResponse{
 		Object: "list",
@@ -329,7 +402,7 @@ func (h *OpenAIHandler) ListModels(c *gin.Context) {
 // @Produce json
 // @Param model path string true "Model ID"
 // @Success 200 {object} map[string]interface{} "Model information"
-// @Router /v1/models/{model} [get]
+// @Router /llm/v1/models/{model} [get]
 func (h *OpenAIHandler) GetModel(c *gin.Context) {
 	model := c.Param("model")
 

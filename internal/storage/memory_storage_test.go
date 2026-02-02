@@ -9,7 +9,6 @@ func TestMemoryStorage_CreateUser(t *testing.T) {
 	storage := NewMemoryStorage()
 	user := &User{
 		Username: "testuser",
-		Email:    "test@example.com",
 		APIKey:   "test-api-key",
 		Status:   "active",
 	}
@@ -37,7 +36,6 @@ func TestMemoryStorage_GetUser(t *testing.T) {
 	storage := NewMemoryStorage()
 	user := &User{
 		Username: "testuser",
-		Email:    "test@example.com",
 		APIKey:   "test-api-key",
 		Status:   "active",
 	}
@@ -71,7 +69,6 @@ func TestMemoryStorage_UpdateUser(t *testing.T) {
 	storage := NewMemoryStorage()
 	user := &User{
 		Username: "testuser",
-		Email:    "test@example.com",
 		APIKey:   "test-api-key",
 		Status:   "active",
 	}
@@ -83,7 +80,7 @@ func TestMemoryStorage_UpdateUser(t *testing.T) {
 
 	// 更新用户
 	user.Username = "updateduser"
-	user.Email = "updated@example.com"
+	user.Status = "inactive"
 
 	if err := storage.UpdateUser(user); err != nil {
 		t.Errorf("UpdateUser failed: %v", err)
@@ -99,8 +96,8 @@ func TestMemoryStorage_UpdateUser(t *testing.T) {
 		t.Errorf("User Username not updated: expected updateduser, got %s", retrievedUser.Username)
 	}
 
-	if retrievedUser.Email != "updated@example.com" {
-		t.Errorf("User Email not updated: expected updated@example.com, got %s", retrievedUser.Email)
+	if retrievedUser.Status != "inactive" {
+		t.Errorf("User Status not updated: expected inactive, got %s", retrievedUser.Status)
 	}
 
 	if retrievedUser.UpdatedAt.Before(user.UpdatedAt) {
@@ -113,7 +110,6 @@ func TestMemoryStorage_DeleteUser(t *testing.T) {
 	storage := NewMemoryStorage()
 	user := &User{
 		Username: "testuser",
-		Email:    "test@example.com",
 		APIKey:   "test-api-key",
 		Status:   "active",
 	}
@@ -148,7 +144,6 @@ func TestMemoryStorage_ListUsers(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		user := &User{
 			Username: "user" + string(rune('0'+i)),
-			Email:    "user" + string(rune('0'+i)) + "@example.com",
 			APIKey:   "api-key-" + string(rune('0'+i)),
 			Status:   "active",
 		}
@@ -180,12 +175,13 @@ func TestMemoryStorage_ListUsers(t *testing.T) {
 func TestMemoryStorage_CreateLLMResource(t *testing.T) {
 	storage := NewMemoryStorage()
 	resource := &LLMResource{
-		Name:    "test-resource",
-		Type:    "openai",
-		Model:   "gpt-3.5-turbo",
-		BaseURL: "https://api.openai.com/v1",
-		APIKey:  "test-api-key",
-		Status:  "active",
+		Name:     "test-resource",
+		Type:     "chat",
+		Provider:  "openai",
+		Model:    "gpt-3.5-turbo",
+		BaseURL:  "https://api.openai.com/v1",
+		APIKey:   "test-api-key",
+		Status:   "active",
 	}
 
 	err := storage.CreateLLMResource(resource)
@@ -210,12 +206,13 @@ func TestMemoryStorage_CreateLLMResource(t *testing.T) {
 func TestMemoryStorage_GetLLMResource(t *testing.T) {
 	storage := NewMemoryStorage()
 	resource := &LLMResource{
-		Name:    "test-resource",
-		Type:    "openai",
-		Model:   "gpt-3.5-turbo",
-		BaseURL: "https://api.openai.com/v1",
-		APIKey:  "test-api-key",
-		Status:  "active",
+		Name:     "test-resource",
+		Type:     "chat",
+		Provider:  "openai",
+		Model:    "gpt-3.5-turbo",
+		BaseURL:  "https://api.openai.com/v1",
+		APIKey:   "test-api-key",
+		Status:   "active",
 	}
 
 	// 创建资源
@@ -250,12 +247,13 @@ func TestMemoryStorage_ListLLMResources(t *testing.T) {
 	createdIDs := make([]string, 3)
 	for i := 0; i < 3; i++ {
 		resource := &LLMResource{
-			Name:    "resource" + string(rune('0'+i)),
-			Type:    "openai",
-			Model:   "gpt-3.5-turbo",
-			BaseURL: "https://api.openai.com/v1",
-			APIKey:  "api-key-" + string(rune('0'+i)),
-			Status:  "active",
+			Name:     "resource" + string(rune('0'+i)),
+			Type:     "chat",
+			Provider:  "openai",
+			Model:    "gpt-3.5-turbo",
+			BaseURL:  "https://api.openai.com/v1",
+			APIKey:   "api-key-" + string(rune('0'+i)),
+			Status:   "active",
 		}
 
 		if err := storage.CreateLLMResource(resource); err != nil {

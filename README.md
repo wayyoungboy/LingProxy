@@ -1,10 +1,5 @@
 # LingProxy - AI API Gateway
 
-<p align="center">
-  <img src="web/static/images/logo/lingproxy-logo.svg" alt="LingProxy Logo">
-</p>
-
-
 LingProxy is a high-performance AI API gateway designed for managing and proxying API calls to various AI service providers. It offers OpenAI compatible interfaces, load balancing, circuit breaking, and more.
 
 ## Features
@@ -16,15 +11,20 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **Request Logging**: Complete request chain tracing and logging
 
 ### 🔐 Security & Authentication
-- **API Key Authentication**: API key-based user authentication mechanism
+- **Flexible Authentication**: Global authentication toggle, configurable authentication requirement
+- **Admin Login**: Username/password login with password hash storage
+- **Token Management**: Request-side token management with policy association and API key authentication
 - **CORS Support**: Flexible cross-origin resource sharing configuration
-- **Secure Storage**: Encrypted API key storage
+- **Secure Storage**: Encrypted storage for API keys and passwords
 
 ### 📊 Management Features
-- **User Management**: Multi-user support, API key management
-- **LLM Resource Management**: Supports configuration of multiple AI service providers (OpenAI, Anthropic, Google, etc.)
+- **Admin Management**: Single admin mode with password and API key management
+- **Token Management**: Create and manage request-side tokens with policy binding
+- **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances
+- **LLM Resource Management**: Supports configuration of multiple AI service providers (OpenAI, Zai, Anthropic, Google, Azure, etc.), supports model categories (chat, image, embedding, rerank, audio, video)
 - **Model Management**: Flexible model configuration, supports pricing, usage limits and other parameters
-- **Endpoint Management**: Custom API endpoint routing configuration
+- **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing, circuit breaker configurations
+- **System Monitoring**: Real-time system information (CPU, memory, uptime, etc.)
 
 ### 🏗️ Architecture Design
 - **Frontend-Backend Separation**: Modern architecture with Vue 3 + Element Plus frontend and Go backend
@@ -59,6 +59,7 @@ Copy and edit the configuration file:
 ```bash
 cp configs/config.yaml.example configs/config.yaml
 # Edit configs/config.yaml to configure as needed
+# ⚠️ IMPORTANT: Change the admin password in config.yaml before starting!
 ```
 
 4. **Build and Run the Backend**
@@ -81,7 +82,7 @@ npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3002`
+The frontend will be available at `http://localhost:3000`
 
 ### Docker Run
 
@@ -95,30 +96,78 @@ docker run -p 8080:8080 -v $(pwd)/configs:/app/configs lingproxy
 
 ## API Usage Guide
 
-### 1. User Registration
-```bash
-curl -X POST http://localhost:8080/api/v1/users/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "email": "test@example.com",
-    "password": "password123"
-  }'
-```
-
-### 2. Get API Key
+### 1. Admin Login
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "testuser",
-    "password": "password123"
+    "username": "admin",
+    "password": "YOUR_PASSWORD"
   }'
 ```
 
-### 3. Proxy AI Request
+Response example:
+```json
+{
+  "token": "your_jwt_token_here",
+  "user": {
+    "id": "...",
+    "username": "admin",
+    "api_key": "..."
+  }
+}
+```
+
+### 2. Create Request-side Token
 ```bash
-curl -X POST http://localhost:8080/api/v1/chat/completions \
+curl -X POST http://localhost:8080/api/v1/tokens \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My API Token",
+    "status": "active"
+  }'
+```
+
+Response example:
+```json
+{
+  "data": {
+    "id": "...",
+    "name": "My API Token",
+    "token": "ling-xxxxxxxxxxxxx",
+    "status": "active"
+  }
+}
+```
+
+### 3. Create Routing Policy (Optional)
+```bash
+curl -X POST http://localhost:8080/api/v1/policies \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Random Policy",
+    "template_id": "random_template_id",
+    "type": "random",
+    "parameters": "{\"filter_by_status\": true}",
+    "enabled": true
+  }'
+```
+
+### 4. Bind Policy to Token (Optional)
+```bash
+curl -X PUT http://localhost:8080/api/v1/tokens/TOKEN_ID/policy \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policy_id": "POLICY_ID"
+  }'
+```
+
+### 5. Proxy AI Request
+```bash
+curl -X POST http://localhost:8080/llm/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -131,12 +180,29 @@ curl -X POST http://localhost:8080/api/v1/chat/completions \
 
 ### API Endpoint Reference
 
-#### User Management
-- `GET /api/v1/users` - Get user list
-- `POST /api/v1/users` - Create user
-- `GET /api/v1/users/:id` - Get user details
-- `PUT /api/v1/users/:id` - Update user
-- `DELETE /api/v1/users/:id` - Delete user
+#### Authentication & Admin
+- `POST /api/v1/auth/login` - Admin login (username/password)
+- `GET /api/v1/admin/info` - Get admin information
+- `PUT /api/v1/admin/api-key` - Reset admin API key
+
+#### Token Management
+- `GET /api/v1/tokens` - Get token list
+- `GET /api/v1/tokens/:id` - Get token details
+- `POST /api/v1/tokens` - Create token
+- `PUT /api/v1/tokens/:id` - Update token
+- `DELETE /api/v1/tokens/:id` - Delete token
+- `POST /api/v1/tokens/:id/reset` - Reset token
+- `PUT /api/v1/tokens/:id/policy` - Bind policy to token
+- `DELETE /api/v1/tokens/:id/policy` - Remove policy binding from token
+
+#### Policy Management
+- `GET /api/v1/policy-templates` - Get policy template list
+- `GET /api/v1/policy-templates/:id` - Get policy template details
+- `GET /api/v1/policies` - Get policy list
+- `GET /api/v1/policies/:id` - Get policy details
+- `POST /api/v1/policies` - Create policy
+- `PUT /api/v1/policies/:id` - Update policy
+- `DELETE /api/v1/policies/:id` - Delete policy
 
 #### LLM Resource Management
 - `GET /api/v1/llm-resources` - Get LLM resource list
@@ -151,17 +217,30 @@ curl -X POST http://localhost:8080/api/v1/chat/completions \
 - `GET /api/v1/models/:id` - Get model details
 - `PUT /api/v1/models/:id` - Update model
 - `DELETE /api/v1/models/:id` - Delete model
-
-#### Endpoint Management
-- `GET /api/v1/endpoints` - Get endpoint list
-- `POST /api/v1/endpoints` - Create endpoint
-- `GET /api/v1/endpoints/:id` - Get endpoint details
-- `PUT /api/v1/endpoints/:id` - Update endpoint
-- `DELETE /api/v1/endpoints/:id` - Delete endpoint
+- `GET /api/v1/models/types` - Get model type list
+- `GET /api/v1/models/:id/pricing` - Get model pricing information
+- `GET /api/v1/llm-resources/:id/models` - Get models under specified LLM resource
 
 #### Request Logging
 - `GET /api/v1/requests` - Get request log list
 - `GET /api/v1/requests/:id` - Get request details
+- `POST /api/v1/requests` - Create request record
+
+#### System Settings & Monitoring
+- `GET /api/v1/settings` - Get system settings
+- `PUT /api/v1/settings` - Update system settings
+- `GET /api/v1/system/info` - Get system information (CPU, memory, uptime, etc.)
+
+#### Statistics
+- `GET /api/v1/stats/system` - Get system statistics
+- `GET /api/v1/stats/llm-resources/:id` - Get LLM resource statistics
+- `GET /api/v1/stats/users/:id` - Get user statistics
+
+#### OpenAI Compatible API
+- `GET /llm/v1/models` - List all available models
+- `GET /llm/v1/models/:model` - Get model information
+- `POST /llm/v1/chat/completions` - Create chat completion
+- `POST /llm/v1/completions` - Create text completion
 
 ## Configuration
 
@@ -189,6 +268,8 @@ storage:
 #### Security Configuration
 ```yaml
 security:
+  auth:
+    enabled: true  # Whether to enable authentication, when false all APIs (except login) don't require authentication
   cors:
     enabled: true
     allow_origins:
@@ -201,6 +282,38 @@ security:
       - "OPTIONS"
     allow_headers:
       - "*"
+```
+
+#### Admin Configuration
+```yaml
+admin:
+  username: "admin"
+  # ⚠️ Set a strong password! Recommended to set immediately after first startup
+  # password: "YOUR_STRONG_PASSWORD_HERE"
+  password: ""  # Leave empty to skip password setup
+  api_key: ""  # Leave empty to auto-generate, check logs after first startup
+  auto_create: true
+```
+
+#### Logging Configuration
+```yaml
+log:
+  level: "info"  # debug, info, warn, error, fatal
+  format: "json"  # text, json
+  output: "stdout"
+```
+
+#### Load Balancer Configuration
+```yaml
+load_balancer:
+  default_strategy: "round_robin"  # Default load balancing strategy
+```
+
+#### Provider Configuration
+```yaml
+provider:
+  timeout: "30s"  # Request timeout
+  max_retries: 3   # Maximum retry count
 ```
 
 ## Monitoring & Operations
@@ -264,8 +377,6 @@ lingproxy/
 │   └── storage/           # Storage implementation
 ├── pkg/                   # Public packages
 │   └── logger/            # Logging
-├── scripts/               # Script files
-├── web/                   # Legacy web interface (deprecated)
 └── docker-compose.yml     # Docker configuration
 ```
 
@@ -274,47 +385,91 @@ lingproxy/
 The system adopts a streamlined storage model design with core models including:
 
 ```go
-// User user model - manages API users
+// User user model - admin user
 type User struct {
-    ID        string    // User unique identifier
-    Username  string    // Username
-    Email     string    // Email
-    APIKey    string    // API key
-    Status    string    // Status
+    ID           string     // User unique identifier
+    Username     string     // Username
+    PasswordHash string     // Password hash
+    APIKey       string     // API key
+    Role         string     // Role (admin)
+    Status       string     // Status (active, inactive, suspended)
+    LastLoginAt  *time.Time // Last login time
+    CreatedAt    time.Time  // Created at
+    UpdatedAt    time.Time  // Updated at
+}
+
+// Token token model - request-side token management
+type Token struct {
+    ID         string     // Token unique identifier
+    Name       string     // Token name/description
+    Token      string     // Token value (API Key, prefixed with "ling-")
+    Prefix     string     // Token prefix (for display)
+    Status     string     // Status (active/inactive)
+    PolicyID   string     // Associated policy ID (optional)
+    LastUsedAt *time.Time // Last used time
+    ExpiresAt  *time.Time // Expiration time (optional)
+    CreatedAt  time.Time  // Created at
+    UpdatedAt  time.Time  // Updated at
+}
+
+// PolicyTemplate policy template model - built-in policy templates
+type PolicyTemplate struct {
+    ID                string    // Template unique identifier
+    Name              string    // Template name
+    Type              string    // Type (random, round_robin, weighted, model_match, regex_match, priority, failover)
+    Description       string    // Description
+    ParametersSchema  string    // Parameter JSON Schema
+    DefaultParameters string    // Default parameters JSON
+    Builtin           bool      // Whether built-in
+    CreatedAt         time.Time // Created at
+    UpdatedAt         time.Time // Updated at
+}
+
+// Policy policy instance model - routing policy configuration
+type Policy struct {
+    ID         string    // Policy unique identifier
+    Name       string    // Policy name
+    TemplateID string    // Associated template ID
+    Type       string    // Type
+    Parameters string    // Parameters JSON
+    Enabled    bool      // Whether enabled
+    CreatedAt  time.Time // Created at
+    UpdatedAt  time.Time // Updated at
 }
 
 // LLMResource LLM resource model - AI service provider configuration
 type LLMResource struct {
     ID        string    // Resource unique identifier
     Name      string    // Resource name
-    Type      string    // Type (openai, anthropic, google, etc.)
+    Type      string    // Model category (chat, image, embedding, rerank, audio, video)
+    Provider  string    // Service provider (openai, zai, anthropic, google, azure, custom, etc.)
     Model     string    // Default model
     BaseURL   string    // API base URL
     APIKey    string    // API key
-    Status    string    // Status
+    Status    string    // Status (active/inactive)
+    CreatedAt time.Time // Created at
+    UpdatedAt time.Time // Updated at
 }
 
 // Model model configuration - AI model management
 type Model struct {
-    ID             string         // Model unique identifier
-    Name           string         // Model name
-    LLMResourceID  string         // Associated LLM resource
-    ModelID        string         // Provider's internal model identifier
-    Type           string         // Model type (chat, completion, embedding, image)
-    Category       string         // Model category
-    Pricing        ModelPricing   // Pricing information
-    Limits         ModelLimits    // Usage limits
-    Parameters     ModelParameters // Default parameters
-    Status         string         // Status
-}
-
-// Endpoint endpoint model - API route configuration
-type Endpoint struct {
-    ID            string    // Endpoint unique identifier
+    ID            string    // Model unique identifier
+    Name          string    // Model name
     LLMResourceID string    // Associated LLM resource
-    Path          string    // API path
-    Method        string    // HTTP method
-    Status        string    // Status
+    ModelID       string    // Provider's internal model identifier
+    Type          string    // Model type (chat, completion, embedding, image)
+    Category      string    // Model category (gpt, claude, gemini, llama, etc.)
+    Version       string    // Model version
+    Description   string    // Description
+    Capabilities  string    // Model capabilities (JSON string)
+    Pricing       string    // Pricing information (JSON string)
+    Limits        string    // Usage limits (JSON string)
+    Parameters    string    // Default parameters (JSON string)
+    Features      string    // Features (JSON string)
+    Status        string    // Status (active, inactive, deprecated)
+    Metadata      string    // Extended metadata (JSON string)
+    CreatedAt     time.Time // Created at
+    UpdatedAt     time.Time // Updated at
 }
 
 // Request request model - request logging
@@ -326,6 +481,7 @@ type Request struct {
     Status    string    // Status
     Duration  int64     // Duration (milliseconds)
     Tokens    int       // Consumed tokens
+    CreatedAt time.Time // Created at
 }
 ```
 
@@ -338,10 +494,34 @@ type Storage interface {
     // User management
     CreateUser(user *User) error
     GetUser(id string) (*User, error)
+    GetUserByUsername(username string) (*User, error)
     GetUserByAPIKey(apiKey string) (*User, error)
     UpdateUser(user *User) error
     DeleteUser(id string) error
     ListUsers() ([]*User, error)
+
+    // Token management
+    CreateToken(token *Token) error
+    GetToken(id string) (*Token, error)
+    GetTokenByToken(token string) (*Token, error)
+    UpdateToken(token *Token) error
+    DeleteToken(id string) error
+    ListTokens() ([]*Token, error)
+
+    // Policy template management
+    CreatePolicyTemplate(template *PolicyTemplate) error
+    GetPolicyTemplate(id string) (*PolicyTemplate, error)
+    GetPolicyTemplateByType(type string) (*PolicyTemplate, error)
+    UpdatePolicyTemplate(template *PolicyTemplate) error
+    DeletePolicyTemplate(id string) error
+    ListPolicyTemplates() ([]*PolicyTemplate, error)
+
+    // Policy management
+    CreatePolicy(policy *Policy) error
+    GetPolicy(id string) (*Policy, error)
+    UpdatePolicy(policy *Policy) error
+    DeletePolicy(id string) error
+    ListPolicies() ([]*Policy, error)
 
     // LLMResource management
     CreateLLMResource(resource *LLMResource) error
@@ -357,13 +537,6 @@ type Storage interface {
     DeleteModel(id string) error
     ListModels() ([]*Model, error)
     ListModelsByLLMResource(llmResourceID string) ([]*Model, error)
-
-    // Endpoint management
-    CreateEndpoint(endpoint *Endpoint) error
-    GetEndpoint(id string) (*Endpoint, error)
-    UpdateEndpoint(endpoint *Endpoint) error
-    DeleteEndpoint(id string) error
-    ListEndpoints() ([]*Endpoint, error)
 
     // Request logging
     CreateRequest(request *Request) error

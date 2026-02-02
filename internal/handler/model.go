@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,7 @@ func (h *ModelHandler) ListModels(c *gin.Context) {
 
 	var models []*storage.Model
 	var err error
-	
+
 	if llmResource != "" {
 		models, err = h.storage.ListModelsByLLMResource(llmResource)
 	} else {
@@ -83,6 +84,35 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 	if err := c.ShouldBindJSON(&model); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// 验证必填字段
+	if model.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "model name is required"})
+		return
+	}
+	if model.LLMResourceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "llm_resource_id is required"})
+		return
+	}
+	if model.ModelID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "model_id is required"})
+		return
+	}
+
+	// 验证LLM资源是否存在
+	_, err := h.storage.GetLLMResource(model.LLMResourceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "llm resource not found"})
+		return
+	}
+
+	// 设置默认值
+	if model.Type == "" {
+		model.Type = "chat"
+	}
+	if model.Status == "" {
+		model.Status = "active"
 	}
 
 	if err := h.storage.CreateModel(&model); err != nil {
@@ -149,7 +179,7 @@ func (h *ModelHandler) DeleteModel(c *gin.Context) {
 // @Router /api/v1/models/types [get]
 func (h *ModelHandler) ListModelTypes(c *gin.Context) {
 	types := map[string][]string{
-		"types":     {"chat", "completion", "embedding", "image", "audio", "moderation"},
+		"types":      {"chat", "completion", "embedding", "image", "audio", "moderation"},
 		"categories": {"gpt", "claude", "gemini", "llama", "mistral", "custom"},
 	}
 	c.JSON(http.StatusOK, types)
@@ -171,7 +201,17 @@ func (h *ModelHandler) GetModelPricing(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "model not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": model.Pricing})
+
+	// 解析JSON字符串为对象
+	var pricing storage.ModelPricing
+	if model.Pricing != "" {
+		if err := json.Unmarshal([]byte(model.Pricing), &pricing); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse pricing data"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": pricing})
 }
 
 // ListModelsByLLMResource godoc

@@ -16,6 +16,9 @@ func NewGormStorage(db *gorm.DB) *GormStorage {
 	// 自动迁移数据库表结构
 	db.AutoMigrate(
 		&User{},
+		&Token{},
+		&PolicyTemplate{},
+		&Policy{},
 		&LLMResource{},
 		&Model{},
 		&Endpoint{},
@@ -357,4 +360,161 @@ func (g *GormStorage) UpdateStatistics(stats *Statistics) error {
 		return err
 	}
 	return nil
+}
+
+// Token methods
+func (g *GormStorage) CreateToken(token *Token) error {
+	token.ID = generateID()
+	token.CreatedAt = time.Now()
+	token.UpdatedAt = time.Now()
+	return g.db.Create(token).Error
+}
+
+func (g *GormStorage) GetToken(id string) (*Token, error) {
+	var token Token
+	if err := g.db.Where("id = ?", id).First(&token).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &token, nil
+}
+
+func (g *GormStorage) GetTokenByValue(tokenValue string) (*Token, error) {
+	var token Token
+	if err := g.db.Where("token = ?", tokenValue).First(&token).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &token, nil
+}
+
+func (g *GormStorage) UpdateToken(token *Token) error {
+	token.UpdatedAt = time.Now()
+	if err := g.db.Save(token).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (g *GormStorage) DeleteToken(id string) error {
+	if err := g.db.Where("id = ?", id).Delete(&Token{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *GormStorage) ListTokens() ([]*Token, error) {
+	var tokens []*Token
+	if err := g.db.Find(&tokens).Error; err != nil {
+		return nil, err
+	}
+	return tokens, nil
+}
+
+// PolicyTemplate methods
+func (g *GormStorage) CreatePolicyTemplate(template *PolicyTemplate) error {
+	template.ID = generateID()
+	template.CreatedAt = time.Now()
+	template.UpdatedAt = time.Now()
+	return g.db.Create(template).Error
+}
+
+func (g *GormStorage) GetPolicyTemplate(id string) (*PolicyTemplate, error) {
+	var template PolicyTemplate
+	if err := g.db.Where("id = ?", id).First(&template).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &template, nil
+}
+
+func (g *GormStorage) GetPolicyTemplateByType(policyType string) (*PolicyTemplate, error) {
+	var template PolicyTemplate
+	if err := g.db.Where("type = ?", policyType).First(&template).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &template, nil
+}
+
+func (g *GormStorage) UpdatePolicyTemplate(template *PolicyTemplate) error {
+	template.UpdatedAt = time.Now()
+	if err := g.db.Save(template).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (g *GormStorage) DeletePolicyTemplate(id string) error {
+	if err := g.db.Where("id = ?", id).Delete(&PolicyTemplate{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *GormStorage) ListPolicyTemplates() ([]*PolicyTemplate, error) {
+	var templates []*PolicyTemplate
+	if err := g.db.Find(&templates).Error; err != nil {
+		return nil, err
+	}
+	return templates, nil
+}
+
+// Policy methods
+func (g *GormStorage) CreatePolicy(policy *Policy) error {
+	policy.ID = generateID()
+	policy.CreatedAt = time.Now()
+	policy.UpdatedAt = time.Now()
+	return g.db.Create(policy).Error
+}
+
+func (g *GormStorage) GetPolicy(id string) (*Policy, error) {
+	var policy Policy
+	if err := g.db.Where("id = ?", id).First(&policy).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &policy, nil
+}
+
+func (g *GormStorage) UpdatePolicy(policy *Policy) error {
+	policy.UpdatedAt = time.Now()
+	if err := g.db.Save(policy).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (g *GormStorage) DeletePolicy(id string) error {
+	if err := g.db.Where("id = ?", id).Delete(&Policy{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *GormStorage) ListPolicies() ([]*Policy, error) {
+	var policies []*Policy
+	if err := g.db.Find(&policies).Error; err != nil {
+		return nil, err
+	}
+	return policies, nil
 }

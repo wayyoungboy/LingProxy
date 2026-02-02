@@ -39,19 +39,28 @@
       >
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="username" label="用户名" />
+        <el-table-column prop="role" label="角色" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'primary'">
+              {{ scope.row.role === 'admin' ? '管理员' : '用户' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="api_key" label="API Key" width="300">
           <template #default="scope">
             <el-tooltip content="点击复制" placement="top">
-              <span @click="copyApiKey(scope.row.api_key)">{{ scope.row.api_key }}</span>
+              <span @click="copyApiKey(scope.row.api_key)" style="cursor: pointer;">
+                {{ scope.row.api_key || '未生成' }}
+              </span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态">
+        <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-tag
-              :type="scope.row.status === 'active' ? 'success' : 'danger'"
+              :type="scope.row.status === 'active' ? 'success' : scope.row.status === 'suspended' ? 'warning' : 'danger'"
             >
-              {{ scope.row.status === 'active' ? '活跃' : '禁用' }}
+              {{ scope.row.status === 'active' ? '活跃' : scope.row.status === 'suspended' ? '暂停' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -60,7 +69,7 @@
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="280">
           <template #default="scope">
             <el-button
               type="primary"
@@ -69,6 +78,14 @@
               style="margin-right: 5px"
             >
               编辑
+            </el-button>
+            <el-button
+              type="warning"
+              size="small"
+              @click="handleResetAPIKey(scope.row.id)"
+              style="margin-right: 5px"
+            >
+              重置Key
             </el-button>
             <el-button
               type="danger"
@@ -110,15 +127,29 @@
         <el-form-item label="用户名" prop="username">
           <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
         </el-form-item>
+        <el-form-item label="密码" prop="password" v-if="isAddMode">
+          <el-input
+            v-model="userForm.password"
+            type="password"
+            placeholder="请输入密码（至少6位）"
+            show-password
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="userForm.role" placeholder="请选择角色">
+            <el-option label="管理员" value="admin"></el-option>
+            <el-option label="普通用户" value="user"></el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="API Key" prop="api_key">
           <el-input
             v-model="userForm.api_key"
-            placeholder="请输入API Key"
-            :disabled="!isAddMode"
+            placeholder="API Key（创建时自动生成）"
+            :disabled="true"
           >
             <template #append>
-              <el-button @click="generateApiKey" type="text">
-                生成
+              <el-button @click="handleResetAPIKey(userForm.id)" type="text" :disabled="isAddMode">
+                重置
               </el-button>
             </template>
           </el-input>
@@ -127,6 +158,7 @@
           <el-select v-model="userForm.status" placeholder="请选择状态">
             <el-option label="活跃" value="active"></el-option>
             <el-option label="禁用" value="inactive"></el-option>
+            <el-option label="暂停" value="suspended"></el-option>
           </el-select>
         </el-form-item>
       </el-form>
@@ -162,6 +194,8 @@ const userFormRef = ref(null)
 const userForm = reactive({
   id: '',
   username: '',
+  password: '',
+  role: 'user',
   api_key: '',
   status: 'active'
 })
@@ -169,10 +203,14 @@ const userForm = reactive({
 // 表单验证规则
 const userRules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 50, message: '用户名长度在3到50个字符', trigger: 'blur' }
   ],
-  api_key: [
-    { required: true, message: '请输入API Key', trigger: 'blur' }
+  password: [
+    { min: 6, message: '密码长度至少为6位', trigger: 'blur' }
+  ],
+  role: [
+    { required: true, message: '请选择角色', trigger: 'change' }
   ],
   status: [
     { required: true, message: '请选择状态', trigger: 'change' }
@@ -183,10 +221,11 @@ const userRules = {
 const getUserList = async () => {
   try {
     loading.value = true
-    const response = await api.getUsers({ page: currentPage.value, page_size: pageSize.value })
+    const response = await api.getUsers()
     if (response && response.data) {
-      users.value = response.data.items || []
-      total.value = response.data.total || 0
+      // 后端返回的是数组，不是分页对象
+      users.value = Array.isArray(response.data) ? response.data : []
+      total.value = users.value.length
     }
   } catch (error) {
     console.error('获取用户列表失败:', error)
@@ -227,6 +266,8 @@ const handleAddUser = () => {
   Object.assign(userForm, {
     id: '',
     username: '',
+    password: '',
+    role: 'user',
     api_key: '',
     status: 'active'
   })
@@ -293,15 +334,37 @@ const handleDeleteUser = async (id) => {
   }
 }
 
-// 生成API Key
-const generateApiKey = () => {
-  // 生成随机API Key
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let apiKey = 'ling_' + Date.now() + '_'
-  for (let i = 0; i < 16; i++) {
-    apiKey += chars.charAt(Math.floor(Math.random() * chars.length))
+// 重置API Key
+const handleResetAPIKey = async (userId) => {
+  if (!userId) {
+    ElMessage.warning('请先保存用户')
+    return
   }
-  userForm.api_key = apiKey
+  
+  try {
+    await ElMessageBox.confirm(
+      '确定要重置这个用户的API Key吗？重置后旧的API Key将失效。',
+      '重置确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    const response = await api.resetAPIKey(userId)
+    if (response && response.data) {
+      userForm.api_key = response.data.api_key
+      ElMessage.success('API Key重置成功')
+      // 重新获取用户列表
+      getUserList()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('重置API Key失败:', error)
+      ElMessage.error('重置API Key失败')
+    }
+  }
 }
 
 // 复制API Key

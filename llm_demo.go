@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -10,8 +11,14 @@ import (
 
 func main() {
 	// 配置参数
-	apiKey := "any_key"
-	baseURL := "http://localhost:8080/v1/"
+	// ⚠️ 请从环境变量或配置文件读取 API Key，不要硬编码
+	apiKey := os.Getenv("LINGPROXY_API_KEY")
+	if apiKey == "" {
+		fmt.Println("Error: LINGPROXY_API_KEY environment variable is not set")
+		fmt.Println("Please set it with: export LINGPROXY_API_KEY=your_api_key")
+		os.Exit(1)
+	}
+	baseURL := "http://localhost:8080/llm/v1/"
 	model := "glm-4.5-flash"
 
 	// 创建 OpenAI 客户端

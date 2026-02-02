@@ -662,7 +662,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/chat/completions": {
+        "/llm/v1/chat/completions": {
             "post": {
                 "description": "Create a chat completion using OpenAI-compatible API",
                 "consumes": [
@@ -714,7 +714,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/completions": {
+        "/llm/v1/completions": {
             "post": {
                 "description": "Create a text completion using OpenAI-compatible API",
                 "consumes": [
@@ -766,7 +766,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/models": {
+        "/llm/v1/models": {
             "get": {
                 "description": "List all available AI models",
                 "consumes": [
@@ -789,7 +789,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/models/{model}": {
+        "/llm/v1/models/{model}": {
             "get": {
                 "description": "Get information about a specific model",
                 "consumes": [

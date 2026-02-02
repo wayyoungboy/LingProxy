@@ -16,9 +16,9 @@
           <el-icon><DataLine /></el-icon>
           <template #title>仪表盘</template>
         </el-menu-item>
-        <el-menu-item index="/users">
-          <el-icon><User /></el-icon>
-          <template #title>用户管理</template>
+        <el-menu-item index="/tokens">
+          <el-icon><Key /></el-icon>
+          <template #title>Token管理</template>
         </el-menu-item>
         <el-menu-item index="/llm-resources">
           <el-icon><Cpu /></el-icon>
@@ -28,13 +28,13 @@
           <el-icon><Grid /></el-icon>
           <template #title>模型管理</template>
         </el-menu-item>
-        <el-menu-item index="/endpoints">
-          <el-icon><Link /></el-icon>
-          <template #title>端点管理</template>
-        </el-menu-item>
         <el-menu-item index="/requests">
           <el-icon><Message /></el-icon>
           <template #title>请求管理</template>
+        </el-menu-item>
+        <el-menu-item index="/policies">
+          <el-icon><Operation /></el-icon>
+          <template #title>策略管理</template>
         </el-menu-item>
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
@@ -89,11 +89,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   DataLine,
-  User,
+  Key,
   Cpu,
   Grid,
-  Link,
   Message,
+  Operation,
   Setting,
   UserFilled,
   Switch

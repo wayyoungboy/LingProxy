@@ -22,7 +22,6 @@ func TestGormStorage(t *testing.T) {
 		// 创建用户
 		user := &User{
 			Username: "testuser",
-			Email:    "test@example.com",
 			APIKey:   "test-api-key",
 			Status:   "active",
 		}
@@ -50,7 +49,7 @@ func TestGormStorage(t *testing.T) {
 		}
 
 		// 更新用户
-		retrievedUser.Email = "updated@example.com"
+		retrievedUser.Username = "updateduser"
 		if err := storage.UpdateUser(retrievedUser); err != nil {
 			t.Errorf("UpdateUser failed: %v", err)
 		}
@@ -59,8 +58,8 @@ func TestGormStorage(t *testing.T) {
 		if err != nil {
 			t.Errorf("GetUser after update failed: %v", err)
 		}
-		if updatedUser.Email != "updated@example.com" {
-			t.Errorf("Expected email updated@example.com, got %s", updatedUser.Email)
+		if updatedUser.Username != "updateduser" {
+			t.Errorf("Expected username updateduser, got %s", updatedUser.Username)
 		}
 
 		// 列出用户
@@ -88,12 +87,13 @@ func TestGormStorage(t *testing.T) {
 	t.Run("LLM Resource Management", func(t *testing.T) {
 		// 创建LLM资源
 		resource := &LLMResource{
-			Name:    "Test Resource",
-			Type:    "openai",
-			Model:   "gpt-3.5-turbo",
-			BaseURL: "https://api.openai.com/v1",
-			APIKey:  "test-api-key",
-			Status:  "active",
+			Name:     "Test Resource",
+			Type:     "chat",
+			Provider:  "openai",
+			Model:    "gpt-3.5-turbo",
+			BaseURL:  "https://api.openai.com/v1",
+			APIKey:   "test-api-key",
+			Status:   "active",
 		}
 
 		if err := storage.CreateLLMResource(resource); err != nil {
