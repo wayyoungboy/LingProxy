@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-form-wrapper">
       <div class="login-logo">
-        <img src="/src/assets/vue.svg" alt="Logo" class="logo-img">
+        <img src="@/assets/lingproxy-logo.svg" alt="LingProxy Logo" class="logo-img">
         <h1 class="logo-text">LingProxy</h1>
         <p class="logo-desc">智能LLM代理管理系统</p>
       </div>
@@ -25,8 +25,10 @@
             <el-input
               v-model="loginForm.username"
               placeholder="请输入用户名"
-              prefix-icon="User"
+              :prefix-icon="User"
               size="large"
+              @keyup.enter="handleLogin"
+              clearable
             ></el-input>
           </el-form-item>
           
@@ -35,9 +37,11 @@
               v-model="loginForm.password"
               type="password"
               placeholder="请输入密码"
-              prefix-icon="Lock"
+              :prefix-icon="Lock"
               show-password
               size="large"
+              @keyup.enter="handleLogin"
+              clearable
             ></el-input>
           </el-form-item>
           
@@ -49,7 +53,7 @@
               @click="handleLogin"
               size="large"
             >
-              登录
+              {{ loading ? '登录中...' : '登录' }}
             </el-button>
           </el-form-item>
         </el-form>
@@ -68,6 +72,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import api from '../api'
+import { STORAGE_KEYS } from '../utils/constants'
 
 const router = useRouter()
 const loginFormRef = ref(null)
@@ -80,7 +85,8 @@ const loginForm = reactive({
 
 const loginRules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 2, message: '用户名长度至少为2位', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -89,33 +95,52 @@ const loginRules = {
 }
 
 const handleLogin = async () => {
+  if (!loginFormRef.value) return
+  
   try {
     // 验证表单
     await loginFormRef.value.validate()
     
     loading.value = true
     
-    // 调用真实登录API
+    // 调用登录API
     const response = await api.login({
-      username: loginForm.username,
+      username: loginForm.username.trim(),
       password: loginForm.password
     })
     
-    if (response && response.data) {
+    // 处理响应数据（根据实际API响应格式调整）
+    const token = response?.token || response?.data?.token
+    const userInfo = response?.user || response?.data?.user
+    
+    if (token) {
       // 存储token和用户信息
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('userInfo', JSON.stringify(response.data.user))
+      localStorage.setItem(STORAGE_KEYS.TOKEN, token)
+      if (userInfo) {
+        localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo))
+      }
       
       ElMessage.success('登录成功')
       // 跳转到首页
       router.push('/')
+    } else {
+      ElMessage.error('登录失败：未获取到token')
     }
   } catch (error) {
     console.error('登录失败:', error)
-    const errorMsg = error.response?.data?.error || '登录失败，请检查用户名和密码'
-    ElMessage.error(errorMsg)
+    // 错误信息已在API拦截器中处理，这里不需要再次显示
+    if (!error.response) {
+      ElMessage.error('网络错误，请检查网络连接')
+    }
   } finally {
     loading.value = false
+  }
+}
+
+// 支持回车键登录
+const handleKeyPress = (event) => {
+  if (event.key === 'Enter') {
+    handleLogin()
   }
 }
 </script>
@@ -144,19 +169,28 @@ const handleLogin = async () => {
 }
 
 .logo-img {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 12px;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.logo-img:hover {
+  transform: scale(1.05);
 }
 
 .logo-text {
-  font-size: 28px;
-  font-weight: bold;
+  font-size: 32px;
+  font-weight: 700;
   color: #fff;
   margin: 0 0 8px 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  letter-spacing: -0.5px;
 }
 
 .logo-desc {

@@ -180,7 +180,7 @@ docker-run:
 docs:
 	@echo "Generating API documentation..."
 	@if command -v swag >/dev/null 2>&1; then \
-		swag init -g cmd/main.go -o docs/swagger; \
+		swag init -g cmd/main.go -o swagger; \
 	else \
 		echo "swag not found, please install it: go install github.com/swaggo/swag/cmd/swag@latest"; \
 	fi

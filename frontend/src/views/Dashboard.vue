@@ -24,7 +24,7 @@
               <el-icon><User /></el-icon>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-value">{{ stats.total_users }}</div>
+              <div class="stat-card-value">{{ formatNumber(stats.total_users) }}</div>
               <div class="stat-card-label">总用户数</div>
             </div>
           </div>
@@ -36,7 +36,7 @@
               <el-icon><Cpu /></el-icon>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-value">{{ stats.total_llm_resources }}</div>
+              <div class="stat-card-value">{{ formatNumber(stats.total_llm_resources) }}</div>
               <div class="stat-card-label">LLM资源数</div>
             </div>
           </div>
@@ -48,7 +48,7 @@
               <el-icon><Message /></el-icon>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-value">{{ stats.total_requests }}</div>
+              <div class="stat-card-value">{{ formatNumber(stats.total_requests) }}</div>
               <div class="stat-card-label">总请求数</div>
             </div>
           </div>
@@ -83,7 +83,7 @@
               </div>
               <div class="metric-item">
                 <div class="metric-label">今日请求数</div>
-                <div class="metric-value">{{ todayRequests }}</div>
+                <div class="metric-value">{{ formatNumber(todayRequests) }}</div>
               </div>
               <div class="metric-item">
                 <div class="metric-label">系统状态</div>
@@ -162,13 +162,10 @@ import {
   User,
   Cpu,
   Message,
-  Check,
-  DataLine,
-  Timer,
-  WarningFilled,
-  Monitor
+  Check
 } from '@element-plus/icons-vue'
 import api from '../api'
+import { formatDate, formatNumber } from '../utils/index'
 
 const router = useRouter()
 const refreshing = ref(false)
@@ -198,41 +195,47 @@ const uptime = computed(() => {
   return systemInfo.value?.uptime || '--'
 })
 
-// 格式化日期
-const formatDate = (dateString) => {
-  const date = new Date(dateString)
-  return date.toLocaleString()
-}
+// 使用工具函数格式化日期（已在import中引入）
 
 // 获取系统统计信息
 const getSystemStats = async () => {
   try {
     refreshing.value = true
     
-    // 从API获取系统统计信息
-    const response = await api.getSystemStats()
-    if (response && response.data) {
-      Object.assign(stats, response.data)
+    // 并行请求多个接口以提高性能
+    const [statsResponse, systemInfoResponse, requestsResponse] = await Promise.allSettled([
+      api.getSystemStats(),
+      api.getSystemInfo(),
+      api.getRequests({ limit: 10 })
+    ])
+    
+    // 处理统计信息
+    if (statsResponse.status === 'fulfilled' && statsResponse.value) {
+      const data = statsResponse.value.data || statsResponse.value
+      Object.assign(stats, {
+        total_users: data.total_users || 0,
+        total_llm_resources: data.total_llm_resources || 0,
+        total_requests: data.total_requests || 0,
+        success_rate: data.success_rate || 0,
+        avg_response_time: data.avg_response_time || 0
+      })
     }
     
-    // 获取系统信息（包含运行时间）
-    const systemInfoResponse = await api.getSystemInfo()
-    if (systemInfoResponse && systemInfoResponse.data) {
-      systemInfo.value = systemInfoResponse.data
+    // 处理系统信息
+    if (systemInfoResponse.status === 'fulfilled' && systemInfoResponse.value) {
+      systemInfo.value = systemInfoResponse.value.data || systemInfoResponse.value
     }
     
-    // 获取最近的请求记录
-    const requestsResponse = await api.getRequests({ limit: 10 })
-    if (requestsResponse && requestsResponse.data) {
-      // 只显示最近10条
-      recentRequests.value = Array.isArray(requestsResponse.data) ? requestsResponse.data : []
+    // 处理请求记录
+    if (requestsResponse.status === 'fulfilled' && requestsResponse.value) {
+      const requestsData = requestsResponse.value.data || requestsResponse.value
+      recentRequests.value = Array.isArray(requestsData) ? requestsData : 
+                           (Array.isArray(requestsData?.items) ? requestsData.items : [])
     }
     
   } catch (error) {
     console.error('获取系统统计信息失败:', error)
-    ElMessage.error('获取系统统计信息失败')
-    
-    // 显示真实的空数据状态
+    // 错误信息已在API拦截器中处理，这里只重置数据
     Object.assign(stats, {
       total_users: 0,
       total_llm_resources: 0,

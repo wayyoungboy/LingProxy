@@ -3,7 +3,7 @@
     <!-- 侧边栏 -->
     <el-aside width="200px" class="layout-aside">
       <div class="logo">
-        <img src="/src/assets/vue.svg" alt="Logo" class="logo-img">
+        <img src="@/assets/lingproxy-logo.svg" alt="LingProxy Logo" class="logo-img">
         <h1 class="logo-text">LingProxy</h1>
       </div>
       <el-menu
@@ -90,7 +90,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   DataLine,
   Key,
@@ -103,6 +103,7 @@ import {
   Switch,
   Document
 } from '@element-plus/icons-vue'
+import { STORAGE_KEYS } from '../utils/constants'
 
 const route = useRoute()
 const router = useRouter()
@@ -124,20 +125,31 @@ const currentTitle = computed(() => {
 })
 
 // 处理退出登录
-const handleLogout = () => {
-  localStorage.removeItem('token')
-  router.push('/login')
-  ElMessage.success('退出登录成功')
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    localStorage.removeItem(STORAGE_KEYS.TOKEN)
+    localStorage.removeItem(STORAGE_KEYS.USER_INFO)
+    router.push('/login')
+    ElMessage.success('退出登录成功')
+  } catch {
+    // 用户取消操作
+  }
 }
 
 // 组件挂载时获取用户信息
 onMounted(() => {
-  // 这里可以从后端获取用户信息
-  const userInfo = localStorage.getItem('userInfo')
+  // 从localStorage获取用户信息
+  const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO)
   if (userInfo) {
     try {
       const info = JSON.parse(userInfo)
-      username.value = info.username || '管理员'
+      username.value = info.username || info.name || '管理员'
     } catch (error) {
       console.error('解析用户信息失败:', error)
     }
@@ -153,9 +165,10 @@ onMounted(() => {
 }
 
 .layout-aside {
-  background-color: #001529;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   color: #fff;
   overflow-y: auto;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
 .logo {
@@ -163,19 +176,30 @@ onMounted(() => {
   align-items: center;
   padding: 0 20px;
   height: 64px;
-  border-bottom: 1px solid #1f2d3d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .logo-img {
-  width: 32px;
-  height: 32px;
-  margin-right: 10px;
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+  flex-shrink: 0;
 }
 
 .logo-text {
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 20px;
+  font-weight: 700;
   margin: 0;
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .layout-menu {
@@ -185,19 +209,30 @@ onMounted(() => {
 
 .layout-menu :deep(.el-menu-item) {
   color: rgba(255, 255, 255, 0.85);
-  height: 60px;
-  line-height: 60px;
-  margin: 0 10px;
-  border-radius: 6px;
+  height: 56px;
+  line-height: 56px;
+  margin: 4px 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-size: 14px;
 }
 
 .layout-menu :deep(.el-menu-item:hover) {
-  background-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.2) 0%, rgba(124, 58, 237, 0.2) 100%);
+  color: #fff;
+  transform: translateX(4px);
 }
 
 .layout-menu :deep(.el-menu-item.is-active) {
-  background-color: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.3) 0%, rgba(124, 58, 237, 0.3) 100%);
   color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.layout-menu :deep(.el-menu-item .el-icon) {
+  font-size: 18px;
+  margin-right: 8px;
 }
 
 .layout-container {

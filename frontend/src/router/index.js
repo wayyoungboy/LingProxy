@@ -1,16 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { STORAGE_KEYS, ROUTE_PATHS } from '../utils/constants'
 
 const routes = [
   {
-    path: '/login',
+    path: ROUTE_PATHS.LOGIN,
     name: 'Login',
     component: () => import('../views/Login.vue'),
-    meta: { requiresAuth: false }
+    meta: { 
+      requiresAuth: false,
+      title: '登录'
+    }
   },
   {
     path: '/',
     name: 'Home',
-    redirect: '/dashboard',
+    redirect: ROUTE_PATHS.DASHBOARD,
     component: () => import('../components/Layout.vue'),
     meta: { requiresAuth: true },
     children: [
@@ -67,7 +71,7 @@ const routes = [
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    redirect: '/dashboard'
+    redirect: ROUTE_PATHS.DASHBOARD
   }
 ]
 
@@ -79,12 +83,22 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-  const hasToken = localStorage.getItem('token')
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
 
-  if (requiresAuth && !hasToken) {
-    next('/login')
-  } else if (to.path === '/login' && hasToken) {
-    next('/')
+  // 设置页面标题
+  if (to.meta.title) {
+    document.title = `${to.meta.title} - LingProxy`
+  }
+
+  if (requiresAuth && !token) {
+    // 需要认证但未登录，跳转到登录页
+    next({
+      path: ROUTE_PATHS.LOGIN,
+      query: { redirect: to.fullPath }
+    })
+  } else if (to.path === ROUTE_PATHS.LOGIN && token) {
+    // 已登录访问登录页，跳转到首页
+    next(ROUTE_PATHS.DASHBOARD)
   } else {
     next()
   }

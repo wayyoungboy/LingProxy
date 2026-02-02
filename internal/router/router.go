@@ -5,13 +5,13 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	_ "github.com/lingproxy/lingproxy/docs/swagger"
 	"github.com/lingproxy/lingproxy/internal/config"
 	"github.com/lingproxy/lingproxy/internal/handler"
 	"github.com/lingproxy/lingproxy/internal/middleware"
 	"github.com/lingproxy/lingproxy/internal/service"
 	"github.com/lingproxy/lingproxy/internal/storage"
 	"github.com/lingproxy/lingproxy/pkg/logger"
+	_ "github.com/lingproxy/lingproxy/swagger"
 )
 
 // SetupRoutes 设置路由

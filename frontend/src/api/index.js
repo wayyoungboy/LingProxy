@@ -1,9 +1,11 @@
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
+import { STORAGE_KEYS, API_BASE_URL, API_TIMEOUT, MESSAGE_DURATION } from '../utils/constants'
 
 // 创建axios实例
 const apiClient = axios.create({
-  baseURL: '/api/v1',
-  timeout: 10000,
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -13,13 +15,14 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   config => {
     // 从localStorage获取token
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
   error => {
+    console.error('Request error:', error)
     return Promise.reject(error)
   }
 )
@@ -29,17 +32,69 @@ apiClient.interceptors.response.use(
   response => {
     // 对于blob响应，直接返回response对象
     if (response.config.responseType === 'blob') {
-      return response.data
+      return response
     }
+    // 统一处理响应数据格式
     return response.data
   },
   error => {
-    // 处理401错误
-    if (error.response && error.response.status === 401) {
-      // 清除token并跳转到登录页
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+    // 处理网络错误
+    if (!error.response) {
+      ElMessage.error({
+        message: '网络连接失败，请检查网络设置',
+        duration: MESSAGE_DURATION.ERROR
+      })
+      return Promise.reject(error)
     }
+
+    const { status, data } = error.response
+    let errorMessage = '请求失败，请稍后重试'
+
+    // 根据状态码处理不同错误
+    switch (status) {
+      case 400:
+        errorMessage = data?.error || data?.message || '请求参数错误'
+        break
+      case 401:
+        errorMessage = '未授权，请重新登录'
+        // 清除token并跳转到登录页
+        localStorage.removeItem(STORAGE_KEYS.TOKEN)
+        localStorage.removeItem(STORAGE_KEYS.USER_INFO)
+        // 避免重复跳转
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+        break
+      case 403:
+        errorMessage = data?.error || data?.message || '没有权限访问该资源'
+        break
+      case 404:
+        errorMessage = data?.error || data?.message || '请求的资源不存在'
+        break
+      case 500:
+        errorMessage = data?.error || data?.message || '服务器内部错误'
+        break
+      case 502:
+        errorMessage = '网关错误'
+        break
+      case 503:
+        errorMessage = '服务不可用'
+        break
+      case 504:
+        errorMessage = '网关超时'
+        break
+      default:
+        errorMessage = data?.error || data?.message || `请求失败 (${status})`
+    }
+
+    // 显示错误消息（401错误不显示，因为会跳转登录页）
+    if (status !== 401) {
+      ElMessage.error({
+        message: errorMessage,
+        duration: MESSAGE_DURATION.ERROR
+      })
+    }
+
     return Promise.reject(error)
   }
 )
