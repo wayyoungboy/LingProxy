@@ -4,10 +4,31 @@
       <template #header>
         <div class="card-header">
           <span>LLM资源管理</span>
-          <el-button type="primary" @click="handleAddResource">
-            <el-icon><Plus /></el-icon>
-            添加LLM资源
-          </el-button>
+          <div class="header-actions">
+            <el-button type="success" @click="handleDownloadTemplate">
+              <el-icon><Download /></el-icon>
+              下载导入模板
+            </el-button>
+            <el-upload
+              ref="uploadRef"
+              :action="uploadAction"
+              :headers="uploadHeaders"
+              :on-success="handleImportSuccess"
+              :on-error="handleImportError"
+              :before-upload="beforeUpload"
+              :show-file-list="false"
+              accept=".xlsx,.xls"
+            >
+              <el-button type="warning">
+                <el-icon><Upload /></el-icon>
+                批量导入
+              </el-button>
+            </el-upload>
+            <el-button type="primary" @click="handleAddResource">
+              <el-icon><Plus /></el-icon>
+              添加LLM资源
+            </el-button>
+          </div>
         </div>
       </template>
       
@@ -62,7 +83,7 @@
             <el-tag type="info">{{ getProviderLabel(scope.row.provider) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="model" label="默认模型" width="150">
+        <el-table-column prop="model" label="模型标识" width="150">
           <template #default="scope">
             <el-tag type="warning" v-if="scope.row.model">{{ scope.row.model }}</el-tag>
             <span v-else>-</span>
@@ -168,10 +189,10 @@
             <el-option label="自定义" value="custom"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="默认模型" prop="model">
+        <el-form-item label="模型标识" prop="model">
           <el-input 
             v-model="resourceForm.model" 
-            placeholder="请输入默认模型名称，如：gpt-4, gpt-3.5-turbo"
+            placeholder="请输入模型标识，如：gpt-4, gpt-3.5-turbo（此资源对应的模型标识）"
           ></el-input>
         </el-form-item>
         <el-form-item label="基础URL" prop="base_url">
@@ -214,7 +235,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, View, Hide } from '@element-plus/icons-vue'
+import { Plus, Search, View, Hide, Upload, Download } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()
@@ -226,6 +247,14 @@ const statusFilter = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const uploadRef = ref(null)
+
+// 上传配置
+const uploadAction = '/api/v1/llm-resources/import'
+const uploadHeaders = computed(() => {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+})
 
 // 对话框相关
 const dialogVisible = ref(false)
@@ -256,7 +285,7 @@ const resourceRules = {
     { required: true, message: '请选择服务提供商', trigger: 'change' }
   ],
   model: [
-    { required: true, message: '请输入默认模型名称', trigger: 'blur' }
+    { required: true, message: '请输入模型标识', trigger: 'blur' }
   ],
   base_url: [
     { required: true, message: '请输入基础URL', trigger: 'blur' }
@@ -478,6 +507,94 @@ const formatDate = (dateString) => {
   return date.toLocaleString()
 }
 
+// 下载导入模板
+const handleDownloadTemplate = async () => {
+  try {
+    const response = await api.downloadLLMResourcesTemplate()
+    // response已经是blob对象
+    const blob = response instanceof Blob ? response : new Blob([response], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    // 创建下载链接
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'llm_resources_import_template.xlsx'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('模板下载成功')
+  } catch (error) {
+    console.error('下载模板失败:', error)
+    // 检查是否是blob类型的错误响应
+    if (error.response && error.response.data instanceof Blob) {
+      // 尝试读取错误信息
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const errorText = JSON.parse(reader.result)
+          ElMessage.error(errorText.error || '下载模板失败')
+        } catch {
+          ElMessage.error('下载模板失败')
+        }
+      }
+      reader.readAsText(error.response.data)
+    } else {
+      ElMessage.error(error.response?.data?.error || error.message || '下载模板失败')
+    }
+  }
+}
+
+// 上传前验证
+const beforeUpload = (file) => {
+  const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                  file.type === 'application/vnd.ms-excel' ||
+                  file.name.endsWith('.xlsx') ||
+                  file.name.endsWith('.xls')
+  if (!isExcel) {
+    ElMessage.error('只能上传Excel文件（.xlsx或.xls格式）')
+    return false
+  }
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过10MB')
+    return false
+  }
+  return true
+}
+
+// 导入成功
+const handleImportSuccess = (response) => {
+  if (response && response.success !== undefined) {
+    const message = `导入完成！成功: ${response.success}条，失败: ${response.fail}条`
+    if (response.fail > 0 && response.errors && response.errors.length > 0) {
+      ElMessageBox.alert(
+        `${message}\n\n错误详情：\n${response.errors.slice(0, 10).join('\n')}${response.errors.length > 10 ? '\n...' : ''}`,
+        '导入结果',
+        {
+          confirmButtonText: '确定',
+          type: response.success > 0 ? 'warning' : 'error'
+        }
+      )
+    } else {
+      ElMessage.success(message)
+    }
+    // 刷新列表
+    getResourceList()
+  } else {
+    ElMessage.success('导入成功')
+    getResourceList()
+  }
+}
+
+// 导入失败
+const handleImportError = (error) => {
+  console.error('导入失败:', error)
+  const errorMsg = error.response?.data?.error || '导入失败，请检查文件格式'
+  ElMessage.error(errorMsg)
+}
+
 // 组件挂载时获取数据
 onMounted(() => {
   getResourceList()
@@ -493,6 +610,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .search-filter {

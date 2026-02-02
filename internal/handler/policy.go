@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lingproxy/lingproxy/internal/service"
@@ -48,12 +49,12 @@ type UpdatePolicyRequest struct {
 func (h *PolicyHandler) ListPolicyTemplates(c *gin.Context) {
 	templates, err := h.templateService.ListTemplates()
 	if err != nil {
-		logger.Error("获取策略模板列表失败", "error", err.Error())
+		logger.Error("获取策略模板列表失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("获取策略模板列表成功", "count", len(templates))
+	logger.Info("获取策略模板列表成功", logger.F("count", len(templates)))
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"items": templates, "total": len(templates)}})
 }
 
@@ -75,7 +76,7 @@ func (h *PolicyHandler) GetPolicyTemplate(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "policy template not found"})
 			return
 		}
-		logger.Error("获取策略模板失败", "error", err.Error(), "id", id)
+		logger.Error("获取策略模板失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -94,12 +95,12 @@ func (h *PolicyHandler) GetPolicyTemplate(c *gin.Context) {
 func (h *PolicyHandler) ListPolicies(c *gin.Context) {
 	policies, err := h.policyService.ListPolicies()
 	if err != nil {
-		logger.Error("获取策略列表失败", "error", err.Error())
+		logger.Error("获取策略列表失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("获取策略列表成功", "count", len(policies))
+	logger.Info("获取策略列表成功", logger.F("count", len(policies)))
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"items": policies, "total": len(policies)}})
 }
 
@@ -121,7 +122,7 @@ func (h *PolicyHandler) GetPolicy(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "policy not found"})
 			return
 		}
-		logger.Error("获取策略失败", "error", err.Error(), "id", id)
+		logger.Error("获取策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -130,7 +131,7 @@ func (h *PolicyHandler) GetPolicy(c *gin.Context) {
 	var params map[string]interface{}
 	if policy.Parameters != "" {
 		if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
-			logger.Warn("解析策略参数失败", "error", err.Error(), "id", id)
+			logger.Warn("解析策略参数失败", logger.F("error", err.Error()), logger.F("id", id))
 		}
 	}
 
@@ -161,7 +162,7 @@ func (h *PolicyHandler) GetPolicy(c *gin.Context) {
 func (h *PolicyHandler) CreatePolicy(c *gin.Context) {
 	var req CreatePolicyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("创建策略失败", "error", err.Error())
+		logger.Error("创建策略失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -172,7 +173,7 @@ func (h *PolicyHandler) CreatePolicy(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "policy template not found"})
 			return
 		}
-		logger.Error("创建策略失败", "error", err.Error())
+		logger.Error("创建策略失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -183,7 +184,7 @@ func (h *PolicyHandler) CreatePolicy(c *gin.Context) {
 		json.Unmarshal([]byte(policy.Parameters), &params)
 	}
 
-	logger.Info("创建策略成功", "id", policy.ID, "name", policy.Name)
+	logger.Info("创建策略成功", logger.F("id", policy.ID), logger.F("name", policy.Name))
 	c.JSON(http.StatusCreated, gin.H{
 		"data": gin.H{
 			"id":          policy.ID,
@@ -213,7 +214,7 @@ func (h *PolicyHandler) UpdatePolicy(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdatePolicyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("更新策略失败", "error", err.Error(), "id", id)
+		logger.Error("更新策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -228,7 +229,7 @@ func (h *PolicyHandler) UpdatePolicy(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "policy template not found"})
 			return
 		}
-		logger.Error("更新策略失败", "error", err.Error(), "id", id)
+		logger.Error("更新策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -239,7 +240,7 @@ func (h *PolicyHandler) UpdatePolicy(c *gin.Context) {
 		json.Unmarshal([]byte(policy.Parameters), &params)
 	}
 
-	logger.Info("更新策略成功", "id", id, "name", policy.Name)
+	logger.Info("更新策略成功", logger.F("id", id), logger.F("name", policy.Name))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
 			"id":          policy.ID,
@@ -266,15 +267,19 @@ func (h *PolicyHandler) UpdatePolicy(c *gin.Context) {
 func (h *PolicyHandler) DeletePolicy(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.policyService.DeletePolicy(id); err != nil {
-		if err == service.ErrPolicyNotFound {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "policy not found"})
 			return
 		}
-		logger.Error("删除策略失败", "error", err.Error(), "id", id)
+		if strings.Contains(err.Error(), "cannot delete builtin") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot delete builtin policy"})
+			return
+		}
+		logger.Error("删除策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("删除策略成功", "id", id)
+	logger.Info("删除策略成功", logger.F("id", id))
 	c.Status(http.StatusNoContent)
 }

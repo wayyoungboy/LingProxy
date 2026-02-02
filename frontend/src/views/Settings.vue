@@ -105,6 +105,40 @@
               <el-switch v-model="settingsForm.security.https_enabled" disabled />
               <span style="color: #909399; margin-left: 10px">暂未实现</span>
             </el-form-item>
+            <el-divider>管理员密码</el-divider>
+            <el-form-item label="当前密码">
+              <el-input
+                v-model="passwordForm.oldPassword"
+                type="password"
+                placeholder="请输入当前密码"
+                show-password
+                style="width: 300px"
+              />
+            </el-form-item>
+            <el-form-item label="新密码">
+              <el-input
+                v-model="passwordForm.newPassword"
+                type="password"
+                placeholder="请输入新密码（至少6位）"
+                show-password
+                style="width: 300px"
+              />
+            </el-form-item>
+            <el-form-item label="确认新密码">
+              <el-input
+                v-model="passwordForm.confirmPassword"
+                type="password"
+                placeholder="请再次输入新密码"
+                show-password
+                style="width: 300px"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="updateAdminPassword" :loading="passwordUpdating">
+                更新密码
+              </el-button>
+              <el-button @click="resetPasswordForm">重置</el-button>
+            </el-form-item>
             <el-divider>CORS设置</el-divider>
             <el-form-item label="启用CORS">
               <el-switch v-model="settingsForm.security.cors.enabled" />
@@ -167,9 +201,10 @@
               <el-select v-model="settingsForm.log.output" placeholder="请选择输出方式">
                 <el-option label="标准输出" value="stdout" />
                 <el-option label="文件" value="file" />
+                <el-option label="同时输出（推荐）" value="both" />
               </el-select>
             </el-form-item>
-            <el-form-item label="日志文件路径" v-if="settingsForm.log.output === 'file'">
+            <el-form-item label="日志文件路径" v-if="settingsForm.log.output === 'file' || settingsForm.log.output === 'both'">
               <el-input v-model="settingsForm.log.file_path" placeholder="请输入日志文件路径" />
             </el-form-item>
             <el-form-item label="单个文件最大大小(MB)">
@@ -209,27 +244,6 @@
             </el-form-item>
             <el-form-item label="最大失败次数">
               <el-input-number v-model="settingsForm.load_balancer.health_check.max_failures" :min="1" :max="10" />
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-        
-        <!-- 熔断器设置 -->
-        <el-tab-pane label="熔断器" name="circuitBreaker">
-          <el-form :model="settingsForm.circuit_breaker" label-width="150px">
-            <el-form-item label="启用熔断器">
-              <el-switch v-model="settingsForm.circuit_breaker.enabled" />
-            </el-form-item>
-            <el-form-item label="失败阈值">
-              <el-input-number v-model="settingsForm.circuit_breaker.failure_threshold" :min="1" :max="100" />
-            </el-form-item>
-            <el-form-item label="超时时间(秒)">
-              <el-input-number v-model="settingsForm.circuit_breaker.timeout" :min="1" :max="300" />
-            </el-form-item>
-            <el-form-item label="半开状态最大请求数">
-              <el-input-number v-model="settingsForm.circuit_breaker.max_requests" :min="1" :max="100" />
-            </el-form-item>
-            <el-form-item label="重置间隔(秒)">
-              <el-input-number v-model="settingsForm.circuit_breaker.interval" :min="1" :max="300" />
             </el-form-item>
           </el-form>
         </el-tab-pane>
@@ -286,6 +300,13 @@ import api from '../api'
 const activeTab = ref('basic')
 const restartDialogVisible = ref(false)
 const restartRequiredFields = ref([])
+const passwordUpdating = ref(false)
+
+const passwordForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
 
 const settingsForm = reactive({
   basic: {
@@ -339,13 +360,6 @@ const settingsForm = reactive({
       max_failures: 3
     }
   },
-  circuit_breaker: {
-    enabled: true,
-    failure_threshold: 5,
-    timeout: 30,
-    max_requests: 3,
-    interval: 10
-  }
 })
 
 const systemInfo = reactive({
@@ -408,10 +422,6 @@ const loadSettings = async () => {
           settingsForm.load_balancer.health_check = response.data.load_balancer.health_check
         }
       }
-      // 更新熔断器设置
-      if (response.data.circuit_breaker) {
-        Object.assign(settingsForm.circuit_breaker, response.data.circuit_breaker)
-      }
     }
   } catch (error) {
     console.error('获取设置失败:', error)
@@ -470,10 +480,6 @@ const saveSettings = async () => {
       updateData.load_balancer = settingsForm.load_balancer
     }
     
-    if (settingsForm.circuit_breaker) {
-      updateData.circuit_breaker = settingsForm.circuit_breaker
-    }
-    
     const response = await api.updateSettings(updateData)
     
     if (response && response.requires_restart) {
@@ -526,6 +532,60 @@ const formatBytes = (bytes) => {
 const formatPercentage = (value) => {
   if (typeof value !== 'number' || isNaN(value)) return '0.00%'
   return value.toFixed(2) + '%'
+}
+
+// 重置密码表单
+const resetPasswordForm = () => {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+}
+
+// 更新管理员密码
+const updateAdminPassword = async () => {
+  // 验证表单
+  if (!passwordForm.oldPassword) {
+    ElMessage.warning('请输入当前密码')
+    return
+  }
+  
+  if (!passwordForm.newPassword) {
+    ElMessage.warning('请输入新密码')
+    return
+  }
+  
+  if (passwordForm.newPassword.length < 6) {
+    ElMessage.warning('新密码长度至少为6位')
+    return
+  }
+  
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    ElMessage.warning('两次输入的新密码不一致')
+    return
+  }
+  
+  if (passwordForm.oldPassword === passwordForm.newPassword) {
+    ElMessage.warning('新密码不能与当前密码相同')
+    return
+  }
+  
+  try {
+    passwordUpdating.value = true
+    
+    await api.updateAdminPassword({
+      old_password: passwordForm.oldPassword,
+      new_password: passwordForm.newPassword
+    })
+    
+    ElMessage.success('密码更新成功')
+    resetPasswordForm()
+  } catch (error) {
+    console.error('更新密码失败:', error)
+    const errorMsg = error.response?.data?.error || '更新密码失败'
+    ElMessage.error(errorMsg)
+  } finally {
+    passwordUpdating.value = false
+  }
 }
 
 onMounted(() => {

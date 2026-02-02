@@ -29,6 +29,7 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 	policyHandler := handler.NewPolicyHandler(policyService, templateService)
 	settingsHandler := handler.NewSettingsHandler(settingsService)
 	systemHandler := handler.NewSystemHandler()
+	logHandler := handler.NewLogHandler()
 	llmResourceHandler := handler.NewLLMResourceHandler(storage)
 	modelHandler := handler.NewModelHandler(storage)
 	requestHandler := handler.NewRequestHandler(storage)
@@ -82,6 +83,7 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 			logger.Debug("Adding admin routes")
 			auth.GET("/admin/info", adminHandler.GetAdminInfo)
 			auth.PUT("/admin/api-key", adminHandler.ResetAPIKey)
+			auth.PUT("/admin/password", adminHandler.UpdatePassword)
 
 			// Token管理路由
 			logger.Debug("Adding token management routes")
@@ -116,6 +118,13 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 			logger.Debug("Adding system info routes")
 			auth.GET("/system/info", systemHandler.GetSystemInfo)
 
+			// 日志管理路由
+			logger.Debug("Adding log management routes")
+			auth.GET("/logs/files", logHandler.ListLogFiles)
+			auth.GET("/logs", logHandler.GetLogs)
+			auth.GET("/logs/files/:file/download", logHandler.DownloadLogFile)
+			auth.POST("/logs/clear", logHandler.ClearLogs)
+
 			// 代理路由
 			logger.Debug("Adding proxy endpoint route")
 			auth.Any("/proxy/*path", func(c *gin.Context) {
@@ -134,6 +143,8 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		llmResourceRoutes.POST("", llmResourceHandler.CreateLLMResource)
 		llmResourceRoutes.PUT("/:id", llmResourceHandler.UpdateLLMResource)
 		llmResourceRoutes.DELETE("/:id", llmResourceHandler.DeleteLLMResource)
+		llmResourceRoutes.POST("/import", llmResourceHandler.ImportLLMResources)
+		llmResourceRoutes.GET("/import/template", llmResourceHandler.DownloadImportTemplate)
 
 		// 模型路由（根据认证开关决定是否需要认证）
 		logger.Debug("Adding model management routes")

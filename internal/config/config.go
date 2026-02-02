@@ -11,15 +11,14 @@ import (
 
 // Config 全局配置结构
 type Config struct {
-	App            AppConfig            `mapstructure:"app"`
-	Storage        StorageConfig        `mapstructure:"storage"`
-	Log            LogConfig            `mapstructure:"log"`
-	Security       SecurityConfig       `mapstructure:"security"`
-	LoadBalancer   LoadBalancerConfig   `mapstructure:"load_balancer"`
-	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
-	Provider       ProviderConfig       `mapstructure:"provider"`
-	Cache          CacheConfig          `mapstructure:"cache"`
-	Admin          AdminConfig          `mapstructure:"admin"`
+	App          AppConfig          `mapstructure:"app"`
+	Storage      StorageConfig      `mapstructure:"storage"`
+	Log          LogConfig          `mapstructure:"log"`
+	Security     SecurityConfig     `mapstructure:"security"`
+	LoadBalancer LoadBalancerConfig `mapstructure:"load_balancer"`
+	Provider     ProviderConfig     `mapstructure:"provider"`
+	Cache        CacheConfig        `mapstructure:"cache"`
+	Admin        AdminConfig        `mapstructure:"admin"`
 }
 
 // AppConfig 应用配置
@@ -106,15 +105,6 @@ type HealthCheckConfig struct {
 	Interval    time.Duration `mapstructure:"interval"`
 	Timeout     time.Duration `mapstructure:"timeout"`
 	MaxFailures int           `mapstructure:"max_failures"`
-}
-
-// CircuitBreakerConfig 熔断器配置
-type CircuitBreakerConfig struct {
-	Enabled          bool          `mapstructure:"enabled"`
-	FailureThreshold int           `mapstructure:"failure_threshold"`
-	Timeout          time.Duration `mapstructure:"timeout"`
-	MaxRequests      int           `mapstructure:"max_requests"`
-	Interval         time.Duration `mapstructure:"interval"`
 }
 
 // ProviderConfig Provider配置
@@ -204,15 +194,15 @@ func setDefaults() {
 	viper.SetDefault("cache.enabled", true)
 	viper.SetDefault("cache.ttl", "5m")
 
-	// 日志默认配置
+	// 日志默认配置（默认同时输出到stdout和文件，实现持久化）
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
-	viper.SetDefault("log.output", "stdout")
+	viper.SetDefault("log.output", "both") // both: 同时输出到stdout和文件
 	viper.SetDefault("log.file_path", "./logs/lingproxy.log")
-	viper.SetDefault("log.max_size", 100)
-	viper.SetDefault("log.max_backups", 3)
-	viper.SetDefault("log.max_age", 28)
-	viper.SetDefault("log.compress", true)
+	viper.SetDefault("log.max_size", 100)    // MB
+	viper.SetDefault("log.max_backups", 3)   // 保留3个备份文件
+	viper.SetDefault("log.max_age", 28)      // 保留28天
+	viper.SetDefault("log.compress", true)  // 压缩旧日志
 
 	// 安全默认配置
 	viper.SetDefault("security.auth.enabled", true)
@@ -231,13 +221,6 @@ func setDefaults() {
 	viper.SetDefault("load_balancer.health_check.interval", "30s")
 	viper.SetDefault("load_balancer.health_check.timeout", "5s")
 	viper.SetDefault("load_balancer.health_check.max_failures", 3)
-
-	// 熔断器默认配置
-	viper.SetDefault("circuit_breaker.enabled", true)
-	viper.SetDefault("circuit_breaker.failure_threshold", 5)
-	viper.SetDefault("circuit_breaker.timeout", "30s")
-	viper.SetDefault("circuit_breaker.max_requests", 3)
-	viper.SetDefault("circuit_breaker.interval", "10s")
 
 	// 管理员默认配置
 	viper.SetDefault("admin.username", "admin")

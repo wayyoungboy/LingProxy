@@ -23,12 +23,17 @@ import (
 
 func main() {
 	// 初始化配置
-	logger.Info("Starting application initialization")
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Fatal("Failed to load config", "error", err)
+		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
+		os.Exit(1)
 	}
-	logger.Info("Config loaded successfully", "environment", cfg.App.Environment, "port", cfg.App.Port)
+
+	// 初始化日志（在配置加载后立即初始化，确保后续日志都能持久化）
+	logger.Init(cfg.Log)
+	logger.Info("Starting application initialization")
+	logger.Info("Config loaded successfully", logger.F("environment", cfg.App.Environment), logger.F("port", cfg.App.Port))
+	logger.Info("Logger initialized", logger.F("level", cfg.Log.Level), logger.F("output", cfg.Log.Output), logger.F("file_path", cfg.Log.FilePath))
 
 	// 检查认证开关状态
 	if !cfg.Security.Auth.Enabled {
@@ -37,10 +42,6 @@ func main() {
 	} else {
 		logger.Info("Authentication is ENABLED. APIs require authentication.")
 	}
-
-	// 初始化日志
-	logger.Init(cfg.Log)
-	logger.Info("Logger initialized", "level", cfg.Log.Level, "output", cfg.Log.Output)
 
 	// 设置Gin模式
 	if cfg.App.Environment == "production" {
@@ -67,18 +68,18 @@ func main() {
 		case "mysql":
 			db, err = gorm.Open(mysql.Open(cfg.Storage.GORM.DSN), &gorm.Config{})
 		default:
-			logger.Fatal("Unsupported GORM driver", "driver", cfg.Storage.GORM.Driver)
+			logger.Fatal("Unsupported GORM driver", logger.F("driver", cfg.Storage.GORM.Driver))
 		}
 
 		if err != nil {
-			logger.Fatal("Failed to connect to database", "error", err)
+			logger.Fatal("Failed to connect to database", logger.F("error", err))
 		}
 
 		storageImpl = storage.NewGormStorage(db)
-		logger.Info("Using GORM storage", "driver", cfg.Storage.GORM.Driver, "dsn", cfg.Storage.GORM.DSN)
+		logger.Info("Using GORM storage", logger.F("driver", cfg.Storage.GORM.Driver), logger.F("dsn", cfg.Storage.GORM.DSN))
 
 	default:
-		logger.Fatal("Unsupported storage type", "type", cfg.Storage.Type)
+		logger.Fatal("Unsupported storage type", logger.F("type", cfg.Storage.Type))
 	}
 
 	// 初始化存储门面
@@ -87,7 +88,7 @@ func main() {
 	// 初始化管理员用户
 	if cfg.Admin.AutoCreate {
 		if err := initAdminUser(storageFacade, cfg); err != nil {
-			logger.Fatal("Failed to initialize admin user", "error", err)
+			logger.Fatal("Failed to initialize admin user", logger.F("error", err))
 		}
 	}
 
@@ -99,9 +100,16 @@ func main() {
 	// 初始化内置策略模板
 	policyTemplateService := service.NewPolicyTemplateService(storageFacade)
 	if err := policyTemplateService.InitBuiltinTemplates(); err != nil {
-		logger.Warn("Failed to initialize builtin policy templates", "error", err)
+		logger.Warn("Failed to initialize builtin policy templates", logger.F("error", err))
 	} else {
 		logger.Info("Builtin policy templates initialized successfully")
+	}
+
+	// 初始化内置策略
+	if err := policyService.InitBuiltinPolicies(); err != nil {
+		logger.Warn("Failed to initialize builtin policies", logger.F("error", err))
+	} else {
+		logger.Info("Builtin policies initialized successfully")
 	}
 
 	logger.Info("Services initialized successfully")
@@ -120,9 +128,9 @@ func main() {
 
 	// 启动服务器
 	go func() {
-		logger.Info("Starting server", "port", cfg.App.Port, "mode", cfg.App.Environment, "host", cfg.App.Host)
+		logger.Info("Starting server", logger.F("port", cfg.App.Port), logger.F("mode", cfg.App.Environment), logger.F("host", cfg.App.Host))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", "error", err, "port", cfg.App.Port)
+			logger.Fatal("Failed to start server", logger.F("error", err), logger.F("port", cfg.App.Port))
 		}
 	}()
 
@@ -139,7 +147,7 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("Server forced to shutdown", "error", err)
+		logger.Error("Server forced to shutdown", logger.F("error", err))
 	} else {
 		logger.Info("Server shutdown completed gracefully")
 	}
@@ -149,7 +157,7 @@ func main() {
 
 // initAdminUser 初始化管理员用户
 func initAdminUser(storageFacade *storage.StorageFacade, cfg *config.Config) error {
-	logger.Info("Initializing admin user", "username", cfg.Admin.Username)
+	logger.Info("Initializing admin user", logger.F("username", cfg.Admin.Username))
 
 	// 检查管理员是否存在
 	users, err := storageFacade.ListUsers()
@@ -195,9 +203,9 @@ func initAdminUser(storageFacade *storage.StorageFacade, cfg *config.Config) err
 		}
 
 		logger.Info("Admin user created successfully",
-			"username", adminUser.Username,
-			"api_key", adminUser.APIKey,
-			"id", adminUser.ID)
+			logger.F("username", adminUser.Username),
+			logger.F("api_key", adminUser.APIKey),
+			logger.F("id", adminUser.ID))
 		logger.Warn("IMPORTANT: Save this API key securely. It will not be shown again.")
 		if cfg.Admin.Password == "" {
 			logger.Warn("⚠️  WARNING: Admin password is not set in config. Please set it in config.yaml or use the password reset feature.")
@@ -215,9 +223,9 @@ func initAdminUser(storageFacade *storage.StorageFacade, cfg *config.Config) err
 			if err := storageFacade.UpdateUser(adminUser); err != nil {
 				return fmt.Errorf("failed to update admin password: %w", err)
 			}
-			logger.Info("Admin password set successfully", "username", adminUser.Username)
+			logger.Info("Admin password set successfully", logger.F("username", adminUser.Username))
 		}
-		logger.Info("Admin user already exists", "username", adminUser.Username, "id", adminUser.ID)
+		logger.Info("Admin user already exists", logger.F("username", adminUser.Username), logger.F("id", adminUser.ID))
 	}
 
 	return nil

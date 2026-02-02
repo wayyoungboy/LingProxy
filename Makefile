@@ -205,6 +205,11 @@ release: clean deps test build
 	@mkdir -p $(DIST_DIR)
 	@tar -czf $(DIST_DIR)/$(BINARY_NAME)-$(VERSION)-$(GOOS)-$(GOARCH).tar.gz -C $(BIN_DIR) $(BINARY_NAME)
 
+# 生成Excel导入模板
+generate-template:
+	@echo "Generating Excel import template..."
+	@go run cmd/generate_template.go
+
 # 帮助信息
 help:
 	@echo "Available targets:"
@@ -232,6 +237,7 @@ help:
 	@echo "  run-frontend     - 仅启动前端服务（前台运行）"
 	@echo "  stop             - 停止所有服务"
 	@echo "  restart          - 重启所有服务"
+	@echo "  generate-template - 生成Excel导入模板文件"
 	@echo "  docker-build     - 构建Docker镜像"
 	@echo "  docker-run       - 运行Docker容器"
 	@echo "  docs             - 生成API文档"

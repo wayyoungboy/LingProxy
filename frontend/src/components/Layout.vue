@@ -40,6 +40,10 @@
           <el-icon><Setting /></el-icon>
           <template #title>系统设置</template>
         </el-menu-item>
+        <el-menu-item index="/logs">
+          <el-icon><Document /></el-icon>
+          <template #title>日志管理</template>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -96,7 +100,8 @@ import {
   Operation,
   Setting,
   UserFilled,
-  Switch
+  Switch,
+  Document
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

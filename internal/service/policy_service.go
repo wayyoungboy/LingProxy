@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/lingproxy/lingproxy/internal/storage"
+	"github.com/lingproxy/lingproxy/pkg/logger"
 )
 
 var (
@@ -77,7 +78,7 @@ func (s *PolicyService) ListPolicies() ([]*storage.Policy, error) {
 func (s *PolicyService) UpdatePolicy(id string, name *string, parameters map[string]interface{}, enabled *bool) (*storage.Policy, error) {
 	policy, err := s.storage.GetPolicy(id)
 	if err != nil {
-		return nil, ErrPolicyNotFound
+		return nil, fmt.Errorf("policy not found: %w", err)
 	}
 
 	if name != nil {
@@ -115,9 +116,13 @@ func (s *PolicyService) UpdatePolicy(id string, name *string, parameters map[str
 
 // DeletePolicy 删除策略
 func (s *PolicyService) DeletePolicy(id string) error {
-	_, err := s.storage.GetPolicy(id)
+	policy, err := s.storage.GetPolicy(id)
 	if err != nil {
-		return ErrPolicyNotFound
+		return fmt.Errorf("policy not found: %w", err)
+	}
+	// 不允许删除内置策略
+	if policy.Builtin {
+		return fmt.Errorf("cannot delete builtin policy")
 	}
 	return s.storage.DeletePolicy(id)
 }
@@ -127,7 +132,7 @@ func (s *PolicyService) ExecutePolicy(policyID, modelName string, resources []*s
 	// 获取策略
 	policy, err := s.storage.GetPolicy(policyID)
 	if err != nil {
-		return nil, ErrPolicyNotFound
+		return nil, fmt.Errorf("policy not found: %w", err)
 	}
 
 	// 检查策略是否启用
@@ -145,4 +150,98 @@ func (s *PolicyService) ExecutePolicy(policyID, modelName string, resources []*s
 // GetDefaultPolicyExecutor 获取默认策略执行器（用于没有配置策略的情况）
 func (s *PolicyService) GetDefaultPolicyExecutor() PolicyExecutor {
 	return NewRoundRobinPolicyExecutor()
+}
+
+// InitBuiltinPolicies 初始化内置策略
+func (s *PolicyService) InitBuiltinPolicies() error {
+	// 获取所有策略模板
+	templates, err := s.storage.ListPolicyTemplates()
+	if err != nil {
+		return fmt.Errorf("failed to list templates: %w", err)
+	}
+
+	// 定义内置策略配置
+	builtinPolicies := []struct {
+		name         string
+		templateType string
+		parameters   map[string]interface{}
+	}{
+		{
+			name:         "默认随机策略",
+			templateType: "random",
+			parameters: map[string]interface{}{
+				"filter_by_status": true,
+			},
+		},
+		{
+			name:         "默认轮询策略",
+			templateType: "round_robin",
+			parameters: map[string]interface{}{
+				"resources":        []interface{}{},
+				"filter_by_status": true,
+			},
+		},
+		{
+			name:         "默认加权策略",
+			templateType: "weighted",
+			parameters: map[string]interface{}{
+				"resources":        []interface{}{},
+				"filter_by_status": true,
+			},
+		},
+	}
+
+	for _, bp := range builtinPolicies {
+		// 查找对应的模板
+		var template *storage.PolicyTemplate
+		for _, t := range templates {
+			if t.Type == bp.templateType {
+				template = t
+				break
+			}
+		}
+		if template == nil {
+			logger.Warn("Template not found for builtin policy", logger.F("type", bp.templateType))
+			continue
+		}
+
+		// 检查策略是否已存在（通过名称和内置标记）
+		policies, err := s.storage.ListPolicies()
+		if err == nil {
+			exists := false
+			for _, p := range policies {
+				if p.Name == bp.name && p.Builtin {
+					exists = true
+					break
+				}
+			}
+			if exists {
+				continue
+			}
+		}
+
+		// 序列化参数
+		paramsJSON, err := json.Marshal(bp.parameters)
+		if err != nil {
+			logger.Warn("Failed to marshal parameters", logger.F("error", err.Error()), logger.F("policy", bp.name))
+			continue
+		}
+
+		// 创建内置策略
+		policy := &storage.Policy{
+			Name:       bp.name,
+			TemplateID: template.ID,
+			Type:       template.Type,
+			Parameters: string(paramsJSON),
+			Enabled:    true,
+			Builtin:    true,
+		}
+
+		if err := s.storage.CreatePolicy(policy); err != nil {
+			logger.Warn("Failed to create builtin policy", logger.F("error", err.Error()), logger.F("policy", bp.name))
+			continue
+		}
+	}
+
+	return nil
 }

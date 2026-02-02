@@ -109,6 +109,24 @@
         <el-form-item label="Token名称" prop="name">
           <el-input v-model="tokenForm.name" placeholder="请输入Token名称"></el-input>
         </el-form-item>
+        <el-form-item v-if="isAddMode" label="策略" prop="policy_id">
+          <el-select
+            v-model="tokenForm.policy_id"
+            placeholder="请选择策略（必选）"
+            style="width: 100%"
+            filterable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
+              <span>{{ policy.name }}</span>
+              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="过期时间" prop="expires_at">
           <el-date-picker
             v-model="tokenForm.expires_at"
@@ -233,6 +251,7 @@ const selectedPolicyId = ref('')
 const tokenForm = reactive({
   id: '',
   name: '',
+  policy_id: '',
   expires_at: '',
   status: 'active'
 })
@@ -240,6 +259,9 @@ const tokenForm = reactive({
 const tokenRules = {
   name: [
     { required: true, message: '请输入Token名称', trigger: 'blur' }
+  ],
+  policy_id: [
+    { required: true, message: '请选择策略', trigger: 'change' }
   ]
 }
 
@@ -266,9 +288,14 @@ const handleAddToken = () => {
   Object.assign(tokenForm, {
     id: '',
     name: '',
+    policy_id: '',
     expires_at: '',
     status: 'active'
   })
+  // 确保策略列表已加载
+  if (policies.value.length === 0) {
+    getPolicyList()
+  }
   dialogVisible.value = true
 }
 
@@ -298,6 +325,17 @@ const handleSaveToken = async () => {
       })
       if (response && response.data) {
         newToken.value = response.data
+        // 创建成功后立即设置策略
+        if (tokenForm.policy_id) {
+          try {
+            await api.setTokenPolicy(response.data.id, {
+              policy_id: tokenForm.policy_id
+            })
+          } catch (error) {
+            console.error('设置策略失败:', error)
+            ElMessage.warning('Token创建成功，但设置策略失败，请稍后手动设置')
+          }
+        }
         dialogVisible.value = false
         tokenDisplayVisible.value = true
         ElMessage.success('Token创建成功')

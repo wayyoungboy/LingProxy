@@ -84,13 +84,6 @@ func (h *SettingsHandler) GetSettings(c *gin.Context) {
 				"max_failures": cfg.LoadBalancer.HealthCheck.MaxFailures,
 			},
 		},
-		"circuit_breaker": gin.H{
-			"enabled":           cfg.CircuitBreaker.Enabled,
-			"failure_threshold": cfg.CircuitBreaker.FailureThreshold,
-			"timeout":           int(cfg.CircuitBreaker.Timeout.Seconds()),
-			"max_requests":      cfg.CircuitBreaker.MaxRequests,
-			"interval":          int(cfg.CircuitBreaker.Interval.Seconds()),
-		},
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": settings})
@@ -109,7 +102,7 @@ func (h *SettingsHandler) GetSettings(c *gin.Context) {
 func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 	var req service.UpdateSettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("更新设置失败", "error", err.Error())
+		logger.Error("更新设置失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -118,14 +111,14 @@ func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 
 	// 更新设置
 	if err := h.settingsService.UpdateSettings(&req, &restartRequiredFields); err != nil {
-		logger.Error("更新设置失败", "error", err.Error())
+		logger.Error("更新设置失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	requiresRestart := len(restartRequiredFields) > 0
 
-	logger.Info("设置更新成功", "requires_restart", requiresRestart, "restart_fields", restartRequiredFields)
+	logger.Info("设置更新成功", logger.F("requires_restart", requiresRestart), logger.F("restart_fields", restartRequiredFields))
 	c.JSON(http.StatusOK, gin.H{
 		"message":                 "设置已更新",
 		"requires_restart":        requiresRestart,

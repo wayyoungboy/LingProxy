@@ -27,6 +27,10 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
   response => {
+    // 对于blob响应，直接返回response对象
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
     return response.data
   },
   error => {
@@ -99,6 +103,20 @@ const api = {
   },
   getLLMResourceModels(resourceId) {
     return apiClient.get(`/llm-resources/${resourceId}/models`)
+  },
+  importLLMResources(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.post('/llm-resources/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
+  downloadLLMResourcesTemplate() {
+    return apiClient.get('/llm-resources/import/template', {
+      responseType: 'blob'
+    })
   },
 
   // 模型管理
@@ -179,6 +197,9 @@ const api = {
   resetAdminAPIKey() {
     return apiClient.put('/admin/api-key')
   },
+  updateAdminPassword(passwordData) {
+    return apiClient.put('/admin/password', passwordData)
+  },
 
   // 策略管理
   getPolicyTemplates() {
@@ -212,6 +233,22 @@ const api = {
   },
   getSystemInfo() {
     return apiClient.get('/system/info')
+  },
+
+  // 日志管理
+  getLogFiles() {
+    return apiClient.get('/logs/files')
+  },
+  getLogs(params) {
+    return apiClient.get('/logs', { params })
+  },
+  downloadLogFile(fileName) {
+    return apiClient.get(`/logs/files/${fileName}/download`, {
+      responseType: 'blob'
+    })
+  },
+  clearLogs(fileName) {
+    return apiClient.post('/logs/clear', null, { params: { file: fileName } })
   }
 }
 

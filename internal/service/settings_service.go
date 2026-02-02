@@ -11,13 +11,12 @@ import (
 
 // UpdateSettingsRequest 更新设置请求
 type UpdateSettingsRequest struct {
-	Basic          *BasicSettings          `json:"basic,omitempty"`
-	Cache          *CacheSettings          `json:"cache,omitempty"`
-	RateLimit      *RateLimitSettings      `json:"rate_limit,omitempty"`
-	Security       *SecuritySettings       `json:"security,omitempty"`
-	Log            *LogSettings            `json:"log,omitempty"`
-	LoadBalancer   *LoadBalancerSettings   `json:"load_balancer,omitempty"`
-	CircuitBreaker *CircuitBreakerSettings `json:"circuit_breaker,omitempty"`
+	Basic        *BasicSettings        `json:"basic,omitempty"`
+	Cache        *CacheSettings        `json:"cache,omitempty"`
+	RateLimit    *RateLimitSettings    `json:"rate_limit,omitempty"`
+	Security     *SecuritySettings     `json:"security,omitempty"`
+	Log          *LogSettings          `json:"log,omitempty"`
+	LoadBalancer *LoadBalancerSettings `json:"load_balancer,omitempty"`
 }
 
 // BasicSettings 基本设置
@@ -83,15 +82,6 @@ type HealthCheckSettings struct {
 	Interval    *int  `json:"interval,omitempty"`
 	Timeout     *int  `json:"timeout,omitempty"`
 	MaxFailures *int  `json:"max_failures,omitempty"`
-}
-
-// CircuitBreakerSettings 熔断器设置
-type CircuitBreakerSettings struct {
-	Enabled          *bool `json:"enabled,omitempty"`
-	FailureThreshold *int  `json:"failure_threshold,omitempty"`
-	Timeout          *int  `json:"timeout,omitempty"`
-	MaxRequests      *int  `json:"max_requests,omitempty"`
-	Interval         *int  `json:"interval,omitempty"`
 }
 
 // SettingsService 设置服务
@@ -258,30 +248,6 @@ func (s *SettingsService) UpdateSettings(req *UpdateSettingsRequest, restartRequ
 				cfg.LoadBalancer.HealthCheck.MaxFailures = *req.LoadBalancer.HealthCheck.MaxFailures
 				viper.Set("load_balancer.health_check.max_failures", *req.LoadBalancer.HealthCheck.MaxFailures)
 			}
-		}
-	}
-
-	// 更新熔断器设置
-	if req.CircuitBreaker != nil {
-		if req.CircuitBreaker.Enabled != nil {
-			cfg.CircuitBreaker.Enabled = *req.CircuitBreaker.Enabled
-			viper.Set("circuit_breaker.enabled", *req.CircuitBreaker.Enabled)
-		}
-		if req.CircuitBreaker.FailureThreshold != nil {
-			cfg.CircuitBreaker.FailureThreshold = *req.CircuitBreaker.FailureThreshold
-			viper.Set("circuit_breaker.failure_threshold", *req.CircuitBreaker.FailureThreshold)
-		}
-		if req.CircuitBreaker.Timeout != nil {
-			cfg.CircuitBreaker.Timeout = time.Duration(*req.CircuitBreaker.Timeout) * time.Second
-			viper.Set("circuit_breaker.timeout", fmt.Sprintf("%ds", *req.CircuitBreaker.Timeout))
-		}
-		if req.CircuitBreaker.MaxRequests != nil {
-			cfg.CircuitBreaker.MaxRequests = *req.CircuitBreaker.MaxRequests
-			viper.Set("circuit_breaker.max_requests", *req.CircuitBreaker.MaxRequests)
-		}
-		if req.CircuitBreaker.Interval != nil {
-			cfg.CircuitBreaker.Interval = time.Duration(*req.CircuitBreaker.Interval) * time.Second
-			viper.Set("circuit_breaker.interval", fmt.Sprintf("%ds", *req.CircuitBreaker.Interval))
 		}
 	}
 

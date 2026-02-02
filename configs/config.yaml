@@ -22,7 +22,12 @@ storage:
 log:
   level: "info"
   format: "json"
-  output: "stdout"
+  output: "both"  # stdout: 仅控制台, file: 仅文件, both: 同时输出到控制台和文件（推荐，实现持久化）
+  file_path: "./logs/lingproxy.log"
+  max_size: 100      # 单个日志文件最大大小（MB）
+  max_backups: 3     # 保留的备份文件数量
+  max_age: 28        # 日志文件保留天数
+  compress: true     # 是否压缩旧日志文件
 
 security:
   auth:

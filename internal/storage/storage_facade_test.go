@@ -87,7 +87,7 @@ func TestStorageFacade(t *testing.T) {
 		resource := &LLMResource{
 			Name:     "Facade Test Resource",
 			Type:     "chat",
-			Provider:  "openai",
+			Provider: "openai",
 			Model:    "gpt-3.5-turbo",
 			BaseURL:  "https://api.openai.com/v1",
 			APIKey:   "facade-test-api-key",

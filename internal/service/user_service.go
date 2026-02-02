@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	ErrUserNotFound      = errors.New("user not found")
-	ErrInvalidPassword   = errors.New("invalid password")
-	ErrUserExists        = errors.New("user already exists")
-	ErrInvalidAPIKey     = errors.New("invalid API key")
+	ErrUserNotFound    = errors.New("user not found")
+	ErrInvalidPassword = errors.New("invalid password")
+	ErrUserExists      = errors.New("user already exists")
+	ErrInvalidAPIKey   = errors.New("invalid API key")
 )
 
 // UserService 用户服务

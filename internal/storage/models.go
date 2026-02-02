@@ -24,14 +24,16 @@ type User struct {
 }
 
 // LLMResource LLM资源模型
+// 一个LLM资源代表一个可调用的AI服务配置，包含base_url、api_key和model三个核心要素
+// 这三个要素共同构成一个完整的可调用资源
 type LLMResource struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Type      string    `json:"type"`     // 模型类别: chat(对话), image(生图), embedding(嵌入), rerank(重排序), audio(语音), video(视频)
 	Provider  string    `json:"provider"` // 服务提供商: openai, zai, anthropic, google, azure, custom等
-	Model     string    `json:"model"`
-	BaseURL   string    `json:"base_url"`
-	APIKey    string    `json:"api_key"`
+	Model     string    `json:"model"`    // 模型标识：此资源对应的模型标识（如gpt-4, gpt-3.5-turbo），与base_url和api_key共同构成可调用资源
+	BaseURL   string    `json:"base_url"` // API基础URL：此资源的API端点地址
+	APIKey    string    `json:"api_key"`  // API密钥：此资源的认证密钥
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -135,6 +137,7 @@ type Policy struct {
 	Type       string    `json:"type"`
 	Parameters string    `json:"parameters"` // JSON
 	Enabled    bool      `json:"enabled"`
+	Builtin    bool      `json:"builtin"` // 是否为内置策略
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

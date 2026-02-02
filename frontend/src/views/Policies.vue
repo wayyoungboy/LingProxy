@@ -18,7 +18,12 @@
         style="width: 100%"
         border
       >
-        <el-table-column prop="name" label="策略名称" />
+        <el-table-column prop="name" label="策略名称" width="200">
+          <template #default="scope">
+            <span>{{ scope.row.name }}</span>
+            <el-tag v-if="scope.row.builtin" type="info" size="small" style="margin-left: 8px">内置</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="type" label="策略类型" width="150">
           <template #default="scope">
             <el-tag>{{ getTypeLabel(scope.row.type) }}</el-tag>
@@ -52,6 +57,7 @@
               type="danger"
               size="small"
               @click="handleDeletePolicy(scope.row.id)"
+              :disabled="scope.row.builtin"
             >
               删除
             </el-button>
@@ -618,6 +624,13 @@ const handleSavePolicy = async () => {
 // 处理删除策略
 const handleDeletePolicy = async (id) => {
   try {
+    // 检查是否为内置策略
+    const policy = policies.value.find(p => p.id === id)
+    if (policy && policy.builtin) {
+      ElMessage.warning('内置策略不允许删除')
+      return
+    }
+
     await ElMessageBox.confirm(
       '确定要删除这个策略吗？删除后使用该策略的Token将使用默认策略。',
       '删除确认',
@@ -634,7 +647,8 @@ const handleDeletePolicy = async (id) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除策略失败:', error)
-      ElMessage.error('删除策略失败')
+      const errorMsg = error.response?.data?.error || '删除策略失败'
+      ElMessage.error(errorMsg)
     }
   }
 }

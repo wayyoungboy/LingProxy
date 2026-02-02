@@ -23,7 +23,7 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances
 - **LLM Resource Management**: Supports configuration of multiple AI service providers (OpenAI, Zai, Anthropic, Google, Azure, etc.), supports model categories (chat, image, embedding, rerank, audio, video)
 - **Model Management**: Flexible model configuration, supports pricing, usage limits and other parameters
-- **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing, circuit breaker configurations
+- **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing configurations
 - **System Monitoring**: Real-time system information (CPU, memory, uptime, etc.)
 
 ### 🏗️ Architecture Design
@@ -370,8 +370,7 @@ lingproxy/
 │   ├── handler/           # HTTP handlers
 │   ├── middleware/        # HTTP middleware
 │   ├── pkg/               # Internal packages
-│   │   ├── balancer/      # Load balancing
-│   │   └── circuitbreaker/ # Circuit breaker
+│   │   └── balancer/      # Load balancing
 │   ├── router/            # Routing
 │   ├── service/           # Business logic
 │   └── storage/           # Storage implementation

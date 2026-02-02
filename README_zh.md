@@ -1,13 +1,12 @@
 # LingProxy - AI API网关
 
-LingProxy 是一个高性能的AI API网关，专为管理和代理各种AI服务提供商的API调用而设计。它提供了OpenAI兼容接口、负载均衡、熔断保护等功能。
+LingProxy 是一个高性能的AI API网关，专为管理和代理各种AI服务提供商的API调用而设计。它提供了OpenAI兼容接口、负载均衡等功能。
 
 ## 功能特性
 
 ### 🚀 核心功能
 - **统一API接口**: 支持OpenAI兼容API，可无缝对接各种AI服务
 - **智能负载均衡**: 轮询负载均衡策略，自动分配请求到多个资源
-- **熔断保护**: 自动检测服务故障并触发熔断，防止级联故障
 - **请求日志**: 完整的请求链路追踪和日志记录
 
 ### 🔐 安全与认证
@@ -370,8 +369,7 @@ lingproxy/
 │   ├── handler/           # HTTP处理器
 │   ├── middleware/        # HTTP中间件
 │   ├── pkg/               # 内部包
-│   │   ├── balancer/      # 负载均衡
-│   │   └── circuitbreaker/ # 熔断器
+│   │   └── balancer/      # 负载均衡
 │   ├── router/            # 路由
 │   ├── service/           # 业务逻辑
 │   └── storage/           # 存储实现

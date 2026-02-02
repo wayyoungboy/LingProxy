@@ -180,6 +180,7 @@ const stats = reactive({
   avg_response_time: 0
 })
 const recentRequests = ref([])
+const systemInfo = ref(null)
 
 // 计算属性
 const todayRequests = computed(() => {
@@ -193,9 +194,8 @@ const todayRequests = computed(() => {
 })
 
 const uptime = computed(() => {
-  // 从系统启动时间计算运行时间（如果有的话）
-  // 暂时返回空，等待后端提供启动时间信息
-  return ''
+  // 从系统信息中获取运行时间
+  return systemInfo.value?.uptime || '--'
 })
 
 // 格式化日期
@@ -213,6 +213,12 @@ const getSystemStats = async () => {
     const response = await api.getSystemStats()
     if (response && response.data) {
       Object.assign(stats, response.data)
+    }
+    
+    // 获取系统信息（包含运行时间）
+    const systemInfoResponse = await api.getSystemInfo()
+    if (systemInfoResponse && systemInfoResponse.data) {
+      systemInfo.value = systemInfoResponse.data
     }
     
     // 获取最近的请求记录
@@ -235,6 +241,7 @@ const getSystemStats = async () => {
       avg_response_time: 0
     })
     recentRequests.value = []
+    systemInfo.value = null
   } finally {
     refreshing.value = false
   }

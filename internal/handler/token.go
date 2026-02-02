@@ -47,7 +47,7 @@ type UpdateTokenRequest struct {
 func (h *TokenHandler) CreateToken(c *gin.Context) {
 	var req CreateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("创建Token失败", "error", err.Error())
+		logger.Error("创建Token失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -56,7 +56,7 @@ func (h *TokenHandler) CreateToken(c *gin.Context) {
 	if req.ExpiresAt != "" {
 		parsed, err := time.Parse(time.RFC3339, req.ExpiresAt)
 		if err != nil {
-			logger.Error("解析过期时间失败", "error", err.Error())
+			logger.Error("解析过期时间失败", logger.F("error", err.Error()))
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid expires_at format, use ISO 8601"})
 			return
 		}
@@ -69,12 +69,12 @@ func (h *TokenHandler) CreateToken(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": "token name already exists"})
 			return
 		}
-		logger.Error("创建Token失败", "error", err.Error())
+		logger.Error("创建Token失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("创建Token成功", "id", token.ID, "name", token.Name)
+	logger.Info("创建Token成功", logger.F("id", token.ID), logger.F("name", token.Name))
 	c.JSON(http.StatusCreated, gin.H{
 		"data": gin.H{
 			"id":         token.ID,
@@ -99,7 +99,7 @@ func (h *TokenHandler) CreateToken(c *gin.Context) {
 func (h *TokenHandler) ListTokens(c *gin.Context) {
 	tokens, err := h.tokenService.ListTokens()
 	if err != nil {
-		logger.Error("获取Token列表失败", "error", err.Error())
+		logger.Error("获取Token列表失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -119,7 +119,7 @@ func (h *TokenHandler) ListTokens(c *gin.Context) {
 		})
 	}
 
-	logger.Info("获取Token列表成功", "count", len(tokens))
+	logger.Info("获取Token列表成功", logger.F("count", len(tokens)))
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"items": tokenList, "total": len(tokens)}})
 }
 
@@ -141,7 +141,7 @@ func (h *TokenHandler) GetToken(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 			return
 		}
-		logger.Error("获取Token失败", "error", err.Error(), "id", id)
+		logger.Error("获取Token失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -176,7 +176,7 @@ func (h *TokenHandler) UpdateToken(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("更新Token失败", "error", err.Error(), "id", id)
+		logger.Error("更新Token失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -191,12 +191,12 @@ func (h *TokenHandler) UpdateToken(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": "token name already exists"})
 			return
 		}
-		logger.Error("更新Token失败", "error", err.Error(), "id", id)
+		logger.Error("更新Token失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("更新Token成功", "id", id, "name", token.Name)
+	logger.Info("更新Token成功", logger.F("id", id), logger.F("name", token.Name))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
 			"id":           token.ID,
@@ -227,12 +227,12 @@ func (h *TokenHandler) DeleteToken(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 			return
 		}
-		logger.Error("删除Token失败", "error", err.Error(), "id", id)
+		logger.Error("删除Token失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("删除Token成功", "id", id)
+	logger.Info("删除Token成功", logger.F("id", id))
 	c.Status(http.StatusNoContent)
 }
 
@@ -254,12 +254,12 @@ func (h *TokenHandler) ResetToken(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 			return
 		}
-		logger.Error("重置Token失败", "error", err.Error(), "id", id)
+		logger.Error("重置Token失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("重置Token成功", "id", id, "name", token.Name)
+	logger.Info("重置Token成功", logger.F("id", id), logger.F("name", token.Name))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
 			"id":         token.ID,
@@ -293,7 +293,7 @@ func (h *TokenHandler) SetTokenPolicy(c *gin.Context) {
 	id := c.Param("id")
 	var req SetTokenPolicyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("设置Token策略失败", "error", err.Error(), "id", id)
+		logger.Error("设置Token策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -304,12 +304,12 @@ func (h *TokenHandler) SetTokenPolicy(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 			return
 		}
-		logger.Error("设置Token策略失败", "error", err.Error(), "id", id)
+		logger.Error("设置Token策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("设置Token策略成功", "id", id, "policy_id", req.PolicyID)
+	logger.Info("设置Token策略成功", logger.F("id", id), logger.F("policy_id", req.PolicyID))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
 			"id":        token.ID,
@@ -338,12 +338,12 @@ func (h *TokenHandler) RemoveTokenPolicy(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 			return
 		}
-		logger.Error("移除Token策略失败", "error", err.Error(), "id", id)
+		logger.Error("移除Token策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("移除Token策略成功", "id", id)
+	logger.Info("移除Token策略成功", logger.F("id", id))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
 			"id":        token.ID,

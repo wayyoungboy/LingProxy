@@ -177,7 +177,7 @@ func TestMemoryStorage_CreateLLMResource(t *testing.T) {
 	resource := &LLMResource{
 		Name:     "test-resource",
 		Type:     "chat",
-		Provider:  "openai",
+		Provider: "openai",
 		Model:    "gpt-3.5-turbo",
 		BaseURL:  "https://api.openai.com/v1",
 		APIKey:   "test-api-key",
@@ -208,7 +208,7 @@ func TestMemoryStorage_GetLLMResource(t *testing.T) {
 	resource := &LLMResource{
 		Name:     "test-resource",
 		Type:     "chat",
-		Provider:  "openai",
+		Provider: "openai",
 		Model:    "gpt-3.5-turbo",
 		BaseURL:  "https://api.openai.com/v1",
 		APIKey:   "test-api-key",
@@ -249,7 +249,7 @@ func TestMemoryStorage_ListLLMResources(t *testing.T) {
 		resource := &LLMResource{
 			Name:     "resource" + string(rune('0'+i)),
 			Type:     "chat",
-			Provider:  "openai",
+			Provider: "openai",
 			Model:    "gpt-3.5-turbo",
 			BaseURL:  "https://api.openai.com/v1",
 			APIKey:   "api-key-" + string(rune('0'+i)),
