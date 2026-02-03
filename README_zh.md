@@ -1,6 +1,12 @@
+<div align="center">
+
+<img src="./assets/lingproxy-logo-full.svg" alt="LingProxy Logo" width="300">
+
 # LingProxy - AI API网关
 
 LingProxy 是一个高性能的AI API网关，专为管理和代理各种AI服务提供商的API调用而设计。它提供了OpenAI兼容接口、负载均衡等功能。
+
+</div>
 
 ## 功能特性
 

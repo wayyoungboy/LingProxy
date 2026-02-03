@@ -4,11 +4,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lingproxy/lingproxy/pkg/logger"
+	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 )
 
-// Logger 日志中间件
-func Logger() gin.HandlerFunc {
+// RequestLogger HTTP请求日志中间件
+func RequestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path

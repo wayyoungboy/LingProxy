@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lingproxy/lingproxy/internal/config"
+	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/service"
-	"github.com/lingproxy/lingproxy/pkg/logger"
 )
 
 // SettingsHandler 设置处理器

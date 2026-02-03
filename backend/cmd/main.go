@@ -11,11 +11,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lingproxy/lingproxy/internal/config"
+	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/pkg/password"
 	"github.com/lingproxy/lingproxy/internal/router"
 	"github.com/lingproxy/lingproxy/internal/service"
 	"github.com/lingproxy/lingproxy/internal/storage"
-	"github.com/lingproxy/lingproxy/pkg/logger"
 	mysql "gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -85,11 +85,9 @@ func main() {
 	// 初始化存储门面
 	storageFacade := storage.NewStorageFacade(storageImpl)
 
-	// 初始化管理员用户
-	if cfg.Admin.AutoCreate {
-		if err := initAdminUser(storageFacade, cfg); err != nil {
-			logger.Fatal("Failed to initialize admin user", logger.F("error", err))
-		}
+	// 初始化管理员用户（默认用户名: admin, 密码: admin123）
+	if err := initAdminUser(storageFacade); err != nil {
+		logger.Fatal("Failed to initialize admin user", logger.F("error", err))
 	}
 
 	// 初始化服务
@@ -156,8 +154,14 @@ func main() {
 }
 
 // initAdminUser 初始化管理员用户
-func initAdminUser(storageFacade *storage.StorageFacade, cfg *config.Config) error {
-	logger.Info("Initializing admin user", logger.F("username", cfg.Admin.Username))
+// 默认用户名: admin, 密码: admin123
+func initAdminUser(storageFacade *storage.StorageFacade) error {
+	const (
+		adminUsername = "admin"
+		adminPassword = "admin123"
+	)
+
+	logger.Info("Initializing admin user", logger.F("username", adminUsername))
 
 	// 检查管理员是否存在
 	users, err := storageFacade.ListUsers()
@@ -168,7 +172,7 @@ func initAdminUser(storageFacade *storage.StorageFacade, cfg *config.Config) err
 	// 查找管理员用户
 	var adminUser *storage.User
 	for _, u := range users {
-		if u.Username == cfg.Admin.Username && u.Role == "admin" {
+		if u.Username == adminUsername && u.Role == "admin" {
 			adminUser = u
 			break
 		}
@@ -177,26 +181,20 @@ func initAdminUser(storageFacade *storage.StorageFacade, cfg *config.Config) err
 	// 如果不存在，创建管理员
 	if adminUser == nil {
 		adminUser = &storage.User{
-			Username: cfg.Admin.Username,
+			Username: adminUsername,
 			Role:     "admin",
 			Status:   "active",
 		}
 
 		// 设置密码
-		if cfg.Admin.Password != "" {
-			hash, err := password.HashPassword(cfg.Admin.Password)
-			if err != nil {
-				return fmt.Errorf("failed to hash password: %w", err)
-			}
-			adminUser.PasswordHash = hash
+		hash, err := password.HashPassword(adminPassword)
+		if err != nil {
+			return fmt.Errorf("failed to hash password: %w", err)
 		}
+		adminUser.PasswordHash = hash
 
-		// 如果配置了API Key，使用配置的；否则自动生成
-		if cfg.Admin.APIKey != "" {
-			adminUser.APIKey = cfg.Admin.APIKey
-		} else {
-			adminUser.APIKey = password.GenerateAPIKey()
-		}
+		// 自动生成API Key
+		adminUser.APIKey = password.GenerateAPIKey()
 
 		if err := storageFacade.CreateUser(adminUser); err != nil {
 			return fmt.Errorf("failed to create admin user: %w", err)
@@ -207,15 +205,12 @@ func initAdminUser(storageFacade *storage.StorageFacade, cfg *config.Config) err
 			logger.F("api_key", adminUser.APIKey),
 			logger.F("id", adminUser.ID))
 		logger.Warn("IMPORTANT: Save this API key securely. It will not be shown again.")
-		if cfg.Admin.Password == "" {
-			logger.Warn("⚠️  WARNING: Admin password is not set in config. Please set it in config.yaml or use the password reset feature.")
-		} else {
-			logger.Info("Password is set from config. Please change it after first login for security.")
-		}
+		logger.Info("Default admin credentials: username=admin, password=admin123")
+		logger.Warn("⚠️  WARNING: Please change the default password after first login for security.")
 	} else {
 		// 如果管理员已存在但没有密码，设置默认密码
-		if adminUser.PasswordHash == "" && cfg.Admin.Password != "" {
-			hash, err := password.HashPassword(cfg.Admin.Password)
+		if adminUser.PasswordHash == "" {
+			hash, err := password.HashPassword(adminPassword)
 			if err != nil {
 				return fmt.Errorf("failed to hash password: %w", err)
 			}

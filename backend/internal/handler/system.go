@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lingproxy/lingproxy/internal/config"
-	"github.com/lingproxy/lingproxy/pkg/logger"
+	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 )
 
 var (

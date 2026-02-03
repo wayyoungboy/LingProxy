@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/service"
-	"github.com/lingproxy/lingproxy/pkg/logger"
 )
 
 // PolicyHandler 策略处理器

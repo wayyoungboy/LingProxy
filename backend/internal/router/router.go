@@ -8,9 +8,9 @@ import (
 	"github.com/lingproxy/lingproxy/internal/config"
 	"github.com/lingproxy/lingproxy/internal/handler"
 	"github.com/lingproxy/lingproxy/internal/middleware"
+	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/service"
 	"github.com/lingproxy/lingproxy/internal/storage"
-	"github.com/lingproxy/lingproxy/pkg/logger"
 	_ "github.com/lingproxy/lingproxy/swagger"
 )
 
@@ -82,8 +82,10 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 			// 管理员路由
 			logger.Debug("Adding admin routes")
 			auth.GET("/admin/info", adminHandler.GetAdminInfo)
-			auth.PUT("/admin/api-key", adminHandler.ResetAPIKey)
-			auth.PUT("/admin/password", adminHandler.UpdatePassword)
+			auth.PUT("/admin/info", adminHandler.UpdateAdminInfo)    // 更新管理员信息（用户名和/或密码）
+			auth.PUT("/admin/username", adminHandler.UpdateUsername) // 更新管理员用户名
+			auth.PUT("/admin/password", adminHandler.UpdatePassword) // 更新管理员密码
+			auth.PUT("/admin/api-key", adminHandler.ResetAPIKey)     // 重置API Key
 
 			// Token管理路由
 			logger.Debug("Adding token management routes")

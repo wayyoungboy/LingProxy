@@ -1,6 +1,12 @@
+<div align="center">
+
+<img src="./assets/lingproxy-logo-full.svg" alt="LingProxy Logo" width="300">
+
 # LingProxy - AI API Gateway
 
 LingProxy is a high-performance AI API gateway designed for managing and proxying API calls to various AI service providers. It offers OpenAI compatible interfaces, load balancing, circuit breaking, and more.
+
+</div>
 
 ## Features
 

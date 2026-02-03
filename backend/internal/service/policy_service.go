@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/storage"
-	"github.com/lingproxy/lingproxy/pkg/logger"
 )
 
 var (

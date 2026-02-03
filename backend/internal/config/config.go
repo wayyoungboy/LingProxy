@@ -18,7 +18,6 @@ type Config struct {
 	LoadBalancer LoadBalancerConfig `mapstructure:"load_balancer"`
 	Provider     ProviderConfig     `mapstructure:"provider"`
 	Cache        CacheConfig        `mapstructure:"cache"`
-	Admin        AdminConfig        `mapstructure:"admin"`
 }
 
 // AppConfig 应用配置
@@ -117,14 +116,6 @@ type ProviderConfig struct {
 	IdleConnTimeout time.Duration `mapstructure:"idle_conn_timeout"`
 }
 
-// AdminConfig 管理员配置
-type AdminConfig struct {
-	Username   string `mapstructure:"username"`
-	Password   string `mapstructure:"password"`
-	APIKey     string `mapstructure:"api_key"`
-	AutoCreate bool   `mapstructure:"auto_create"`
-}
-
 var (
 	// C 全局配置实例
 	C *Config
@@ -199,10 +190,10 @@ func setDefaults() {
 	viper.SetDefault("log.format", "json")
 	viper.SetDefault("log.output", "both") // both: 同时输出到stdout和文件
 	viper.SetDefault("log.file_path", "./logs/lingproxy.log")
-	viper.SetDefault("log.max_size", 100)    // MB
-	viper.SetDefault("log.max_backups", 3)   // 保留3个备份文件
-	viper.SetDefault("log.max_age", 28)      // 保留28天
-	viper.SetDefault("log.compress", true)  // 压缩旧日志
+	viper.SetDefault("log.max_size", 100)  // MB
+	viper.SetDefault("log.max_backups", 3) // 保留3个备份文件
+	viper.SetDefault("log.max_age", 28)    // 保留28天
+	viper.SetDefault("log.compress", true) // 压缩旧日志
 
 	// 安全默认配置
 	viper.SetDefault("security.auth.enabled", true)
@@ -221,13 +212,6 @@ func setDefaults() {
 	viper.SetDefault("load_balancer.health_check.interval", "30s")
 	viper.SetDefault("load_balancer.health_check.timeout", "5s")
 	viper.SetDefault("load_balancer.health_check.max_failures", 3)
-
-	// 管理员默认配置
-	viper.SetDefault("admin.username", "admin")
-	// 注意：默认密码应该通过配置文件或环境变量设置，不在代码中硬编码
-	viper.SetDefault("admin.password", "")
-	viper.SetDefault("admin.api_key", "")
-	viper.SetDefault("admin.auto_create", true)
 
 	// Provider默认配置
 	viper.SetDefault("provider.timeout", "30s")
