@@ -94,9 +94,12 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "模型类别是必填项"})
 		return
 	}
-	if resource.Provider == "" {
-		logger.Warn("创建LLM资源失败：服务提供商为空")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "服务提供商是必填项"})
+	// 驱动固定为openai
+	if resource.Driver == "" {
+		resource.Driver = "openai"
+	} else if resource.Driver != "openai" {
+		logger.Warn("创建LLM资源失败：不支持的驱动", logger.F("driver", resource.Driver))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "目前仅支持openai驱动"})
 		return
 	}
 	if resource.Model == "" {
@@ -158,9 +161,12 @@ func (h *LLMResourceHandler) UpdateLLMResource(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "模型类别是必填项"})
 		return
 	}
-	if resource.Provider == "" {
-		logger.Warn("更新LLM资源失败：服务提供商为空", logger.F("id", id))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "服务提供商是必填项"})
+	// 驱动固定为openai
+	if resource.Driver == "" {
+		resource.Driver = "openai"
+	} else if resource.Driver != "openai" {
+		logger.Warn("更新LLM资源失败：不支持的驱动", logger.F("id", id), logger.F("driver", resource.Driver))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "目前仅支持openai驱动"})
 		return
 	}
 	if resource.Model == "" {
@@ -288,7 +294,7 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 	requiredFieldGroups := map[string][]string{
 		"资源名称":  {"资源名称", "name"},
 		"模型类别":  {"模型类别", "type"},
-		"服务提供商": {"服务提供商", "provider"},
+		"驱动":    {"驱动", "driver"},
 		"模型标识":  {"模型标识", "model"},
 		"基础URL": {"基础url", "base_url", "baseurl"},
 		"API密钥": {"api密钥", "api_key", "apikey"},
@@ -314,7 +320,7 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 	// 获取列索引
 	nameCol := getColumnIndex(headerMap, []string{"资源名称", "name"})
 	typeCol := getColumnIndex(headerMap, []string{"模型类别", "type"})
-	providerCol := getColumnIndex(headerMap, []string{"服务提供商", "provider"})
+	driverCol := getColumnIndex(headerMap, []string{"驱动", "driver"})
 	modelCol := getColumnIndex(headerMap, []string{"模型标识", "model"})
 	baseURLCol := getColumnIndex(headerMap, []string{"基础url", "base_url", "baseurl"})
 	apiKeyCol := getColumnIndex(headerMap, []string{"api密钥", "api_key", "apikey"})
@@ -336,7 +342,7 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 		// 获取字段值
 		name := getCellValue(row, nameCol)
 		typeVal := getCellValue(row, typeCol)
-		provider := getCellValue(row, providerCol)
+		driver := getCellValue(row, driverCol)
 		model := getCellValue(row, modelCol)
 		baseURL := getCellValue(row, baseURLCol)
 		apiKey := getCellValue(row, apiKeyCol)
@@ -344,9 +350,13 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 		if status == "" {
 			status = "active"
 		}
+		// 驱动默认为openai，如果为空或不是openai则设置为openai
+		if driver == "" || strings.ToLower(driver) != "openai" {
+			driver = "openai"
+		}
 
 		// 验证必填字段
-		if name == "" || typeVal == "" || provider == "" || model == "" || baseURL == "" || apiKey == "" {
+		if name == "" || typeVal == "" || model == "" || baseURL == "" || apiKey == "" {
 			failCount++
 			errors = append(errors, fmt.Sprintf("第%d行: 必填字段不能为空", rowNum))
 			continue
@@ -354,13 +364,13 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 
 		// 创建资源
 		resource := &storage.LLMResource{
-			Name:     name,
-			Type:     strings.ToLower(typeVal),
-			Provider: strings.ToLower(provider),
-			Model:    model,
-			BaseURL:  baseURL,
-			APIKey:   apiKey,
-			Status:   strings.ToLower(status),
+			Name:    name,
+			Type:    strings.ToLower(typeVal),
+			Driver:  strings.ToLower(driver),
+			Model:   model,
+			BaseURL: baseURL,
+			APIKey:  apiKey,
+			Status:  strings.ToLower(status),
 		}
 
 		if err := h.storage.CreateLLMResource(resource); err != nil {
@@ -401,8 +411,17 @@ func (h *LLMResourceHandler) DownloadImportTemplate(c *gin.Context) {
 		return
 	}
 
+	// 先设置新sheet为活动sheet，再删除默认Sheet1
+	f.SetActiveSheet(index)
+
+	// 删除默认Sheet1
+	if err := f.DeleteSheet("Sheet1"); err != nil {
+		logger.Warn("删除默认Sheet失败", logger.F("error", err.Error()))
+		// 删除失败不影响文件生成，继续执行
+	}
+
 	// 设置表头
-	headers := []string{"资源名称", "模型类别", "服务提供商", "模型标识", "基础URL", "API密钥", "状态"}
+	headers := []string{"资源名称", "模型类别", "驱动", "模型标识", "基础URL", "API密钥", "状态"}
 	for i, header := range headers {
 		cell := fmt.Sprintf("%c1", 'A'+i)
 		if err := f.SetCellValue(sheetName, cell, header); err != nil {
@@ -412,11 +431,11 @@ func (h *LLMResourceHandler) DownloadImportTemplate(c *gin.Context) {
 		}
 	}
 
-	// 设置示例数据
+	// 设置示例数据（只包含核心字段，不包含模型元数据）
 	examples := [][]interface{}{
 		{"OpenAI GPT-4", "chat", "openai", "gpt-4", "https://api.openai.com/v1", "sk-xxxxxxxxxxxxx", "active"},
 		{"OpenAI GPT-3.5", "chat", "openai", "gpt-3.5-turbo", "https://api.openai.com/v1", "sk-yyyyyyyyyyyyy", "active"},
-		{"Claude 3", "chat", "anthropic", "claude-3-opus", "https://api.anthropic.com/v1", "sk-ant-zzzzzzzzzzz", "active"},
+		{"OpenAI GPT-4o", "chat", "openai", "gpt-4o", "https://api.openai.com/v1", "sk-zzzzzzzzzzzzz", "active"},
 	}
 
 	for rowIdx, example := range examples {
@@ -430,37 +449,45 @@ func (h *LLMResourceHandler) DownloadImportTemplate(c *gin.Context) {
 		}
 	}
 
-	// 设置列宽
-	if err := f.SetColWidth(sheetName, "A", "G", 20); err != nil {
-		logger.Warn("设置列宽失败", logger.F("error", err.Error()))
-		// 列宽设置失败不影响文件生成，继续执行
+	// 设置列宽（根据字段长度优化）
+	columnWidths := map[string]float64{
+		"A": 20, // 资源名称
+		"B": 12, // 模型类别
+		"C": 10, // 驱动
+		"D": 20, // 模型标识
+		"E": 30, // 基础URL
+		"F": 25, // API密钥
+		"G": 10, // 状态
+	}
+	for col, width := range columnWidths {
+		if err := f.SetColWidth(sheetName, col, col, width); err != nil {
+			logger.Warn("设置列宽失败", logger.F("column", col), logger.F("error", err.Error()))
+		}
 	}
 
 	// 设置表头样式
 	headerStyle, err := f.NewStyle(&excelize.Style{
-		Font: &excelize.Font{Bold: true},
-		Fill: excelize.Fill{Type: "pattern", Color: []string{"#E0E0E0"}, Pattern: 1},
+		Font:      &excelize.Font{Bold: true},
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"#E0E0E0"}, Pattern: 1},
+		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
 	})
 	if err == nil {
 		f.SetCellStyle(sheetName, "A1", "G1", headerStyle)
 	}
 
-	// 删除默认Sheet1
-	if err := f.DeleteSheet("Sheet1"); err != nil {
-		logger.Warn("删除默认Sheet失败", logger.F("error", err.Error()))
-		// 删除失败不影响文件生成，继续执行
-	}
-	f.SetActiveSheet(index)
-
-	// 设置响应头
+	// 设置响应头（必须在写入数据之前设置）
 	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Disposition", "attachment; filename=llm_resources_import_template.xlsx")
+	c.Header("Content-Disposition", `attachment; filename="llm_resources_import_template.xlsx"`)
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Status(http.StatusOK)
 
 	// 写入响应
 	if err := f.Write(c.Writer); err != nil {
 		logger.Error("写入Excel模板失败", logger.F("error", err.Error()))
 		// 注意：此时响应头已经设置，不能再用c.JSON，需要直接写入错误信息
-		c.String(http.StatusInternalServerError, "写入Excel模板失败: %v", err)
+		if !c.Writer.Written() {
+			c.String(http.StatusInternalServerError, "写入Excel模板失败: %v", err)
+		}
 		return
 	}
 

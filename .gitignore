@@ -38,6 +38,7 @@ lingproxy
 /data/
 /logs/
 /temp/
+/run/
 *.log
 *.db
 *.sqlite
@@ -49,6 +50,8 @@ lingproxy
 .env.*.local
 
 # Configuration files with sensitive data
+backend/configs/config.yaml
+!backend/configs/config.yaml.example
 configs/config.yaml
 !configs/config.yaml.example
 

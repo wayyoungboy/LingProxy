@@ -16,6 +16,7 @@ GOPROXY ?= https://goproxy.cn,direct
 DIST_DIR=dist
 BIN_DIR=bin
 COVERAGE_DIR=coverage
+RUN_DIR=run
 
 .PHONY: all build clean test lint fmt vet deps help
 
@@ -26,7 +27,7 @@ all: clean deps fmt vet lint test build
 build:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BIN_DIR)
-	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) GOPROXY=$(GOPROXY) go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) ./cmd/main.go
+	@cd backend && CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) GOPROXY=$(GOPROXY) go build $(LDFLAGS) -o ../$(BIN_DIR)/$(BINARY_NAME) ./cmd/main.go
 
 # 交叉编译
 build-linux:
@@ -47,25 +48,26 @@ clean:
 	@rm -rf $(BIN_DIR)
 	@rm -rf $(DIST_DIR)
 	@rm -rf $(COVERAGE_DIR)
+	@rm -rf $(RUN_DIR)
 	@rm -f coverage.out
-	@go clean -cache -testcache -modcache
+	@cd backend && go clean -cache -testcache -modcache
 
 # 运行测试
 test:
 	@echo "Running tests..."
 	@mkdir -p $(COVERAGE_DIR)
-	@go test -v -race -coverprofile=coverage.out ./...
+	@cd backend && go test -v -race -coverprofile=../coverage.out ./...
 	@go tool cover -html=coverage.out -o $(COVERAGE_DIR)/coverage.html
 
 # 运行单元测试
 test-unit:
 	@echo "Running unit tests..."
-	@go test -v -short ./...
+	@cd backend && go test -v -short ./...
 
 # 运行集成测试
 test-integration:
 	@echo "Running integration tests..."
-	@go test -v -run Integration ./...
+	@cd backend && go test -v -run Integration ./...
 
 # 代码覆盖率
 coverage: test
@@ -74,13 +76,13 @@ coverage: test
 # 代码格式化
 fmt:
 	@echo "Formatting code..."
-	@go fmt ./...
+	@cd backend && go fmt ./...
 
 # 代码检查
 lint:
 	@echo "Running linter..."
 	@if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run; \
+		cd backend && golangci-lint run; \
 	else \
 		echo "golangci-lint not found, please install it"; \
 	fi
@@ -88,19 +90,19 @@ lint:
 # 静态分析
 vet:
 	@echo "Running go vet..."
-	@go vet ./...
+	@cd backend && go vet ./...
 
 # 依赖管理
 deps:
 	@echo "Downloading dependencies..."
-	@go mod download
-	@go mod tidy
+	@cd backend && go mod download
+	@cd backend && go mod tidy
 
 # 更新依赖
 deps-update:
 	@echo "Updating dependencies..."
-	@go get -u ./...
-	@go mod tidy
+	@cd backend && go get -u ./...
+	@cd backend && go mod tidy
 
 # 启动服务（后台运行）
 start:
@@ -108,33 +110,106 @@ start:
 	@echo "Backend: http://localhost:8080"
 	@echo "Frontend: http://localhost:3000"
 	@echo "Use 'make stop' to stop services"
-	@(cd frontend && npm run dev > /dev/null 2>&1 &) && \
-	(go run ./cmd/main.go > /dev/null 2>&1 &) && \
-	echo "Services started in background. PIDs:" && \
-	pgrep -f "npm run dev" && pgrep -f "go run.*cmd/main.go"
+	@$(MAKE) start-frontend
+	@$(MAKE) start-backend
+	@echo "Services started. PIDs saved to $(RUN_DIR)/"
 
 # 启动后端服务（后台运行）
 start-backend:
 	@echo "Starting backend service in background..."
-	@go run ./cmd/main.go > /dev/null 2>&1 &
-	@echo "Backend started. PID: $$(pgrep -f 'go run.*cmd/main.go')"
+	@mkdir -p $(RUN_DIR)
+	@if [ -f $(RUN_DIR)/backend.pid ]; then \
+		OLD_PID=$$(cat $(RUN_DIR)/backend.pid); \
+		if ps -p $$OLD_PID > /dev/null 2>&1; then \
+			echo "Backend already running (PID: $$OLD_PID)"; \
+			exit 0; \
+		else \
+			echo "Removing stale PID file"; \
+			rm -f $(RUN_DIR)/backend.pid; \
+		fi; \
+	fi
+	@cd backend && go run ./cmd/main.go > /dev/null 2>&1 &
+	@sleep 2
+	@BACKEND_PID=$$(pgrep -f "go run.*cmd/main.go" | head -1); \
+	if [ -z "$$BACKEND_PID" ]; then \
+		BACKEND_PID=$$(pgrep -f "lingproxy" | head -1); \
+	fi; \
+	if [ -n "$$BACKEND_PID" ]; then \
+		echo $$BACKEND_PID > $(RUN_DIR)/backend.pid; \
+		echo "Backend started. PID: $$BACKEND_PID"; \
+	else \
+		echo "Warning: Failed to get backend PID, but service may be running"; \
+		echo "Check with: lsof -ti:8080"; \
+	fi
 
 # 启动前端服务（后台运行）
 start-frontend:
 	@echo "Starting frontend service in background..."
+	@mkdir -p $(RUN_DIR)
+	@if [ -f $(RUN_DIR)/frontend.pid ]; then \
+		OLD_PID=$$(cat $(RUN_DIR)/frontend.pid); \
+		if ps -p $$OLD_PID > /dev/null 2>&1; then \
+			echo "Frontend already running (PID: $$OLD_PID)"; \
+			exit 0; \
+		else \
+			echo "Removing stale PID file"; \
+			rm -f $(RUN_DIR)/frontend.pid; \
+		fi; \
+	fi
 	@cd frontend && npm run dev > /dev/null 2>&1 &
-	@echo "Frontend started. PID: $$(pgrep -f 'npm run dev')"
+	@sleep 1
+	@FRONTEND_PID=$$(pgrep -f "npm run dev" | head -1); \
+	if [ -n "$$FRONTEND_PID" ]; then \
+		echo $$FRONTEND_PID > $(RUN_DIR)/frontend.pid; \
+		echo "Frontend started. PID: $$FRONTEND_PID"; \
+	else \
+		echo "Failed to start frontend or get PID"; \
+		exit 1; \
+	fi
 
 # 停止所有服务
 stop:
 	@echo "Stopping all services..."
-	@echo "Stopping frontend services..."
-	@pkill -f "npm run dev" 2>/dev/null || true
-	@pkill -f "vite" 2>/dev/null || true
-	@echo "Stopping backend services..."
-	@pkill -f "go run.*cmd/main.go" 2>/dev/null || true
-	@pkill -f "lingproxy" 2>/dev/null || true
-	@pkill -f "/tmp/go-build.*exe/main" 2>/dev/null || true
+	@if [ -f $(RUN_DIR)/frontend.pid ]; then \
+		FRONTEND_PID=$$(cat $(RUN_DIR)/frontend.pid); \
+		if ps -p $$FRONTEND_PID > /dev/null 2>&1; then \
+			echo "Stopping frontend (PID: $$FRONTEND_PID)..."; \
+			kill $$FRONTEND_PID 2>/dev/null || true; \
+			sleep 1; \
+			if ps -p $$FRONTEND_PID > /dev/null 2>&1; then \
+				echo "Force killing frontend (PID: $$FRONTEND_PID)..."; \
+				kill -9 $$FRONTEND_PID 2>/dev/null || true; \
+			fi; \
+		else \
+			echo "Frontend process (PID: $$FRONTEND_PID) not running"; \
+		fi; \
+		rm -f $(RUN_DIR)/frontend.pid; \
+	else \
+		echo "No frontend PID file found, trying to kill by process name..."; \
+		pkill -f "npm run dev" 2>/dev/null || true; \
+		pkill -f "vite" 2>/dev/null || true; \
+	fi
+	@if [ -f $(RUN_DIR)/backend.pid ]; then \
+		BACKEND_PID=$$(cat $(RUN_DIR)/backend.pid); \
+		if ps -p $$BACKEND_PID > /dev/null 2>&1; then \
+			echo "Stopping backend (PID: $$BACKEND_PID)..."; \
+			kill $$BACKEND_PID 2>/dev/null || true; \
+			sleep 1; \
+			if ps -p $$BACKEND_PID > /dev/null 2>&1; then \
+				echo "Force killing backend (PID: $$BACKEND_PID)..."; \
+				kill -9 $$BACKEND_PID 2>/dev/null || true; \
+			fi; \
+		else \
+			echo "Backend process (PID: $$BACKEND_PID) not running"; \
+		fi; \
+		rm -f $(RUN_DIR)/backend.pid; \
+	else \
+		echo "No backend PID file found, trying to kill by process name..."; \
+		pkill -f "go run.*backend/cmd/main.go" 2>/dev/null || true; \
+		pkill -f "go run.*cmd/main.go" 2>/dev/null || true; \
+		pkill -f "lingproxy" 2>/dev/null || true; \
+		pkill -f "/tmp/go-build.*exe/main" 2>/dev/null || true; \
+	fi
 	@echo "Releasing ports..."
 	@lsof -ti:8080 2>/dev/null | xargs kill -9 2>/dev/null || true
 	@lsof -ti:3000 2>/dev/null | xargs kill -9 2>/dev/null | grep -v "Cursor" || true
@@ -155,12 +230,12 @@ run:
 	@echo "Press Ctrl+C to stop both services"
 	@trap 'kill 0' EXIT; \
 	(cd frontend && npm run dev &) && \
-	go run ./cmd/main.go
+	cd backend && go run ./cmd/main.go
 
 # 仅启动后端（前台运行）
 run-backend:
 	@echo "Running backend service..."
-	@go run ./cmd/main.go
+	@cd backend && go run ./cmd/main.go
 
 # 仅启动前端（前台运行）
 run-frontend:
@@ -180,7 +255,7 @@ docker-run:
 docs:
 	@echo "Generating API documentation..."
 	@if command -v swag >/dev/null 2>&1; then \
-		swag init -g cmd/main.go -o swagger; \
+		cd backend && swag init -g cmd/main.go -o swagger; \
 	else \
 		echo "swag not found, please install it: go install github.com/swaggo/swag/cmd/swag@latest"; \
 	fi
@@ -188,13 +263,13 @@ docs:
 # 性能测试
 bench:
 	@echo "Running benchmarks..."
-	@go test -bench=. -benchmem ./...
+	@cd backend && go test -bench=. -benchmem ./...
 
 # 安全扫描
 security:
 	@echo "Running security scan..."
 	@if command -v gosec >/dev/null 2>&1; then \
-		gosec ./...; \
+		cd backend && gosec ./...; \
 	else \
 		echo "gosec not found, please install it: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest"; \
 	fi
@@ -208,7 +283,7 @@ release: clean deps test build
 # 生成Excel导入模板
 generate-template:
 	@echo "Generating Excel import template..."
-	@go run cmd/generate_template.go
+	@cd backend && go run cmd/generate_template.go
 
 # 帮助信息
 help:

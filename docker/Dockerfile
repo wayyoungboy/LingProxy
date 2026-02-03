@@ -5,19 +5,19 @@ FROM golang:1.24-alpine AS builder
 WORKDIR /app
 
 # 安装构建依赖
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates tzdata
 
 # 设置 Go 代理（可选，加速依赖下载）
 ENV GOPROXY=https://goproxy.cn,direct
 
-# 复制go mod文件
-COPY go.mod go.sum ./
+# 复制go mod文件（构建上下文在项目根目录）
+COPY backend/go.mod backend/go.sum ./
 
 # 下载依赖
 RUN go mod download
 
-# 复制源代码
-COPY . .
+# 复制源代码（构建上下文在项目根目录）
+COPY backend/ .
 
 # 构建应用
 # 使用 CGO_ENABLED=0 构建静态二进制文件，便于在 alpine 中运行
@@ -47,12 +47,15 @@ WORKDIR /app
 # 从构建阶段复制二进制文件
 COPY --from=builder /app/lingproxy .
 
-# 复制配置文件
+# 复制配置文件（如果存在）
 COPY --from=builder /app/configs ./configs
 
-# 创建必要的目录（数据目录、日志目录）
-RUN mkdir -p /app/data /app/logs && \
+# 创建必要的目录（数据目录、日志目录、运行目录）
+RUN mkdir -p /app/data /app/logs /app/run && \
     chown -R lingproxy:lingproxy /app
+
+# 设置时区为Asia/Shanghai
+ENV TZ=Asia/Shanghai
 
 # 切换到非root用户
 USER lingproxy

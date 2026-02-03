@@ -2,30 +2,36 @@ package storage
 
 import (
 	"testing"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
-func TestStorageFacade(t *testing.T) {
-	// 初始化内存存储
-	memoryStorage := NewMemoryStorage()
+func TestGormStorage(t *testing.T) {
+	// 创建内存SQLite数据库
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to connect to database: %v", err)
+	}
 
-	// 初始化存储门面
-	facade := NewStorageFacade(memoryStorage)
+	// 初始化GORM存储
+	storage := NewGormStorage(db)
 
 	// 测试用户管理
 	t.Run("User Management", func(t *testing.T) {
 		// 创建用户
 		user := &User{
-			Username: "facade-test-user",
-			APIKey:   "facade-test-api-key",
+			Username: "testuser",
+			APIKey:   "test-api-key",
 			Status:   "active",
 		}
 
-		if err := facade.CreateUser(user); err != nil {
+		if err := storage.CreateUser(user); err != nil {
 			t.Errorf("CreateUser failed: %v", err)
 		}
 
 		// 获取用户
-		retrievedUser, err := facade.GetUser(user.ID)
+		retrievedUser, err := storage.GetUser(user.ID)
 		if err != nil {
 			t.Errorf("GetUser failed: %v", err)
 		}
@@ -34,7 +40,7 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 通过API Key获取用户
-		userByAPIKey, err := facade.GetUserByAPIKey(user.APIKey)
+		userByAPIKey, err := storage.GetUserByAPIKey(user.APIKey)
 		if err != nil {
 			t.Errorf("GetUserByAPIKey failed: %v", err)
 		}
@@ -43,25 +49,21 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 更新用户
-		retrievedUser.Username = "facade-updated-user"
-		retrievedUser.Status = "inactive"
-		if err := facade.UpdateUser(retrievedUser); err != nil {
+		retrievedUser.Username = "updateduser"
+		if err := storage.UpdateUser(retrievedUser); err != nil {
 			t.Errorf("UpdateUser failed: %v", err)
 		}
 
-		updatedUser, err := facade.GetUser(user.ID)
+		updatedUser, err := storage.GetUser(user.ID)
 		if err != nil {
 			t.Errorf("GetUser after update failed: %v", err)
 		}
-		if updatedUser.Username != "facade-updated-user" {
-			t.Errorf("Expected username facade-updated-user, got %s", updatedUser.Username)
-		}
-		if updatedUser.Status != "inactive" {
-			t.Errorf("Expected status inactive, got %s", updatedUser.Status)
+		if updatedUser.Username != "updateduser" {
+			t.Errorf("Expected username updateduser, got %s", updatedUser.Username)
 		}
 
 		// 列出用户
-		users, err := facade.ListUsers()
+		users, err := storage.ListUsers()
 		if err != nil {
 			t.Errorf("ListUsers failed: %v", err)
 		}
@@ -70,12 +72,12 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 删除用户
-		if err := facade.DeleteUser(user.ID); err != nil {
+		if err := storage.DeleteUser(user.ID); err != nil {
 			t.Errorf("DeleteUser failed: %v", err)
 		}
 
 		// 验证用户已删除
-		_, err = facade.GetUser(user.ID)
+		_, err = storage.GetUser(user.ID)
 		if err != ErrNotFound {
 			t.Errorf("Expected ErrNotFound, got %v", err)
 		}
@@ -85,21 +87,21 @@ func TestStorageFacade(t *testing.T) {
 	t.Run("LLM Resource Management", func(t *testing.T) {
 		// 创建LLM资源
 		resource := &LLMResource{
-			Name:     "Facade Test Resource",
+			Name:     "Test Resource",
 			Type:     "chat",
-			Provider: "openai",
+			Driver: "openai",
 			Model:    "gpt-3.5-turbo",
 			BaseURL:  "https://api.openai.com/v1",
-			APIKey:   "facade-test-api-key",
+			APIKey:   "test-api-key",
 			Status:   "active",
 		}
 
-		if err := facade.CreateLLMResource(resource); err != nil {
+		if err := storage.CreateLLMResource(resource); err != nil {
 			t.Errorf("CreateLLMResource failed: %v", err)
 		}
 
 		// 获取LLM资源
-		retrievedResource, err := facade.GetLLMResource(resource.ID)
+		retrievedResource, err := storage.GetLLMResource(resource.ID)
 		if err != nil {
 			t.Errorf("GetLLMResource failed: %v", err)
 		}
@@ -108,21 +110,21 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 更新LLM资源
-		retrievedResource.Name = "Facade Updated Resource"
-		if err := facade.UpdateLLMResource(retrievedResource); err != nil {
+		retrievedResource.Name = "Updated Resource"
+		if err := storage.UpdateLLMResource(retrievedResource); err != nil {
 			t.Errorf("UpdateLLMResource failed: %v", err)
 		}
 
-		updatedResource, err := facade.GetLLMResource(resource.ID)
+		updatedResource, err := storage.GetLLMResource(resource.ID)
 		if err != nil {
 			t.Errorf("GetLLMResource after update failed: %v", err)
 		}
-		if updatedResource.Name != "Facade Updated Resource" {
-			t.Errorf("Expected name Facade Updated Resource, got %s", updatedResource.Name)
+		if updatedResource.Name != "Updated Resource" {
+			t.Errorf("Expected name Updated Resource, got %s", updatedResource.Name)
 		}
 
 		// 列出LLM资源
-		resources, err := facade.ListLLMResources()
+		resources, err := storage.ListLLMResources()
 		if err != nil {
 			t.Errorf("ListLLMResources failed: %v", err)
 		}
@@ -131,12 +133,12 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 删除LLM资源
-		if err := facade.DeleteLLMResource(resource.ID); err != nil {
+		if err := storage.DeleteLLMResource(resource.ID); err != nil {
 			t.Errorf("DeleteLLMResource failed: %v", err)
 		}
 
 		// 验证资源已删除
-		_, err = facade.GetLLMResource(resource.ID)
+		_, err = storage.GetLLMResource(resource.ID)
 		if err != ErrNotFound {
 			t.Errorf("Expected ErrNotFound, got %v", err)
 		}
@@ -146,13 +148,13 @@ func TestStorageFacade(t *testing.T) {
 	t.Run("Model Management", func(t *testing.T) {
 		// 创建模型
 		model := &Model{
-			Name:          "Facade Test Model",
-			LLMResourceID: "facade-test-resource",
-			ModelID:       "facade-test-model",
+			Name:          "Test Model",
+			LLMResourceID: "test-resource",
+			ModelID:       "test-model",
 			Type:          "chat",
 			Category:      "gpt",
 			Version:       "1.0",
-			Description:   "Facade test model",
+			Description:   "Test model",
 			Capabilities:  "[\"text-generation\"]",
 			Pricing:       "{\"input_token_price\":0.001,\"output_token_price\":0.002,\"currency\":\"USD\"}",
 			Limits:        "{\"max_tokens\":4096,\"context_window\":8192}",
@@ -162,12 +164,12 @@ func TestStorageFacade(t *testing.T) {
 			Metadata:      "{\"key\":\"value\"}",
 		}
 
-		if err := facade.CreateModel(model); err != nil {
+		if err := storage.CreateModel(model); err != nil {
 			t.Errorf("CreateModel failed: %v", err)
 		}
 
 		// 获取模型
-		retrievedModel, err := facade.GetModel(model.ID)
+		retrievedModel, err := storage.GetModel(model.ID)
 		if err != nil {
 			t.Errorf("GetModel failed: %v", err)
 		}
@@ -176,21 +178,21 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 更新模型
-		retrievedModel.Name = "Facade Updated Model"
-		if err := facade.UpdateModel(retrievedModel); err != nil {
+		retrievedModel.Name = "Updated Model"
+		if err := storage.UpdateModel(retrievedModel); err != nil {
 			t.Errorf("UpdateModel failed: %v", err)
 		}
 
-		updatedModel, err := facade.GetModel(model.ID)
+		updatedModel, err := storage.GetModel(model.ID)
 		if err != nil {
 			t.Errorf("GetModel after update failed: %v", err)
 		}
-		if updatedModel.Name != "Facade Updated Model" {
-			t.Errorf("Expected name Facade Updated Model, got %s", updatedModel.Name)
+		if updatedModel.Name != "Updated Model" {
+			t.Errorf("Expected name Updated Model, got %s", updatedModel.Name)
 		}
 
 		// 列出模型
-		models, err := facade.ListModels()
+		models, err := storage.ListModels()
 		if err != nil {
 			t.Errorf("ListModels failed: %v", err)
 		}
@@ -199,18 +201,18 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 列出指定LLM资源的模型
-		_, err = facade.ListModelsByLLMResource("facade-test-resource")
+		_, err = storage.ListModelsByLLMResource("test-resource")
 		if err != nil {
 			t.Errorf("ListModelsByLLMResource failed: %v", err)
 		}
 
 		// 删除模型
-		if err := facade.DeleteModel(model.ID); err != nil {
+		if err := storage.DeleteModel(model.ID); err != nil {
 			t.Errorf("DeleteModel failed: %v", err)
 		}
 
 		// 验证模型已删除
-		_, err = facade.GetModel(model.ID)
+		_, err = storage.GetModel(model.ID)
 		if err != ErrNotFound {
 			t.Errorf("Expected ErrNotFound, got %v", err)
 		}
@@ -220,18 +222,18 @@ func TestStorageFacade(t *testing.T) {
 	t.Run("Endpoint Management", func(t *testing.T) {
 		// 创建端点
 		endpoint := &Endpoint{
-			LLMResourceID: "facade-test-resource",
-			Path:          "/facade-test",
+			LLMResourceID: "test-resource",
+			Path:          "/test",
 			Method:        "POST",
 			Status:        "active",
 		}
 
-		if err := facade.CreateEndpoint(endpoint); err != nil {
+		if err := storage.CreateEndpoint(endpoint); err != nil {
 			t.Errorf("CreateEndpoint failed: %v", err)
 		}
 
 		// 获取端点
-		retrievedEndpoint, err := facade.GetEndpoint(endpoint.ID)
+		retrievedEndpoint, err := storage.GetEndpoint(endpoint.ID)
 		if err != nil {
 			t.Errorf("GetEndpoint failed: %v", err)
 		}
@@ -240,21 +242,21 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 更新端点
-		retrievedEndpoint.Path = "/facade-updated"
-		if err := facade.UpdateEndpoint(retrievedEndpoint); err != nil {
+		retrievedEndpoint.Path = "/updated"
+		if err := storage.UpdateEndpoint(retrievedEndpoint); err != nil {
 			t.Errorf("UpdateEndpoint failed: %v", err)
 		}
 
-		updatedEndpoint, err := facade.GetEndpoint(endpoint.ID)
+		updatedEndpoint, err := storage.GetEndpoint(endpoint.ID)
 		if err != nil {
 			t.Errorf("GetEndpoint after update failed: %v", err)
 		}
-		if updatedEndpoint.Path != "/facade-updated" {
-			t.Errorf("Expected path /facade-updated, got %s", updatedEndpoint.Path)
+		if updatedEndpoint.Path != "/updated" {
+			t.Errorf("Expected path /updated, got %s", updatedEndpoint.Path)
 		}
 
 		// 列出端点
-		endpoints, err := facade.ListEndpoints()
+		endpoints, err := storage.ListEndpoints()
 		if err != nil {
 			t.Errorf("ListEndpoints failed: %v", err)
 		}
@@ -263,12 +265,12 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 删除端点
-		if err := facade.DeleteEndpoint(endpoint.ID); err != nil {
+		if err := storage.DeleteEndpoint(endpoint.ID); err != nil {
 			t.Errorf("DeleteEndpoint failed: %v", err)
 		}
 
 		// 验证端点已删除
-		_, err = facade.GetEndpoint(endpoint.ID)
+		_, err = storage.GetEndpoint(endpoint.ID)
 		if err != ErrNotFound {
 			t.Errorf("Expected ErrNotFound, got %v", err)
 		}
@@ -278,20 +280,20 @@ func TestStorageFacade(t *testing.T) {
 	t.Run("Request Management", func(t *testing.T) {
 		// 创建请求
 		request := &Request{
-			UserID:   "facade-test-user",
-			Endpoint: "/facade-test",
+			UserID:   "test-user",
+			Endpoint: "/test",
 			Method:   "POST",
 			Status:   "success",
-			Duration: 150,
-			Tokens:   150,
+			Duration: 100,
+			Tokens:   100,
 		}
 
-		if err := facade.CreateRequest(request); err != nil {
+		if err := storage.CreateRequest(request); err != nil {
 			t.Errorf("CreateRequest failed: %v", err)
 		}
 
 		// 获取请求
-		retrievedRequest, err := facade.GetRequest(request.ID)
+		retrievedRequest, err := storage.GetRequest(request.ID)
 		if err != nil {
 			t.Errorf("GetRequest failed: %v", err)
 		}
@@ -300,7 +302,7 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 列出请求
-		requests, err := facade.ListRequests(5)
+		requests, err := storage.ListRequests(10)
 		if err != nil {
 			t.Errorf("ListRequests failed: %v", err)
 		}

@@ -37,12 +37,6 @@ const routes = [
         meta: { title: 'LLM资源管理' }
       },
       {
-        path: 'models',
-        name: 'Models',
-        component: () => import('../views/Models.vue'),
-        meta: { title: '模型管理' }
-      },
-      {
         path: 'requests',
         name: 'Requests',
         component: () => import('../views/Requests.vue'),

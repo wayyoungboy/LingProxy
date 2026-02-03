@@ -71,6 +71,7 @@ jobs:
 
       - name: Get dependencies
         run: |
+          cd backend
           go mod download
           go mod tidy
 
@@ -98,8 +99,9 @@ jobs:
         run: |
           mkdir -p dist/${{ matrix.platform }}
           LDFLAGS="-X main.Version=${{ env.VERSION }} -X main.Commit=${{ env.COMMIT }} -X main.BuildTime=${{ env.BUILD_TIME }}"
-          go build -ldflags "$LDFLAGS" -o dist/${{ matrix.platform }}/${{ env.BINARY_NAME }}${{ matrix.goos == 'windows' && '.exe' || '' }} ./cmd/main.go
-          chmod +x dist/${{ matrix.platform }}/${{ env.BINARY_NAME }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          cd backend
+          go build -ldflags "$LDFLAGS" -o ../dist/${{ matrix.platform }}/${{ env.BINARY_NAME }}${{ matrix.goos == 'windows' && '.exe' || '' }} ./cmd/main.go
+          chmod +x ../dist/${{ matrix.platform }}/${{ env.BINARY_NAME }}${{ matrix.goos == 'windows' && '.exe' || '' }}
 
       - name: Create archive
         if: |

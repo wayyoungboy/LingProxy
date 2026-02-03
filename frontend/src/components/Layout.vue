@@ -24,10 +24,6 @@
           <el-icon><Cpu /></el-icon>
           <template #title>LLM资源管理</template>
         </el-menu-item>
-        <el-menu-item index="/models">
-          <el-icon><Grid /></el-icon>
-          <template #title>模型管理</template>
-        </el-menu-item>
         <el-menu-item index="/requests">
           <el-icon><Message /></el-icon>
           <template #title>请求管理</template>

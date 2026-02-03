@@ -1,0 +1,44 @@
+# Docker Compose 配置示例
+# 
+# 使用说明：
+# 1. 确保已创建配置文件：backend/configs/config.yaml（从config.yaml.example复制）
+# 2. 在项目根目录运行：docker-compose -f docker/docker-compose.yml up -d
+# 3. 或者复制此文件到项目根目录并重命名为docker-compose.yml
+
+version: '3.8'
+
+services:
+  lingproxy:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: lingproxy:latest
+    container_name: lingproxy
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - TZ=Asia/Shanghai
+    volumes:
+      # 配置文件目录（只读挂载）
+      - ../backend/configs:/app/configs:ro
+      # 日志目录
+      - ../logs:/app/logs
+      # 数据目录（SQLite数据库等）
+      - ../data:/app/data
+      # 运行目录（PID文件等）
+      - ../run:/app/run
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - lingproxy-network
+
+networks:
+  lingproxy-network:
+    driver: bridge
+    name: lingproxy-network

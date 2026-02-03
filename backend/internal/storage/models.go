@@ -30,7 +30,7 @@ type LLMResource struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Type      string    `json:"type"`     // 模型类别: chat(对话), image(生图), embedding(嵌入), rerank(重排序), audio(语音), video(视频)
-	Provider  string    `json:"provider"` // 服务提供商: openai, zai, anthropic, google, azure, custom等
+	Driver    string    `json:"driver"`   // 驱动: openai（目前仅支持openai）
 	Model     string    `json:"model"`    // 模型标识：此资源对应的模型标识（如gpt-4, gpt-3.5-turbo），与base_url和api_key共同构成可调用资源
 	BaseURL   string    `json:"base_url"` // API基础URL：此资源的API端点地址
 	APIKey    string    `json:"api_key"`  // API密钥：此资源的认证密钥

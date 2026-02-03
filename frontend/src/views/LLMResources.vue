@@ -36,9 +36,9 @@
       <div class="search-filter">
         <el-input
           v-model="searchQuery"
-          placeholder="搜索资源名称"
+          placeholder="搜索资源名称或基础URL"
           :prefix-icon="Search"
-          style="width: 240px; margin-right: 10px"
+          style="width: 300px; margin-right: 10px"
         ></el-input>
         <el-select
           v-model="typeFilter"
@@ -78,9 +78,9 @@
             <el-tag>{{ getTypeLabel(scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="provider" label="服务提供商" width="120">
+        <el-table-column prop="driver" label="驱动" width="100">
           <template #default="scope">
-            <el-tag type="info">{{ getProviderLabel(scope.row.provider) }}</el-tag>
+            <el-tag type="info">{{ getDriverLabel(scope.row.driver) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="model" label="模型标识" width="150">
@@ -113,14 +113,6 @@
               style="margin-right: 5px"
             >
               编辑
-            </el-button>
-            <el-button
-              type="success"
-              size="small"
-              @click="viewModels(scope.row.id)"
-              style="margin-right: 5px"
-            >
-              查看模型
             </el-button>
             <el-button
               type="danger"
@@ -175,18 +167,13 @@
             <el-option label="视频" value="video"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="服务提供商" prop="provider">
+        <el-form-item label="驱动" prop="driver">
           <el-select 
-            v-model="resourceForm.provider" 
-            placeholder="请选择服务提供商"
-            @change="handleProviderChange"
+            v-model="resourceForm.driver" 
+            placeholder="请选择驱动"
+            @change="handleDriverChange"
           >
             <el-option label="OpenAI" value="openai"></el-option>
-            <el-option label="Zai" value="zai"></el-option>
-            <el-option label="Anthropic" value="anthropic"></el-option>
-            <el-option label="Google" value="google"></el-option>
-            <el-option label="Azure" value="azure"></el-option>
-            <el-option label="自定义" value="custom"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="模型标识" prop="model">
@@ -198,7 +185,7 @@
         <el-form-item label="基础URL" prop="base_url">
           <el-input 
             v-model="resourceForm.base_url" 
-            placeholder="选择服务提供商后将自动填充"
+            placeholder="选择驱动后将自动填充"
           ></el-input>
         </el-form-item>
         <el-form-item label="API密钥" prop="api_key">
@@ -266,7 +253,7 @@ const resourceForm = reactive({
   id: '',
   name: '',
   type: 'chat',
-  provider: 'openai',
+  driver: 'openai',
   model: '',
   base_url: '',
   api_key: '',
@@ -281,8 +268,8 @@ const resourceRules = {
   type: [
     { required: true, message: '请选择模型类别', trigger: 'change' }
   ],
-  provider: [
-    { required: true, message: '请选择服务提供商', trigger: 'change' }
+  driver: [
+    { required: true, message: '请选择驱动', trigger: 'change' }
   ],
   model: [
     { required: true, message: '请输入模型标识', trigger: 'blur' }
@@ -304,8 +291,20 @@ const getResourceList = async () => {
     loading.value = true
     const response = await api.getLLMResources({ page: currentPage.value, page_size: pageSize.value })
     if (response && response.data) {
-      resources.value = response.data.items || []
-      total.value = response.data.total || 0
+      // 后端返回的data可能是数组，也可能是分页对象
+      if (Array.isArray(response.data)) {
+        // 直接是数组格式
+        resources.value = response.data
+        total.value = response.data.length
+      } else if (response.data.items) {
+        // 分页格式
+        resources.value = response.data.items || []
+        total.value = response.data.total || 0
+      } else {
+        // 其他格式，尝试直接使用data
+        resources.value = []
+        total.value = 0
+      }
     }
   } catch (error) {
     console.error('获取LLM资源列表失败:', error)
@@ -319,12 +318,19 @@ const getResourceList = async () => {
 const filteredResources = computed(() => {
   let result = resources.value
   
-  // 搜索过滤
+  // 搜索过滤（支持资源名称、基础URL和模型标识的模糊搜索）
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(resource => 
-      resource.name.toLowerCase().includes(query)
-    )
+    const query = searchQuery.value.toLowerCase().trim()
+    result = result.filter(resource => {
+      // 搜索资源名称
+      const nameMatch = resource.name && resource.name.toLowerCase().includes(query)
+      // 搜索基础URL（模糊匹配）
+      const urlMatch = resource.base_url && resource.base_url.toLowerCase().includes(query)
+      // 搜索模型标识（可选，增强搜索体验）
+      const modelMatch = resource.model && resource.model.toLowerCase().includes(query)
+      // 只要有一个字段匹配就返回true
+      return nameMatch || urlMatch || modelMatch
+    })
   }
   
   // 类型过滤
@@ -358,50 +364,31 @@ const getTypeLabel = (type) => {
   return typeLabels[type] || type
 }
 
-// 服务提供商标签映射
-const providerLabels = {
-  openai: 'OpenAI',
-  zai: 'Zai',
-  anthropic: 'Anthropic',
-  google: 'Google',
-  azure: 'Azure',
-  custom: '自定义'
+// 驱动标签映射
+const driverLabels = {
+  openai: 'OpenAI'
 }
 
-// 获取服务提供商标签
-const getProviderLabel = (provider) => {
-  return providerLabels[provider] || provider
+// 获取驱动标签
+const getDriverLabel = (driver) => {
+  return driverLabels[driver] || driver
 }
 
-// 服务提供商到BaseURL的映射
-const providerToBaseURL = {
-  openai: 'https://api.openai.com/v1',  // 公开API端点
-  zai: 'https://api.zai.com/v1',  // 公开API端点
-  anthropic: 'https://api.anthropic.com/v1',  // 公开API端点
-  google: 'https://generativelanguage.googleapis.com/v1',  // 公开API端点
-  azure: 'https://your-resource-name.openai.azure.com',  // 占位符，需要用户替换
-  custom: ''
+// 驱动到BaseURL的映射
+const driverToBaseURL = {
+  openai: 'https://api.openai.com/v1'
 }
 
-// 处理服务提供商变化
-const handleProviderChange = (provider) => {
-  if (!provider) return
+// 处理驱动变化
+const handleDriverChange = (driver) => {
+  if (!driver) return
   
-  if (provider === 'custom') {
-    // 自定义提供商时，不清空base_url，让用户自己填写或保留原有值
-    // 如果是添加模式，清空；如果是编辑模式，保留原值
-    if (isAddMode.value) {
-      resourceForm.base_url = ''
-    }
-  } else {
-    // 选择预设提供商时，自动填充对应的base_url
-    const defaultURL = providerToBaseURL[provider]
-    if (defaultURL) {
-      // 如果当前base_url为空或者是其他预设提供商的URL，则替换
-      // 如果用户已经手动修改过，则询问是否替换（这里简化处理，直接替换）
-      if (isAddMode.value || !resourceForm.base_url || Object.values(providerToBaseURL).includes(resourceForm.base_url)) {
-        resourceForm.base_url = defaultURL
-      }
+  // 根据驱动自动填充BaseURL
+  const defaultURL = driverToBaseURL[driver]
+  if (defaultURL) {
+    // 只有在添加模式，或者当前base_url为空，或者是默认URL时才自动填充
+    if (isAddMode.value || !resourceForm.base_url || Object.values(driverToBaseURL).includes(resourceForm.base_url)) {
+      resourceForm.base_url = defaultURL
     }
   }
 }
@@ -415,9 +402,9 @@ const handleAddResource = () => {
     id: '',
     name: '',
     type: 'chat',
-    provider: 'openai',
+    driver: 'openai',
     model: '',
-    base_url: providerToBaseURL['openai'], // 默认填充OpenAI的URL
+    base_url: driverToBaseURL['openai'], // 默认填充OpenAI的URL
     api_key: '',
     status: 'active'
   })
@@ -487,9 +474,6 @@ const handleDeleteResource = async (id) => {
 }
 
 // 查看资源下的模型
-const viewModels = (resourceId) => {
-  router.push(`/models?resource_id=${resourceId}`)
-}
 
 // 分页处理
 const handleSizeChange = (size) => {
@@ -511,38 +495,61 @@ const formatDate = (dateString) => {
 const handleDownloadTemplate = async () => {
   try {
     const response = await api.downloadLLMResourcesTemplate()
-    // response已经是blob对象
-    const blob = response instanceof Blob ? response : new Blob([response], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    })
+    
+    // 响应拦截器对于blob响应返回的是整个response对象
+    // response.data应该是Blob类型
+    if (!response || !response.data) {
+      ElMessage.error('下载失败：响应格式不正确')
+      return
+    }
+    
+    const blob = response.data instanceof Blob ? response.data : new Blob([response.data])
+    
+    // 验证blob是否有效
+    if (!blob || blob.size === 0) {
+      ElMessage.error('下载的文件为空，请重试')
+      return
+    }
+    
+    // 验证文件类型（Excel文件应该以ZIP格式开头）
+    const firstBytes = await blob.slice(0, 4).arrayBuffer()
+    const uint8Array = new Uint8Array(firstBytes)
+    
+    // Excel文件（.xlsx）是ZIP格式，ZIP文件头是 50 4B 03 04 (PK..)
+    const isValidExcel = uint8Array[0] === 0x50 && uint8Array[1] === 0x4B && 
+                          uint8Array[2] === 0x03 && uint8Array[3] === 0x04
+    
+    if (!isValidExcel) {
+      // 可能是错误响应，尝试读取错误信息
+      const text = await blob.text()
+      try {
+        const errorData = JSON.parse(text)
+        ElMessage.error(errorData.error || '下载模板失败')
+      } catch (e) {
+        ElMessage.error('下载的文件格式不正确，请重试')
+      }
+      return
+    }
+    
     // 创建下载链接
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = 'llm_resources_import_template.xlsx'
+    link.style.display = 'none'
     document.body.appendChild(link)
     link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
+    
+    // 清理
+    setTimeout(() => {
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    }, 100)
+    
     ElMessage.success('模板下载成功')
   } catch (error) {
     console.error('下载模板失败:', error)
-    // 检查是否是blob类型的错误响应
-    if (error.response && error.response.data instanceof Blob) {
-      // 尝试读取错误信息
-      const reader = new FileReader()
-      reader.onload = () => {
-        try {
-          const errorText = JSON.parse(reader.result)
-          ElMessage.error(errorText.error || '下载模板失败')
-        } catch {
-          ElMessage.error('下载模板失败')
-        }
-      }
-      reader.readAsText(error.response.data)
-    } else {
-      ElMessage.error(error.response?.data?.error || error.message || '下载模板失败')
-    }
+    ElMessage.error(error.response?.data?.error || error.message || '下载模板失败')
   }
 }
 

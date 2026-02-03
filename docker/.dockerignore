@@ -1,0 +1,72 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+README_zh.md
+*.md
+docs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Frontend (not needed for backend Docker image)
+frontend/
+node_modules/
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Logs and temporary files
+logs/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+run/
+*.pid
+
+# Test files
+test_*.xlsx
+*_test.go
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Configuration files (use .example files instead)
+backend/configs/config.yaml
+configs/config.yaml
+
+# Docker files (don't copy into image)
+docker/
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# CI/CD
+.github/
+
+# Other
+agent.md
+SECURITY.md
+Makefile

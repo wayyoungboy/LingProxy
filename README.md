@@ -21,7 +21,7 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **Admin Management**: Single admin mode with password and API key management
 - **Token Management**: Create and manage request-side tokens with policy binding
 - **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances
-- **LLM Resource Management**: Supports configuration of multiple AI service providers (OpenAI, Zai, Anthropic, Google, Azure, etc.), supports model categories (chat, image, embedding, rerank, audio, video)
+- **LLM Resource Management**: Supports configuration of AI service resources with driver-based architecture (currently supports OpenAI driver), supports model categories (chat, image, embedding, rerank, audio, video), supports batch import/export via Excel templates
 - **Model Management**: Flexible model configuration, supports pricing, usage limits and other parameters
 - **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing configurations
 - **System Monitoring**: Real-time system information (CPU, memory, uptime, etc.)
@@ -86,13 +86,51 @@ The frontend will be available at `http://localhost:3000`
 
 ### Docker Run
 
+#### Using Docker Compose (Recommended)
+
+1. **Prepare Configuration**
 ```bash
-# Build image
-docker build -t lingproxy .
+# Copy configuration example
+cp backend/configs/config.yaml.example backend/configs/config.yaml
+# Edit backend/configs/config.yaml as needed
+```
+
+2. **Start Services**
+```bash
+# Build and start (from project root)
+docker-compose -f docker/docker-compose.yml up -d
+
+# View logs
+docker-compose -f docker/docker-compose.yml logs -f
+
+# Stop services
+docker-compose -f docker/docker-compose.yml down
+```
+
+#### Using Docker Directly
+
+```bash
+# Build image (from project root)
+docker build -f docker/Dockerfile -t lingproxy:latest .
 
 # Run container
-docker run -p 8080:8080 -v $(pwd)/configs:/app/configs lingproxy
+docker run -d \
+  --name lingproxy \
+  -p 8080:8080 \
+  -v $(pwd)/backend/configs:/app/configs:ro \
+  -v $(pwd)/logs:/app/logs \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/run:/app/run \
+  -e GIN_MODE=release \
+  -e TZ=Asia/Shanghai \
+  --restart unless-stopped \
+  lingproxy:latest
 ```
+
+**Note**: 
+- All Docker-related files are located in the `docker/` directory
+- Make sure to create `backend/configs/config.yaml` before running the container
+- See `docker/README.md` for detailed Docker deployment guide
 
 ## API Usage Guide
 
@@ -205,11 +243,23 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
 - `DELETE /api/v1/policies/:id` - Delete policy
 
 #### LLM Resource Management
-- `GET /api/v1/llm-resources` - Get LLM resource list
+- `GET /api/v1/llm-resources` - Get LLM resource list (supports search filtering)
 - `POST /api/v1/llm-resources` - Create LLM resource
 - `GET /api/v1/llm-resources/:id` - Get LLM resource details
 - `PUT /api/v1/llm-resources/:id` - Update LLM resource
 - `DELETE /api/v1/llm-resources/:id` - Delete LLM resource
+- `POST /api/v1/llm-resources/import` - Batch import LLM resources from Excel file
+- `GET /api/v1/llm-resources/import/template` - Download Excel import template
+
+**Batch Import**:
+- Supports batch importing LLM resources via Excel files
+- Excel template includes fields: Name, Type, Driver, Model, BaseURL, APIKey, Status
+- Driver field currently only supports "openai", will be auto-set to "openai" if empty or invalid
+- Import results return success/failure counts and error details
+
+**Search Functionality**:
+- Frontend supports fuzzy search on resource name, base URL, and model identifier
+- Case-insensitive search with partial matching support
 
 #### Model Management
 - `GET /api/v1/models` - Get model list
@@ -314,6 +364,10 @@ load_balancer:
 provider:
   timeout: "30s"  # Request timeout
   max_retries: 3   # Maximum retry count
+  retry_delay: "1s"  # Retry delay between attempts
+  max_idle_conns: 100  # Maximum idle connections
+  max_conns_per_host: 100  # Maximum connections per host
+  idle_conn_timeout: "90s"  # Idle connection timeout
 ```
 
 ## Monitoring & Operations
@@ -441,8 +495,8 @@ type LLMResource struct {
     ID        string    // Resource unique identifier
     Name      string    // Resource name
     Type      string    // Model category (chat, image, embedding, rerank, audio, video)
-    Provider  string    // Service provider (openai, zai, anthropic, google, azure, custom, etc.)
-    Model     string    // Default model
+    Driver    string    // Driver (currently supports: openai)
+    Model     string    // Model identifier (e.g., gpt-4, gpt-3.5-turbo)
     BaseURL   string    // API base URL
     APIKey    string    // API key
     Status    string    // Status (active/inactive)
@@ -544,16 +598,19 @@ type Storage interface {
 }
 ```
 
-### Adding a New AI Provider
+### Adding a New AI Driver
 
-1. **Create LLM Resource Configuration**
-Add new provider type handling logic in `internal/handler/provider.go`
+1. **Update LLM Resource Model**
+Extend the Driver field validation in `internal/handler/provider.go` to support new driver types
 
-2. **Implement Load Balancing Strategy**
-Implement a new load balancing algorithm in `internal/pkg/balancer/`
+2. **Implement Driver Client**
+Create a new client implementation in `internal/client/` for the new driver
 
-3. **Update Model Support**
-Extend the Model struct in `internal/storage/model.go` to support new model features
+3. **Update Load Balancing Strategy**
+Implement or update load balancing algorithms in `internal/pkg/balancer/` if needed
+
+4. **Update Frontend**
+Add the new driver option in the frontend LLM resource management interface
 
 ### Testing
 
@@ -587,6 +644,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Email**: support@lingproxy.com
 
 ## Changelog
+
+### v1.3.0 (2026-02-03)
+- **Driver Architecture**: Changed from "Provider" to "Driver" concept, currently supports OpenAI driver only
+- **Batch Import/Export**: Added Excel template download and batch import functionality for LLM resources
+- **Enhanced Search**: Added fuzzy search support for resource name, base URL, and model identifier
+- **Frontend Improvements**: Fixed data display issues after batch import, improved search UX
+- **Template Management**: Excel import template includes core fields (name, type, driver, model, base_url, api_key, status)
 
 ### v1.2.0 (2026-02-02)
 - **Frontend-Backend Separation**: Implemented modern Vue 3 + Element Plus frontend
