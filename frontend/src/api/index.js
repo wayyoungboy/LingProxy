@@ -168,6 +168,10 @@ const api = {
       }
     })
   },
+  importLLMResourcesByJSON(resources) {
+    // 通过 JSON 数组批量导入 LLM 资源
+    return apiClient.post('/llm-resources/import', resources)
+  },
   downloadLLMResourcesTemplate() {
     return apiClient.get('/llm-resources/import/template', {
       responseType: 'blob'

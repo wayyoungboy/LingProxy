@@ -233,17 +233,26 @@ func (h *LLMResourceHandler) DeleteLLMResource(c *gin.Context) {
 }
 
 // ImportLLMResources 批量导入LLM资源
-// @Summary Import LLM resources from Excel
-// @Description Import multiple LLM resources from Excel file
+// @Summary Import LLM resources
+// @Description Import multiple LLM resources from Excel file or JSON body
 // @Tags llm-resources
 // @Accept multipart/form-data
+// @Accept json
 // @Produce json
-// @Param file formData file true "Excel file"
+// @Param file formData file false "Excel file"
+// @Param resources body []storage.LLMResource false "LLM resources JSON array"
 // @Success 200 {object} map[string]interface{} "Import result"
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/v1/llm-resources/import [post]
 func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
+	// 优先根据 Content-Type 判断是否为 JSON 导入
+	contentType := c.GetHeader("Content-Type")
+	if strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+		h.importLLMResourcesFromJSON(c)
+		return
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		logger.Warn("批量导入LLM资源失败：文件获取失败", logger.F("error", err.Error()))
@@ -383,6 +392,79 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 	}
 
 	logger.Info("批量导入LLM资源完成", logger.F("success", successCount), logger.F("fail", failCount))
+	c.JSON(http.StatusOK, gin.H{
+		"message": "导入完成",
+		"success": successCount,
+		"fail":    failCount,
+		"errors":  errors,
+		"total":   successCount + failCount,
+	})
+}
+
+// importLLMResourcesFromJSON 通过 JSON 批量导入LLM资源
+func (h *LLMResourceHandler) importLLMResourcesFromJSON(c *gin.Context) {
+	var resources []storage.LLMResource
+	if err := c.ShouldBindJSON(&resources); err != nil {
+		logger.Warn("批量导入LLM资源失败：JSON解析失败", logger.F("error", err.Error()))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON解析失败: " + err.Error()})
+		return
+	}
+
+	if len(resources) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求数据为空"})
+		return
+	}
+
+	successCount := 0
+	failCount := 0
+	errors := []string{}
+
+	for i, item := range resources {
+		rowNum := i + 1 // JSON数组下标，从1开始更易读
+
+		name := strings.TrimSpace(item.Name)
+		typeVal := strings.TrimSpace(item.Type)
+		driver := strings.TrimSpace(item.Driver)
+		model := strings.TrimSpace(item.Model)
+		baseURL := strings.TrimSpace(item.BaseURL)
+		apiKey := strings.TrimSpace(item.APIKey)
+		status := strings.TrimSpace(item.Status)
+
+		if status == "" {
+			status = "active"
+		}
+		// 驱动默认为openai，如果为空或不是openai则设置为openai
+		if driver == "" || strings.ToLower(driver) != "openai" {
+			driver = "openai"
+		}
+
+		// 验证必填字段
+		if name == "" || typeVal == "" || model == "" || baseURL == "" || apiKey == "" {
+			failCount++
+			errors = append(errors, fmt.Sprintf("第%d条: 必填字段不能为空", rowNum))
+			continue
+		}
+
+		resource := &storage.LLMResource{
+			Name:    name,
+			Type:    strings.ToLower(typeVal),
+			Driver:  strings.ToLower(driver),
+			Model:   model,
+			BaseURL: baseURL,
+			APIKey:  apiKey,
+			Status:  strings.ToLower(status),
+		}
+
+		if err := h.storage.CreateLLMResource(resource); err != nil {
+			failCount++
+			errors = append(errors, fmt.Sprintf("第%d条: %s", rowNum, err.Error()))
+			continue
+		}
+
+		successCount++
+	}
+
+	logger.Info("批量导入LLM资源(JSON)完成", logger.F("success", successCount), logger.F("fail", failCount))
 	c.JSON(http.StatusOK, gin.H{
 		"message": "导入完成",
 		"success": successCount,

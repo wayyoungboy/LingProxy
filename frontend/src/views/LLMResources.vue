@@ -21,9 +21,13 @@
             >
               <el-button type="warning">
                 <el-icon><Upload /></el-icon>
-                批量导入
+                Excel批量导入
               </el-button>
             </el-upload>
+            <el-button type="warning" plain @click="jsonImportDialogVisible = true">
+              <el-icon><Upload /></el-icon>
+              JSON批量导入
+            </el-button>
             <el-button type="primary" @click="handleAddResource">
               <el-icon><Plus /></el-icon>
               添加LLM资源
@@ -215,6 +219,50 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- JSON 批量导入对话框 -->
+    <el-dialog
+      v-model="jsonImportDialogVisible"
+      title="JSON 批量导入 LLM 资源"
+      width="720px"
+    >
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        title="请按示例格式提供 JSON 数组，每一项为一个 LLM 资源对象。必填字段：name、type、model、base_url、api_key。"
+      />
+
+      <div class="json-import-example">
+        <div class="json-import-example-header">
+          <span>JSON 格式示例</span>
+          <el-button type="primary" text size="small" @click="fillJsonExample">
+            一键填充到编辑区
+          </el-button>
+        </div>
+        <pre class="json-example-block">{{ jsonImportExample }}</pre>
+      </div>
+
+      <el-form label-position="top">
+        <el-form-item label="要导入的 JSON 数据">
+          <el-input
+            v-model="jsonImportText"
+            type="textarea"
+            :rows="12"
+            placeholder="在此粘贴或编辑要导入的 JSON 数组，例如上方示例"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="jsonImportDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="jsonImportLoading" @click="handleJsonImport">
+            开始导入
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -235,6 +283,31 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const uploadRef = ref(null)
+
+// JSON 导入相关
+const jsonImportDialogVisible = ref(false)
+const jsonImportText = ref('')
+const jsonImportLoading = ref(false)
+const jsonImportExample = `[
+  {
+    "name": "OpenAI GPT-4",
+    "type": "chat",
+    "driver": "openai",
+    "model": "gpt-4",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "sk-xxxxxxxxxxxxx",
+    "status": "active"
+  },
+  {
+    "name": "OpenAI GPT-3.5",
+    "type": "chat",
+    "driver": "openai",
+    "model": "gpt-3.5-turbo",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "sk-yyyyyyyyyyyyy",
+    "status": "active"
+  }
+]`
 
 // 上传配置
 const uploadAction = '/api/v1/llm-resources/import'
@@ -602,6 +675,46 @@ const handleImportError = (error) => {
   ElMessage.error(errorMsg)
 }
 
+// 一键填充 JSON 示例
+const fillJsonExample = () => {
+  jsonImportText.value = jsonImportExample
+}
+
+// 处理 JSON 批量导入
+const handleJsonImport = async () => {
+  if (!jsonImportText.value.trim()) {
+    ElMessage.error('请先粘贴要导入的 JSON 数据')
+    return
+  }
+
+  let data
+  try {
+    data = JSON.parse(jsonImportText.value)
+  } catch (e) {
+    console.error('JSON 解析错误:', e)
+    ElMessage.error('JSON 格式错误，请检查后重试')
+    return
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    ElMessage.error('JSON 数据必须是非空数组')
+    return
+  }
+
+  jsonImportLoading.value = true
+  try {
+    const response = await api.importLLMResourcesByJSON(data)
+    // 复用 Excel 导入的成功提示逻辑
+    handleImportSuccess(response)
+    jsonImportDialogVisible.value = false
+  } catch (error) {
+    // 错误提示已在 axios 拦截器中统一处理，这里仅记录日志
+    console.error('JSON 导入失败:', error)
+  } finally {
+    jsonImportLoading.value = false
+  }
+}
+
 // 组件挂载时获取数据
 onMounted(() => {
   getResourceList()
@@ -641,5 +754,31 @@ onMounted(() => {
   width: 100%;
   display: flex;
   justify-content: flex-end;
+}
+
+.json-import-example {
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+.json-import-example-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.json-example-block {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 260px;
+  overflow: auto;
 }
 </style>
