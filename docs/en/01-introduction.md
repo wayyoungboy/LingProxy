@@ -30,6 +30,8 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **LLM Resource Management**: Driver-based architecture (currently supports OpenAI driver)
 - **Model Management**: Flexible model configuration with pricing and usage limits
 - **Policy Management**: Built-in routing policy templates and custom policy instances
+- **Request Management**: Complete request logging and tracking functionality
+- **Usage Statistics**: Detailed usage statistics grouped by LLM resources, including token usage, request count, success rate, and more
 - **System Settings**: Dynamic configuration management
 - **System Monitoring**: Real-time system information and statistics
 

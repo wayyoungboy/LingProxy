@@ -25,10 +25,12 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 
 ### 📊 Management Features
 - **Admin Management**: Single admin mode with password and API key management
-- **Token Management**: Create and manage request-side tokens with policy binding
+- **Token Management**: Create and manage request-side tokens with policy binding, supports token copying functionality
 - **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances
 - **LLM Resource Management**: Supports configuration of AI service resources with driver-based architecture (currently supports OpenAI driver), supports model categories (chat, image, embedding, rerank, audio, video), supports batch import/export via Excel templates or JSON format, includes resource testing functionality to verify connectivity
 - **Model Management**: Flexible model configuration, supports pricing, usage limits and other parameters
+- **Request Management**: Complete request logging and tracking, supports request detail viewing and export
+- **Usage Statistics**: Detailed usage statistics grouped by LLM resources, including token usage, request count, success rate, average tokens per request, and more, with support for time range and resource name filtering
 - **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing configurations
 - **System Monitoring**: Real-time system information (CPU, memory, uptime, etc.)
 
@@ -299,8 +301,9 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
 - `GET /api/v1/system/info` - Get system information (CPU, memory, uptime, etc.)
 
 #### Statistics
-- `GET /api/v1/stats/system` - Get system statistics
-- `GET /api/v1/stats/llm-resources/:id` - Get LLM resource statistics
+- `GET /api/v1/stats/system` - Get system statistics (total requests, total users, total LLM resources, success rate, average response time)
+- `GET /api/v1/stats/llm-resources/usage` - Get LLM resource usage statistics (grouped by resource, includes token usage, request count, success rate, etc.)
+- `GET /api/v1/stats/llm-resources/:id` - Get single LLM resource statistics
 - `GET /api/v1/stats/users/:id` - Get user statistics
 
 #### OpenAI Compatible API

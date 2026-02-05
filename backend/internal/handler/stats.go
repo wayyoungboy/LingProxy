@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/storage"
 )
 
@@ -106,16 +107,22 @@ func (h *StatsHandler) GetLLMResourceUsageStats(c *gin.Context) {
 	// 获取所有请求记录
 	requests, err := h.storage.ListRequests(100000) // 获取足够多的记录
 	if err != nil {
+		logger.Error("Failed to get requests for usage stats", logger.F("component", "handler"), logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get requests: " + err.Error()})
 		return
 	}
 
+	logger.Debug("Retrieved requests for usage stats", logger.F("component", "handler"), logger.F("request_count", len(requests)))
+
 	// 获取所有LLM资源
 	resources, err := h.storage.ListLLMResources()
 	if err != nil {
+		logger.Error("Failed to get llm resources for usage stats", logger.F("component", "handler"), logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get llm resources: " + err.Error()})
 		return
 	}
+
+	logger.Debug("Retrieved llm resources for usage stats", logger.F("component", "handler"), logger.F("resource_count", len(resources)))
 
 	// 创建资源映射
 	resourceMap := make(map[string]*storage.LLMResource)
@@ -125,15 +132,19 @@ func (h *StatsHandler) GetLLMResourceUsageStats(c *gin.Context) {
 
 	// 按资源分组统计
 	usageMap := make(map[string]map[string]interface{})
+	skippedRequests := 0
 	for _, request := range requests {
 		resourceID := request.LLMResourceID
 		if resourceID == "" {
+			skippedRequests++
 			continue // 跳过没有关联资源的请求
 		}
 
 		if _, exists := usageMap[resourceID]; !exists {
 			resource, ok := resourceMap[resourceID]
 			if !ok {
+				skippedRequests++
+				logger.Debug("Request references non-existent resource", logger.F("component", "handler"), logger.F("resource_id", resourceID), logger.F("request_id", request.ID))
 				continue // 资源不存在，跳过
 			}
 			usageMap[resourceID] = map[string]interface{}{
@@ -166,6 +177,10 @@ func (h *StatsHandler) GetLLMResourceUsageStats(c *gin.Context) {
 		}
 	}
 
+	if skippedRequests > 0 {
+		logger.Debug("Skipped requests without valid resource", logger.F("component", "handler"), logger.F("skipped_count", skippedRequests))
+	}
+
 	// 转换为数组并计算成功率
 	var usageList []map[string]interface{}
 	for _, usage := range usageMap {
@@ -188,5 +203,8 @@ func (h *StatsHandler) GetLLMResourceUsageStats(c *gin.Context) {
 		usageList = append(usageList, usage)
 	}
 
+	logger.Debug("Usage stats calculated", logger.F("component", "handler"), logger.F("usage_items_count", len(usageList)))
+
+	// 即使没有数据也返回空数组，而不是错误
 	c.JSON(http.StatusOK, gin.H{"data": usageList})
 }

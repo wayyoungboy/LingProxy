@@ -433,8 +433,13 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 
 	// 非流式响应处理
 	serviceResp, err := h.openaiService.CreateChatCompletion(ctx, llmResource, serviceReq)
-	duration := serviceResp.Duration.Milliseconds()
-	openaiResponse := serviceResp.Response
+	var duration int64
+	var openaiResponse *openaiSDK.ChatCompletion
+	
+	if serviceResp != nil {
+		duration = serviceResp.Duration.Milliseconds()
+		openaiResponse = serviceResp.Response
+	}
 
 	// 记录API调用结果
 	if err != nil {
@@ -466,6 +471,8 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		// 保存失败的请求记录
 		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
 			logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+		} else {
+			logger.Debug("Failed request record saved", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("resource_id", llmResource.ID), logger.F("user_id", userID))
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": map[string]interface{}{
@@ -479,13 +486,16 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 	}
 
 	// 记录token使用量
-	if openaiResponse != nil {
+	if openaiResponse != nil && openaiResponse.Usage.TotalTokens > 0 {
 		requestRecord.Tokens = int(openaiResponse.Usage.TotalTokens)
+		logger.Debug("Token usage recorded", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("tokens", requestRecord.Tokens))
 	}
 
 	// 保存请求记录
 	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
 		logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+	} else {
+		logger.Debug("Request record saved successfully", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("resource_id", llmResource.ID), logger.F("user_id", userID), logger.F("tokens", requestRecord.Tokens), logger.F("status", requestRecord.Status))
 	}
 
 	// 检查响应是否有效
@@ -559,10 +569,30 @@ func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx contex
 	c.Header("Connection", "keep-alive")
 	c.Header("X-Accel-Buffering", "no") // 禁用 nginx 缓冲
 
+	// 记录开始时间
+	startTime := time.Now()
+
 	// 获取流式响应
 	stream, err := h.openaiService.CreateChatCompletionStream(ctx, llmResource, req)
 	if err != nil {
 		logger.Error("Failed to create streaming chat completion", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
+		
+		// 记录失败的请求
+		duration := time.Since(startTime)
+		requestRecord := &storage.Request{
+			UserID:        userID,
+			LLMResourceID: llmResource.ID,
+			Endpoint:      "/llm/v1/chat/completions",
+			Method:        "POST",
+			Duration:      duration.Milliseconds(),
+			Status:        "error",
+			Tokens:        0,
+			CreatedAt:     time.Now(),
+		}
+		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+			logger.Error("Failed to save failed streaming request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+		}
+		
 		c.SSEvent("error", gin.H{
 			"error": map[string]interface{}{
 				"message": "Failed to create streaming chat completion: " + err.Error(),
@@ -573,9 +603,6 @@ func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx contex
 		c.Writer.Flush()
 		return
 	}
-
-	// 记录开始时间
-	startTime := time.Now()
 	var totalTokens int
 	var promptTokens int
 	var completionTokens int
@@ -625,6 +652,26 @@ func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx contex
 	// 检查流式响应错误
 	if err := stream.Err(); err != nil {
 		logger.Error("Stream iteration error", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
+		
+		// 记录失败的请求
+		duration := time.Since(startTime)
+		requestRecord := &storage.Request{
+			UserID:        userID,
+			LLMResourceID: llmResource.ID,
+			Endpoint:      "/llm/v1/chat/completions",
+			Method:        "POST",
+			Duration:      duration.Milliseconds(),
+			Status:        "error",
+			Tokens:        totalTokens,
+			CreatedAt:     time.Now(),
+		}
+		if totalTokens == 0 {
+			requestRecord.Tokens = promptTokens + completionTokens
+		}
+		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+			logger.Error("Failed to save failed streaming request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+		}
+		
 		errorJSON, _ := json.Marshal(gin.H{
 			"error": map[string]interface{}{
 				"message": "Stream error: " + err.Error(),
@@ -664,6 +711,8 @@ func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx contex
 	// 保存请求记录
 	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
 		logger.Error("Failed to save streaming request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+	} else {
+		logger.Debug("Streaming request record saved successfully", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("resource_id", llmResource.ID), logger.F("user_id", userID), logger.F("tokens", totalTokens), logger.F("status", requestRecord.Status))
 	}
 
 	logger.Debug("Streaming chat completion completed", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("response_id", responseID), logger.F("model", responseModel), logger.F("duration_ms", duration.Milliseconds()), logger.F("tokens", totalTokens))
@@ -840,8 +889,13 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	// 调用统一的API服务
 	ctx := c.Request.Context()
 	serviceResp, err := h.openaiService.CreateCompletion(ctx, llmResource, serviceReq)
-	duration := serviceResp.Duration.Milliseconds()
-	openaiResponse := serviceResp.Response
+	var duration int64
+	var openaiResponse *openaiSDK.Completion
+	
+	if serviceResp != nil {
+		duration = serviceResp.Duration.Milliseconds()
+		openaiResponse = serviceResp.Response
+	}
 
 	// 记录请求到数据库
 	requestRecord := &storage.Request{
@@ -861,6 +915,8 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 		// 保存失败的请求记录
 		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
 			logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+		} else {
+			logger.Debug("Failed completion request record saved", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("resource_id", llmResource.ID), logger.F("user_id", userID))
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": map[string]interface{}{
@@ -874,13 +930,16 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	}
 
 	// 记录token使用量
-	if openaiResponse != nil {
+	if openaiResponse != nil && openaiResponse.Usage.TotalTokens > 0 {
 		requestRecord.Tokens = int(openaiResponse.Usage.TotalTokens)
+		logger.Debug("Completion token usage recorded", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("tokens", requestRecord.Tokens))
 	}
 
 	// 保存请求记录
 	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
 		logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+	} else {
+		logger.Debug("Completion request record saved successfully", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("resource_id", llmResource.ID), logger.F("user_id", userID), logger.F("tokens", requestRecord.Tokens), logger.F("status", requestRecord.Status))
 	}
 
 	// 转换响应格式

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 )
@@ -327,6 +328,11 @@ func (m *MemoryStorage) ListRequests(limit int) ([]*Request, error) {
 	for _, request := range m.requests {
 		requests = append(requests, request)
 	}
+
+	// 按创建时间倒序排序（最新的在前）
+	sort.Slice(requests, func(i, j int) bool {
+		return requests[i].CreatedAt.After(requests[j].CreatedAt)
+	})
 
 	// 简单的分页
 	if limit > 0 && len(requests) > limit {

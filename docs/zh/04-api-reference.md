@@ -350,6 +350,104 @@ Authorization: Bearer YOUR_API_KEY_OR_TOKEN
 }
 ```
 
+### 统计信息
+
+#### 获取系统统计信息
+
+**端点：** `GET /api/v1/stats/system`
+
+**响应：**
+```json
+{
+  "data": {
+    "total_requests": 1000,
+    "total_users": 10,
+    "total_llm_resources": 5,
+    "success_rate": 98.5,
+    "avg_response_time": 120.5
+  }
+}
+```
+
+#### 获取LLM资源使用统计
+
+**端点：** `GET /api/v1/stats/llm-resources/usage`
+
+**说明：** 按LLM资源分组统计使用情况，包括Token使用量、请求数、成功率等。
+
+**响应：**
+```json
+{
+  "data": [
+    {
+      "resource_id": "1770294403900247000",
+      "resource_name": "硅基流动-对话-Qwen-Qwen2.5-7B-Instruct",
+      "resource_type": "chat",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "total_tokens": 50000,
+      "total_requests": 100,
+      "success_requests": 98,
+      "failed_requests": 2,
+      "success_rate": 98.0,
+      "avg_tokens_per_request": 500,
+      "last_request_time": "2026-02-06T00:29:27+08:00"
+    }
+  ]
+}
+```
+
+**字段说明：**
+- `resource_id`: LLM资源ID
+- `resource_name`: 资源名称
+- `resource_type`: 资源类型（chat、image、embedding等）
+- `model`: 模型标识
+- `total_tokens`: Token使用总量
+- `total_requests`: 总请求数
+- `success_requests`: 成功请求数
+- `failed_requests`: 失败请求数
+- `success_rate`: 成功率（百分比）
+- `avg_tokens_per_request`: 平均Token/请求
+- `last_request_time`: 最后请求时间
+
+#### 获取单个LLM资源统计信息
+
+**端点：** `GET /api/v1/stats/llm-resources/:id`
+
+**参数：**
+- `id`: LLM资源ID
+
+**响应：**
+```json
+{
+  "data": {
+    "llm_resource_id": "1770294403900247000",
+    "total_requests": 100,
+    "success_rate": 98.0,
+    "avg_response_time": 110
+  }
+}
+```
+
+#### 获取用户统计信息
+
+**端点：** `GET /api/v1/stats/users/:id`
+
+**参数：**
+- `id`: 用户ID
+
+**响应：**
+```json
+{
+  "data": {
+    "user_id": "1770272193110467000",
+    "total_requests": 100,
+    "total_tokens": 50000,
+    "success_rate": 97.8,
+    "avg_response_time": 130
+  }
+}
+```
+
 ### 系统
 
 #### 获取系统信息

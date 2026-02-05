@@ -183,8 +183,9 @@ const loadUsageData = async () => {
     loading.value = true
     
     // 调用后端API获取按资源分组的统计
+    // 注意：apiClient的响应拦截器已经返回了response.data，所以这里直接使用response.data
     const response = await api.getLLMResourceUsageStats()
-    const usageArray = response?.data?.data || []
+    const usageArray = response?.data || []
     
     // 应用筛选
     let filtered = usageArray

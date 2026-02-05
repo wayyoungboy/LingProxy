@@ -350,6 +350,104 @@ List available models.
 }
 ```
 
+### Statistics
+
+#### Get System Statistics
+
+**Endpoint:** `GET /api/v1/stats/system`
+
+**Response:**
+```json
+{
+  "data": {
+    "total_requests": 1000,
+    "total_users": 10,
+    "total_llm_resources": 5,
+    "success_rate": 98.5,
+    "avg_response_time": 120.5
+  }
+}
+```
+
+#### Get LLM Resource Usage Statistics
+
+**Endpoint:** `GET /api/v1/stats/llm-resources/usage`
+
+**Description:** Get usage statistics grouped by LLM resources, including token usage, request count, success rate, etc.
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "resource_id": "1770294403900247000",
+      "resource_name": "SiliconFlow-Chat-Qwen-Qwen2.5-7B-Instruct",
+      "resource_type": "chat",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "total_tokens": 50000,
+      "total_requests": 100,
+      "success_requests": 98,
+      "failed_requests": 2,
+      "success_rate": 98.0,
+      "avg_tokens_per_request": 500,
+      "last_request_time": "2026-02-06T00:29:27+08:00"
+    }
+  ]
+}
+```
+
+**Field Descriptions:**
+- `resource_id`: LLM resource ID
+- `resource_name`: Resource name
+- `resource_type`: Resource type (chat, image, embedding, etc.)
+- `model`: Model identifier
+- `total_tokens`: Total token usage
+- `total_requests`: Total request count
+- `success_requests`: Successful request count
+- `failed_requests`: Failed request count
+- `success_rate`: Success rate (percentage)
+- `avg_tokens_per_request`: Average tokens per request
+- `last_request_time`: Last request time
+
+#### Get Single LLM Resource Statistics
+
+**Endpoint:** `GET /api/v1/stats/llm-resources/:id`
+
+**Parameters:**
+- `id`: LLM resource ID
+
+**Response:**
+```json
+{
+  "data": {
+    "llm_resource_id": "1770294403900247000",
+    "total_requests": 100,
+    "success_rate": 98.0,
+    "avg_response_time": 110
+  }
+}
+```
+
+#### Get User Statistics
+
+**Endpoint:** `GET /api/v1/stats/users/:id`
+
+**Parameters:**
+- `id`: User ID
+
+**Response:**
+```json
+{
+  "data": {
+    "user_id": "1770272193110467000",
+    "total_requests": 100,
+    "total_tokens": 50000,
+    "success_rate": 97.8,
+    "avg_response_time": 130
+  }
+}
+```
+
 ### System
 
 #### Get System Info
