@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -99,7 +101,7 @@ func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string,
 		logger.Warn("Policy execution failed, falling back to default", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("error", err.Error()), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID))
 		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
-	logger.Info("Resource selected successfully", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("resource_type", resource.Type))
+	logger.Debug("Resource selected successfully", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("resource_type", resource.Type))
 
 	return resource, nil
 }
@@ -123,7 +125,7 @@ func (h *OpenAIHandler) selectResourceWithDefaultPolicy(c *gin.Context, modelNam
 			randomIndex = int(time.Now().UnixNano()) % len(activeResources)
 		}
 		selected := activeResources[randomIndex]
-		logger.Info("Default policy (random) selected resource", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("model", modelName), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name), logger.F("total_active", len(activeResources)))
+		logger.Debug("Default policy (random) selected resource", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("model", modelName), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name), logger.F("total_active", len(activeResources)))
 		return selected, nil
 	}
 
@@ -200,15 +202,26 @@ type ChatCompletionRequest struct {
 	User             string        `json:"user,omitempty"`
 }
 
+// ContentPart 内容部分（用于多模态消息）
+type ContentPart struct {
+	Type     string `json:"type"` // "text" 或 "image_url"
+	Text     string `json:"text,omitempty"`
+	ImageURL struct {
+		URL string `json:"url"`
+	} `json:"image_url,omitempty"`
+}
+
 // ChatMessage 聊天消息
-// @Description 单条聊天消息
+// @Description 单条聊天消息，支持多模态（文本和图片）
 // @Param role body string true "角色: system, user, assistant"
-// @Param content body string true "消息内容"
+// @Param content body string|array true "消息内容，可以是字符串（纯文本）或数组（多模态：文本+图片）"
 // @Param name body string false "消息发送者名称"
+// @Example content as string: "Hello, how are you?"
+// @Example content as array: [{"type": "text", "text": "What is in this image?"}, {"type": "image_url", "image_url": {"url": "https://example.com/image.png"}}]
 type ChatMessage struct {
-	Role    string `json:"role" binding:"required"`
-	Content string `json:"content" binding:"required"`
-	Name    string `json:"name,omitempty"`
+	Role    string      `json:"role" binding:"required"`
+	Content interface{} `json:"content" binding:"required"` // 可以是 string 或 []ContentPart
+	Name    string      `json:"name,omitempty"`
 }
 
 // ChatCompletionResponse 聊天补全响应
@@ -269,27 +282,117 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		return
 	}
 
-	// 转换消息格式
+	// 获取 requestID（用于日志）
+	requestID := middleware.GetRequestID(c)
+
+	// 记录请求的 messages（用于调试）
+	logger.Debug("Chat completion request received", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", req.Model), logger.F("message_count", len(req.Messages)), logger.F("messages", req.Messages))
+
+	// 转换消息格式（支持多模态）
 	messages := make([]openaiSDK.ChatCompletionMessageParamUnion, 0, len(req.Messages))
 	for _, msg := range req.Messages {
-		switch strings.ToLower(msg.Role) {
-		case "system":
-			messages = append(messages, openaiSDK.SystemMessage(msg.Content))
-		case "user":
-			messages = append(messages, openaiSDK.UserMessage(msg.Content))
-		case "assistant":
-			messages = append(messages, openaiSDK.AssistantMessage(msg.Content))
+		// 处理 content 字段（支持 string 或 array）
+		var messageParam openaiSDK.ChatCompletionMessageParamUnion
+
+		// 判断 content 类型
+		switch content := msg.Content.(type) {
+		case string:
+			// 纯文本消息
+			switch strings.ToLower(msg.Role) {
+			case "system":
+				messageParam = openaiSDK.SystemMessage(content)
+			case "user":
+				messageParam = openaiSDK.UserMessage(content)
+			case "assistant":
+				messageParam = openaiSDK.AssistantMessage(content)
+			default:
+				messageParam = openaiSDK.UserMessage(content)
+			}
+		case []interface{}:
+			// 多模态消息（数组格式）- 仅 user 角色支持多模态
+			if strings.ToLower(msg.Role) != "user" {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": map[string]interface{}{
+						"message": "Multimodal content (array) is only supported for 'user' role",
+						"type":    "invalid_request_error",
+						"param":   nil,
+						"code":    "invalid_request",
+					},
+				})
+				return
+			}
+
+			contentParts := make([]openaiSDK.ChatCompletionContentPartUnionParam, 0, len(content))
+			for _, part := range content {
+				partMap, ok := part.(map[string]interface{})
+				if !ok {
+					logger.Warn("Invalid content part format", logger.F("component", "handler"), logger.F("request_id", requestID))
+					continue
+				}
+
+				partType, ok := partMap["type"].(string)
+				if !ok {
+					logger.Warn("Content part missing type", logger.F("component", "handler"), logger.F("request_id", requestID))
+					continue
+				}
+
+				switch partType {
+				case "text":
+					if text, ok := partMap["text"].(string); ok {
+						contentParts = append(contentParts, openaiSDK.TextContentPart(text))
+					}
+				case "image_url":
+					if imageURLMap, ok := partMap["image_url"].(map[string]interface{}); ok {
+						if url, ok := imageURLMap["url"].(string); ok {
+							imageURLParam := openaiSDK.ChatCompletionContentPartImageImageURLParam{
+								URL: url,
+							}
+							// 可选：支持 detail 参数
+							if detail, ok := imageURLMap["detail"].(string); ok {
+								imageURLParam.Detail = detail
+							}
+							contentParts = append(contentParts, openaiSDK.ImageContentPart(imageURLParam))
+						}
+					}
+				default:
+					logger.Warn("Unsupported content part type", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("type", partType))
+				}
+			}
+
+			if len(contentParts) == 0 {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": map[string]interface{}{
+						"message": "Invalid content array: no valid content parts",
+						"type":    "invalid_request_error",
+						"param":   nil,
+						"code":    "invalid_request",
+					},
+				})
+				return
+			}
+
+			// User 消息支持多模态
+			messageParam = openaiSDK.UserMessage(contentParts)
 		default:
-			messages = append(messages, openaiSDK.UserMessage(msg.Content))
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": map[string]interface{}{
+					"message": "Invalid content type: must be string or array",
+					"type":    "invalid_request_error",
+					"param":   nil,
+					"code":    "invalid_request",
+				},
+			})
+			return
 		}
+
+		messages = append(messages, messageParam)
 	}
 
 	// 使用资源中配置的model覆写请求中的model（如果资源配置了model）
-	requestID := middleware.GetRequestID(c)
 	modelToUse := req.Model
 	if llmResource.Model != "" {
 		modelToUse = llmResource.Model
-		logger.Info("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
+		logger.Debug("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
 	}
 	logger.Debug("Request parameters prepared", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse), logger.F("base_url", llmResource.BaseURL), logger.F("message_count", len(messages)))
 
@@ -316,13 +419,34 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		PresencePenalty:  req.PresencePenalty,
 		FrequencyPenalty: req.FrequencyPenalty,
 		User:             req.User,
+		Stream:           req.Stream,
 	}
 
 	// 调用统一的API服务
 	ctx := c.Request.Context()
+
+	// 如果请求流式响应，使用流式处理
+	if req.Stream {
+		h.handleStreamingChatCompletion(c, ctx, llmResource, serviceReq, requestID, userID, modelToUse)
+		return
+	}
+
+	// 非流式响应处理
 	serviceResp, err := h.openaiService.CreateChatCompletion(ctx, llmResource, serviceReq)
 	duration := serviceResp.Duration.Milliseconds()
 	openaiResponse := serviceResp.Response
+
+	// 记录API调用结果
+	if err != nil {
+		logger.Error("OpenAI API call failed", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
+	} else if openaiResponse == nil {
+		logger.Error("OpenAI API returned nil response", logger.F("component", "handler"), logger.F("request_id", requestID))
+	} else {
+		logger.Debug("OpenAI API call succeeded", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("response_id", openaiResponse.ID), logger.F("model", openaiResponse.Model), logger.F("choices_count", len(openaiResponse.Choices)))
+		if len(openaiResponse.Choices) > 0 {
+			logger.Debug("Chat completion response", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("response_content", openaiResponse.Choices[0].Message.Content), logger.F("finish_reason", openaiResponse.Choices[0].FinishReason))
+		}
+	}
 
 	// 记录请求到数据库
 	requestRecord := &storage.Request{
@@ -364,45 +488,247 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
 	}
 
-	// 转换响应格式
-	choices := make([]struct {
-		Index        int         `json:"index"`
-		Message      ChatMessage `json:"message"`
-		FinishReason string      `json:"finish_reason"`
-	}, len(openaiResponse.Choices))
-	for i, choice := range openaiResponse.Choices {
-		choices[i] = struct {
-			Index        int         `json:"index"`
-			Message      ChatMessage `json:"message"`
-			FinishReason string      `json:"finish_reason"`
-		}{
-			Index: i,
-			Message: ChatMessage{
-				Role:    string(choice.Message.Role),
-				Content: choice.Message.Content,
+	// 检查响应是否有效
+	if openaiResponse == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Received nil response from OpenAI API",
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
 			},
-			FinishReason: string(choice.FinishReason),
+		})
+		return
+	}
+
+	if len(openaiResponse.Choices) == 0 {
+		logger.Warn("OpenAI API returned empty choices", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("response_id", openaiResponse.ID))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Received empty choices from OpenAI API",
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
+			},
+		})
+		return
+	}
+
+	// 直接返回从资源侧收到的响应，不做任何转换
+	// 记录最终响应（用于调试）
+	logger.Debug("Sending chat completion response", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("response_id", openaiResponse.ID), logger.F("choices_count", len(openaiResponse.Choices)))
+	if len(openaiResponse.Choices) > 0 {
+		logger.Debug("Response content", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("content", openaiResponse.Choices[0].Message.Content), logger.F("content_type", fmt.Sprintf("%T", openaiResponse.Choices[0].Message.Content)))
+	}
+
+	// 尝试序列化响应以检查是否有错误
+	responseJSON, err := json.Marshal(openaiResponse)
+	if err != nil {
+		logger.Error("Failed to marshal response to JSON", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Failed to serialize response: " + err.Error(),
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
+			},
+		})
+		return
+	}
+
+	previewLen := len(responseJSON)
+	if previewLen > 500 {
+		previewLen = 500
+	}
+	logger.Debug("Response JSON serialized successfully", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("json_size", len(responseJSON)), logger.F("json_preview", string(responseJSON[:previewLen])))
+
+	// 直接返回从资源侧收到的原始响应
+	c.JSON(http.StatusOK, openaiResponse)
+
+	// 记录响应发送完成
+	logger.Debug("Response sent to client", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("status_code", c.Writer.Status()), logger.F("response_written", c.Writer.Written()))
+}
+
+// handleStreamingChatCompletion 处理流式聊天补全请求
+func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx context.Context, llmResource *storage.LLMResource, req service.ChatCompletionRequest, requestID string, userID string, modelToUse string) {
+	logger.Debug("Starting streaming chat completion", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse))
+
+	// 设置响应头为 Server-Sent Events (SSE)
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no") // 禁用 nginx 缓冲
+
+	// 获取流式响应
+	stream, err := h.openaiService.CreateChatCompletionStream(ctx, llmResource, req)
+	if err != nil {
+		logger.Error("Failed to create streaming chat completion", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
+		c.SSEvent("error", gin.H{
+			"error": map[string]interface{}{
+				"message": "Failed to create streaming chat completion: " + err.Error(),
+				"type":    "internal_server_error",
+				"code":    "internal_server_error",
+			},
+		})
+		c.Writer.Flush()
+		return
+	}
+
+	// 记录开始时间
+	startTime := time.Now()
+	var totalTokens int
+	var promptTokens int
+	var completionTokens int
+	var responseID string
+	var responseModel string
+
+	// 处理流式响应
+	defer stream.Close()
+
+	// 迭代流式响应
+	for stream.Next() {
+		chunk := stream.Current()
+		if chunk.ID == "" {
+			continue
+		}
+
+		// 提取 response ID 和 model（通常在第一个 chunk）
+		if responseID == "" {
+			responseID = chunk.ID
+			responseModel = string(chunk.Model)
+		}
+
+		// 提取 usage（通常在最后一个 chunk）
+		if chunk.Usage.PromptTokens > 0 || chunk.Usage.CompletionTokens > 0 {
+			promptTokens = int(chunk.Usage.PromptTokens)
+			completionTokens = int(chunk.Usage.CompletionTokens)
+			totalTokens = int(chunk.Usage.TotalTokens)
+		}
+
+		// 清理 chunk 数据以符合 OpenAI API 规范
+		cleanedChunk := h.cleanChatCompletionChunk(chunk)
+
+		// 将清理后的 chunk 转换为 JSON
+		chunkJSON, err := json.Marshal(cleanedChunk)
+		if err != nil {
+			logger.Warn("Failed to marshal chunk", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
+			continue
+		}
+
+		// 发送 SSE 事件
+		c.Writer.WriteString("data: ")
+		c.Writer.Write(chunkJSON)
+		c.Writer.WriteString("\n\n")
+		c.Writer.Flush()
+	}
+
+	// 检查流式响应错误
+	if err := stream.Err(); err != nil {
+		logger.Error("Stream iteration error", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
+		errorJSON, _ := json.Marshal(gin.H{
+			"error": map[string]interface{}{
+				"message": "Stream error: " + err.Error(),
+				"type":    "internal_server_error",
+				"code":    "internal_server_error",
+			},
+		})
+		c.Writer.WriteString("data: ")
+		c.Writer.Write(errorJSON)
+		c.Writer.WriteString("\n\n")
+		c.Writer.Flush()
+		return
+	}
+
+	// 发送结束标记
+	c.Writer.WriteString("data: [DONE]\n\n")
+	c.Writer.Flush()
+
+	duration := time.Since(startTime)
+
+	// 记录请求到数据库
+	requestRecord := &storage.Request{
+		UserID:        userID,
+		LLMResourceID: llmResource.ID,
+		Endpoint:      "/llm/v1/chat/completions",
+		Method:        "POST",
+		Duration:      duration.Milliseconds(),
+		Status:        "success",
+		Tokens:        totalTokens,
+		CreatedAt:     time.Now(),
+	}
+
+	if totalTokens == 0 {
+		requestRecord.Tokens = promptTokens + completionTokens
+	}
+
+	// 保存请求记录
+	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+		logger.Error("Failed to save streaming request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+	}
+
+	logger.Debug("Streaming chat completion completed", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("response_id", responseID), logger.F("model", responseModel), logger.F("duration_ms", duration.Milliseconds()), logger.F("tokens", totalTokens))
+}
+
+// cleanChatCompletionChunk 清理 ChatCompletionChunk 以符合 OpenAI API 规范
+// 移除空字符串字段，确保符合 OpenAI SDK 的验证要求
+func (h *OpenAIHandler) cleanChatCompletionChunk(chunk openaiSDK.ChatCompletionChunk) map[string]interface{} {
+	chunkJSON, err := json.Marshal(chunk)
+	if err != nil {
+		logger.Warn("Failed to marshal chunk for cleaning", logger.F("error", err.Error()))
+		return map[string]interface{}{
+			"id":      chunk.ID,
+			"object":  chunk.Object,
+			"created": chunk.Created,
+			"model":   chunk.Model,
+			"choices": chunk.Choices,
 		}
 	}
 
-	response := ChatCompletionResponse{
-		ID:      openaiResponse.ID,
-		Object:  string(openaiResponse.Object),
-		Created: int64(openaiResponse.Created),
-		Model:   openaiResponse.Model,
-		Choices: choices,
-		Usage: struct {
-			PromptTokens     int `json:"prompt_tokens"`
-			CompletionTokens int `json:"completion_tokens"`
-			TotalTokens      int `json:"total_tokens"`
-		}{
-			PromptTokens:     int(openaiResponse.Usage.PromptTokens),
-			CompletionTokens: int(openaiResponse.Usage.CompletionTokens),
-			TotalTokens:      int(openaiResponse.Usage.TotalTokens),
-		},
+	var chunkMap map[string]interface{}
+	if err := json.Unmarshal(chunkJSON, &chunkMap); err != nil {
+		logger.Warn("Failed to unmarshal chunk for cleaning", logger.F("error", err.Error()))
+		return chunkMap
 	}
 
-	c.JSON(http.StatusOK, response)
+	// 清理 choices 中的 delta 字段
+	if choices, ok := chunkMap["choices"].([]interface{}); ok {
+		for _, choice := range choices {
+			if choiceMap, ok := choice.(map[string]interface{}); ok {
+				if delta, ok := choiceMap["delta"].(map[string]interface{}); ok {
+					// 移除 role 字段（OpenAI API 规范中 delta 不应该包含 role）
+					delete(delta, "role")
+					h.removeEmptyStringField(delta, "refusal")
+					// 清理 function_call
+					if functionCall, ok := delta["function_call"].(map[string]interface{}); ok {
+						h.removeEmptyStringField(functionCall, "name")
+						h.removeEmptyStringField(functionCall, "arguments")
+						if len(functionCall) == 0 {
+							delete(delta, "function_call")
+						}
+					}
+					// 移除 null 的 tool_calls
+					if toolCalls, ok := delta["tool_calls"]; ok && toolCalls == nil {
+						delete(delta, "tool_calls")
+					}
+				}
+				// 移除空的 finish_reason
+				h.removeEmptyStringField(choiceMap, "finish_reason")
+			}
+		}
+	}
+
+	// 移除其他空字段
+	h.removeEmptyStringField(chunkMap, "system_fingerprint")
+	h.removeEmptyStringField(chunkMap, "service_tier")
+
+	return chunkMap
+}
+
+// removeEmptyStringField 辅助函数：如果字段是空字符串则移除
+func (h *OpenAIHandler) removeEmptyStringField(m map[string]interface{}, key string) {
+	if val, ok := m[key].(string); ok && val == "" {
+		delete(m, key)
+	}
 }
 
 // CompletionRequest 文本补全请求
@@ -482,7 +808,7 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	modelToUse := req.Model
 	if llmResource.Model != "" {
 		modelToUse = llmResource.Model
-		logger.Info("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
+		logger.Debug("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
 	}
 	logger.Debug("Request parameters prepared", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse), logger.F("base_url", llmResource.BaseURL))
 

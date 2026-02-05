@@ -1,0 +1,22 @@
+{
+  "name": "lingproxy-client",
+  "version": "1.0.0",
+  "description": "Standard JavaScript/TypeScript client for LingProxy AI API Gateway",
+  "type": "module",
+  "main": "lingproxy-client.js",
+  "scripts": {
+    "demo": "node lingproxy-client.js"
+  },
+  "keywords": [
+    "lingproxy",
+    "openai",
+    "ai",
+    "api",
+    "client"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.0.0"
+  }
+}

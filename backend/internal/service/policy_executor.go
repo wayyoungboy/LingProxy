@@ -66,7 +66,7 @@ func (e *RandomPolicyExecutor) Execute(policy *storage.Policy, modelName string,
 
 	// 随机选择（使用已初始化的随机数生成器）
 	selected := filtered[mathrand.Intn(len(filtered))]
-	logger.Info("Random policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name), logger.F("base_url", selected.BaseURL))
+		logger.Debug("Random policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name), logger.F("base_url", selected.BaseURL))
 
 	return selected, nil
 }
@@ -113,7 +113,7 @@ func (e *RoundRobinPolicyExecutor) Execute(policy *storage.Policy, modelName str
 	e.mu.Unlock()
 
 	selected := filtered[index]
-	logger.Info("Round-robin policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("current_index", index), logger.F("next_index", nextIndex), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name))
+		logger.Debug("Round-robin policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("current_index", index), logger.F("next_index", nextIndex), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name))
 
 	return selected, nil
 }
@@ -195,14 +195,14 @@ func (e *WeightedPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 	for _, wr := range validResources {
 		currentWeight += wr.Weight
 		if random < currentWeight {
-			logger.Info("Weighted policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", wr.Resource.ID), logger.F("resource_name", wr.Resource.Name), logger.F("weight", wr.Weight))
+			logger.Debug("Weighted policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", wr.Resource.ID), logger.F("resource_name", wr.Resource.Name), logger.F("weight", wr.Weight))
 			return wr.Resource, nil
 		}
 	}
 
 	// 兜底返回第一个资源
 	selected := validResources[0].Resource
-	logger.Info("Weighted policy fallback selection", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name))
+	logger.Debug("Weighted policy fallback selection", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name))
 	return selected, nil
 }
 
@@ -250,7 +250,7 @@ func (e *ModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 			}
 			// 然后检查资源是否可用
 			if resource, exists := resourceMap[mapping.ResourceID]; exists {
-				logger.Info("Model-match policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+				logger.Debug("Model-match policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
 				return resource, nil
 			}
 			logger.Warn("Model-match policy: resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", mapping.ResourceID))
@@ -264,7 +264,7 @@ func (e *ModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 		if _, exists := allResourceMap[params.DefaultResourceID]; !exists {
 			logger.Warn("Model-match policy: configured default resource not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
 		} else if resource, exists := resourceMap[params.DefaultResourceID]; exists {
-			logger.Info("Model-match policy selected default resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+			logger.Debug("Model-match policy selected default resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
 			return resource, nil
 		} else {
 			logger.Warn("Model-match policy: default resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
@@ -324,7 +324,7 @@ func (e *RegexMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 			}
 			// 然后检查资源是否可用
 			if resource, exists := resourceMap[rule.ResourceID]; exists {
-				logger.Info("Regex-match policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+				logger.Debug("Regex-match policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
 				return resource, nil
 			}
 			logger.Warn("Regex-match policy: resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", rule.ResourceID))
@@ -338,7 +338,7 @@ func (e *RegexMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 		if _, exists := allResourceMap[params.DefaultResourceID]; !exists {
 			logger.Warn("Regex-match policy: configured default resource not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
 		} else if resource, exists := resourceMap[params.DefaultResourceID]; exists {
-			logger.Info("Regex-match policy selected default resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+			logger.Debug("Regex-match policy selected default resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
 			return resource, nil
 		} else {
 			logger.Warn("Regex-match policy: default resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
@@ -405,7 +405,7 @@ func (e *PriorityPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 			continue
 		}
 		if resource, exists := resourceMap[pr.ID]; exists {
-			logger.Info("Priority policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("priority", pr.Priority))
+			logger.Debug("Priority policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("priority", pr.Priority))
 			return resource, nil
 		}
 		logger.Debug("Priority policy: resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", pr.ID), logger.F("priority", pr.Priority))
@@ -416,7 +416,7 @@ func (e *PriorityPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 		logger.Debug("Priority policy: fallback enabled", logger.F("component", "service"), logger.F("policy_id", policy.ID))
 		for _, r := range resources {
 			if r.Status == "active" {
-				logger.Info("Priority policy selected fallback resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", r.ID), logger.F("resource_name", r.Name))
+				logger.Debug("Priority policy selected fallback resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", r.ID), logger.F("resource_name", r.Name))
 				return r, nil
 			}
 		}
@@ -495,7 +495,7 @@ func (e *FailoverPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 				logger.Debug("Failover policy checking primary resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID), logger.F("is_healthy", isHealthy))
 
 				if isHealthy {
-					logger.Info("Failover policy selected primary resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", primary.ID), logger.F("resource_name", primary.Name))
+					logger.Debug("Failover policy selected primary resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", primary.ID), logger.F("resource_name", primary.Name))
 					return primary, nil
 				}
 				logger.Warn("Failover policy: primary resource unhealthy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID))
@@ -517,7 +517,7 @@ func (e *FailoverPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 			logger.Debug("Failover policy checking fallback resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("fallback_resource_id", fallbackID), logger.F("is_healthy", isHealthy))
 
 			if isHealthy {
-				logger.Info("Failover policy selected fallback resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", fallback.ID), logger.F("resource_name", fallback.Name))
+				logger.Debug("Failover policy selected fallback resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", fallback.ID), logger.F("resource_name", fallback.Name))
 				return fallback, nil
 			}
 			logger.Debug("Failover policy: fallback resource unhealthy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("fallback_resource_id", fallbackID))

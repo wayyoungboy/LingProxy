@@ -6,6 +6,7 @@ import (
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/packages/ssestream"
 )
 
 // Client 封装了 OpenAI 官方客户端
@@ -77,7 +78,7 @@ func (c *ChatCompletions) New(ctx context.Context, params openai.ChatCompletionN
 }
 
 // NewStreaming 创建流式聊天补全请求
-func (c *ChatCompletions) NewStreaming(ctx context.Context, params openai.ChatCompletionNewParams) interface{} {
+func (c *ChatCompletions) NewStreaming(ctx context.Context, params openai.ChatCompletionNewParams) *ssestream.Stream[openai.ChatCompletionChunk] {
 	return c.client.Chat.Completions.NewStreaming(ctx, params)
 }
 

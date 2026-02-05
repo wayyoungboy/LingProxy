@@ -10,6 +10,7 @@ import (
 	"github.com/lingproxy/lingproxy/internal/storage"
 	openaiSDK "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/packages/param"
+	"github.com/openai/openai-go/v3/packages/ssestream"
 )
 
 // OpenAIService OpenAI服务，统一管理OpenAI客户端调用
@@ -47,6 +48,7 @@ type ChatCompletionRequest struct {
 	PresencePenalty  float64
 	FrequencyPenalty float64
 	User             string
+	Stream           bool
 }
 
 // ChatCompletionResponse 聊天补全响应
@@ -68,6 +70,32 @@ func (s *OpenAIService) CreateChatCompletion(ctx context.Context, resource *stor
 	}
 
 	// 构建请求参数
+	params := s.buildChatCompletionParams(modelToUse, req)
+
+	// 记录开始时间
+	startTime := time.Now()
+
+	// 调用API
+	response, err := client.Chat().Completions().New(ctx, params)
+	duration := time.Since(startTime)
+
+	if err != nil {
+		return &ChatCompletionResponse{
+			Response: nil,
+			Duration: duration,
+			Error:    err,
+		}, err
+	}
+
+	return &ChatCompletionResponse{
+		Response: response,
+		Duration: duration,
+		Error:    nil,
+	}, nil
+}
+
+// buildChatCompletionParams 构建聊天补全请求参数
+func (s *OpenAIService) buildChatCompletionParams(modelToUse string, req ChatCompletionRequest) openaiSDK.ChatCompletionNewParams {
 	params := openaiSDK.ChatCompletionNewParams{
 		Model:    modelToUse,
 		Messages: req.Messages,
@@ -98,26 +126,29 @@ func (s *OpenAIService) CreateChatCompletion(ctx context.Context, resource *stor
 		params.User = param.NewOpt(req.User)
 	}
 
-	// 记录开始时间
-	startTime := time.Now()
+	return params
+}
 
-	// 调用API
-	response, err := client.Chat().Completions().New(ctx, params)
-	duration := time.Since(startTime)
+// CreateChatCompletionStream 创建流式聊天补全请求
+func (s *OpenAIService) CreateChatCompletionStream(ctx context.Context, resource *storage.LLMResource, req ChatCompletionRequest) (*ssestream.Stream[openaiSDK.ChatCompletionChunk], error) {
+	client := s.CreateClient(resource)
+	defer client.Close()
 
-	if err != nil {
-		return &ChatCompletionResponse{
-			Response: nil,
-			Duration: duration,
-			Error:    err,
-		}, err
+	// 确定使用的模型
+	modelToUse := req.Model
+	if resource.Model != "" {
+		modelToUse = resource.Model
 	}
 
-	return &ChatCompletionResponse{
-		Response: response,
-		Duration: duration,
-		Error:    nil,
-	}, nil
+	// 构建请求参数
+	params := s.buildChatCompletionParams(modelToUse, req)
+
+	// 调用流式API
+	stream := client.Chat().Completions().NewStreaming(ctx, params)
+	if stream == nil {
+		return nil, fmt.Errorf("failed to create stream")
+	}
+	return stream, nil
 }
 
 // CompletionRequest 文本补全请求参数
