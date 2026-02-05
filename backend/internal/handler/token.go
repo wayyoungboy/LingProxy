@@ -110,7 +110,7 @@ func (h *TokenHandler) ListTokens(c *gin.Context) {
 		tokenList = append(tokenList, gin.H{
 			"id":           token.ID,
 			"name":         token.Name,
-			"token":        token.Prefix, // 只显示前缀
+			"prefix":       token.Prefix, // 显示前缀
 			"status":       token.Status,
 			"policy_id":    token.PolicyID,
 			"last_used_at": token.LastUsedAt,
@@ -150,7 +150,8 @@ func (h *TokenHandler) GetToken(c *gin.Context) {
 		"data": gin.H{
 			"id":           token.ID,
 			"name":         token.Name,
-			"token":        token.Prefix, // 只显示前缀
+			"token":        token.Token, // 返回完整Token（管理员权限）
+			"prefix":       token.Prefix, // 同时返回前缀用于显示
 			"status":       token.Status,
 			"policy_id":    token.PolicyID,
 			"last_used_at": token.LastUsedAt,

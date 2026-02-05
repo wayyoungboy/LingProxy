@@ -20,9 +20,20 @@
         stripe
       >
         <el-table-column prop="name" label="Token名称" />
-        <el-table-column prop="token" label="Token值" width="200">
+        <el-table-column prop="token" label="Token值" width="280">
           <template #default="scope">
-            <el-tag>{{ scope.row.token }}</el-tag>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <el-tag>{{ scope.row.prefix || scope.row.token || 'ling-...' }}</el-tag>
+              <el-button
+                type="primary"
+                size="small"
+                text
+                @click="handleCopyToken(scope.row)"
+                title="复制完整Token"
+              >
+                <el-icon><DocumentCopy /></el-icon>
+              </el-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
@@ -232,7 +243,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, DocumentCopy } from '@element-plus/icons-vue'
 import api from '../api'
 
 const loading = ref(false)
@@ -410,7 +421,7 @@ const handleResetToken = async (id) => {
   }
 }
 
-// 复制Token
+// 复制Token（用于创建/重置对话框）
 const copyToken = () => {
   if (tokenInputRef.value) {
     const input = tokenInputRef.value.$el.querySelector('input')
@@ -419,6 +430,43 @@ const copyToken = () => {
       document.execCommand('copy')
       ElMessage.success('Token已复制到剪贴板')
     }
+  }
+}
+
+// 复制Token（用于列表）
+const handleCopyToken = async (token) => {
+  try {
+    // 如果列表中没有完整token，则从API获取
+    let tokenValue = token.token
+    if (!tokenValue || tokenValue.includes('...')) {
+      const response = await api.getToken(token.id)
+      if (response && response.data) {
+        tokenValue = response.data.token
+      } else {
+        ElMessage.error('获取Token失败')
+        return
+      }
+    }
+    
+    // 复制到剪贴板
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(tokenValue)
+      ElMessage.success('Token已复制到剪贴板')
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea')
+      textArea.value = tokenValue
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      ElMessage.success('Token已复制到剪贴板')
+    }
+  } catch (error) {
+    console.error('复制Token失败:', error)
+    ElMessage.error('复制Token失败')
   }
 }
 
