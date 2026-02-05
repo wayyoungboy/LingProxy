@@ -35,10 +35,9 @@
       </el-form>
       
       <el-table :data="requestsList" style="width: 100%" v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="path" label="请求路径" />
+        <el-table-column prop="id" label="ID" width="180" />
+        <el-table-column prop="endpoint" label="请求路径" />
         <el-table-column prop="method" label="方法" width="100" />
-        <el-table-column prop="model" label="模型" width="150" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.status === 'success' ? 'success' : 'danger'">
@@ -46,8 +45,13 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="response_time" label="响应时间(ms)" width="120" />
-        <el-table-column prop="created_at" label="请求时间" width="180" />
+        <el-table-column prop="duration" label="响应时间(ms)" width="120" />
+        <el-table-column prop="tokens" label="Token使用" width="120" />
+        <el-table-column prop="created_at" label="请求时间" width="180">
+          <template #default="scope">
+            {{ formatDate(scope.row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="scope">
             <el-button type="primary" size="small" @click="viewRequestDetail(scope.row)">
@@ -79,27 +83,17 @@
       <div v-if="currentRequest" class="request-detail">
         <el-descriptions :column="1" border>
           <el-descriptions-item label="请求ID">{{ currentRequest.id }}</el-descriptions-item>
-          <el-descriptions-item label="请求路径">{{ currentRequest.path }}</el-descriptions-item>
+          <el-descriptions-item label="用户ID">{{ currentRequest.user_id || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="请求路径">{{ currentRequest.endpoint }}</el-descriptions-item>
           <el-descriptions-item label="请求方法">{{ currentRequest.method }}</el-descriptions-item>
-          <el-descriptions-item label="使用模型">{{ currentRequest.model }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ currentRequest.status }}</el-descriptions-item>
-          <el-descriptions-item label="响应时间">{{ currentRequest.response_time }}ms</el-descriptions-item>
-          <el-descriptions-item label="请求时间">{{ currentRequest.created_at }}</el-descriptions-item>
-          <el-descriptions-item label="请求参数">
-            <el-scrollbar height="200px">
-              <pre>{{ formatJson(currentRequest.request_params) }}</pre>
-            </el-scrollbar>
+          <el-descriptions-item label="状态">
+            <el-tag :type="currentRequest.status === 'success' ? 'success' : 'danger'">
+              {{ currentRequest.status === 'success' ? '成功' : '失败' }}
+            </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="响应数据">
-            <el-scrollbar height="200px">
-              <pre>{{ formatJson(currentRequest.response_data) }}</pre>
-            </el-scrollbar>
-          </el-descriptions-item>
-          <el-descriptions-item label="错误信息" v-if="currentRequest.error_message">
-            <el-scrollbar height="200px">
-              <pre>{{ currentRequest.error_message }}</pre>
-            </el-scrollbar>
-          </el-descriptions-item>
+          <el-descriptions-item label="响应时间">{{ currentRequest.duration }}ms</el-descriptions-item>
+          <el-descriptions-item label="Token使用">{{ currentRequest.tokens || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="请求时间">{{ formatDate(currentRequest.created_at) }}</el-descriptions-item>
         </el-descriptions>
       </div>
       <template #footer>
@@ -137,22 +131,57 @@ const getRequests = async () => {
   loading.value = true
   try {
     const params = {
-      page: pagination.current,
-      page_size: pagination.size,
-      path: searchForm.path,
-      status: searchForm.status
-    }
-    
-    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      params.start_time = searchForm.dateRange[0]
-      params.end_time = searchForm.dateRange[1]
+      limit: pagination.size * pagination.current  // 后端使用limit参数
     }
     
     const response = await api.getRequests(params)
-    requestsList.value = response.data.items
-    pagination.total = response.data.total
+    // 后端返回格式: { "data": [...] }
+    if (response && response.data) {
+      // 如果是数组，直接使用
+      if (Array.isArray(response.data)) {
+        // 客户端分页和过滤
+        let filtered = response.data
+        
+        // 按路径过滤
+        if (searchForm.path) {
+          filtered = filtered.filter(r => r.endpoint && r.endpoint.includes(searchForm.path))
+        }
+        
+        // 按状态过滤
+        if (searchForm.status) {
+          filtered = filtered.filter(r => r.status === searchForm.status)
+        }
+        
+        // 按时间范围过滤
+        if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+          const start = new Date(searchForm.dateRange[0])
+          const end = new Date(searchForm.dateRange[1])
+          end.setHours(23, 59, 59, 999) // 包含结束日期
+          filtered = filtered.filter(r => {
+            const createdAt = new Date(r.created_at)
+            return createdAt >= start && createdAt <= end
+          })
+        }
+        
+        // 客户端分页
+        const start = (pagination.current - 1) * pagination.size
+        const end = start + pagination.size
+        requestsList.value = filtered.slice(start, end)
+        pagination.total = filtered.length
+      } else {
+        // 如果后端返回分页格式
+        requestsList.value = response.data.items || []
+        pagination.total = response.data.total || 0
+      }
+    } else {
+      requestsList.value = []
+      pagination.total = 0
+    }
   } catch (error) {
+    console.error('获取请求列表失败:', error)
     ElMessage.error('获取请求列表失败')
+    requestsList.value = []
+    pagination.total = 0
   } finally {
     loading.value = false
   }
@@ -194,6 +223,12 @@ const handleSizeChange = (size) => {
 const handleCurrentChange = (current) => {
   pagination.current = current
   getRequests()
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  return date.toLocaleString('zh-CN')
 }
 
 const formatJson = (jsonString) => {
