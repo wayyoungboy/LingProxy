@@ -212,9 +212,6 @@ const api = {
   getRequestDetail(id) {
     return apiClient.get(`/requests/${id}`)
   },
-  exportRequests(params) {
-    return apiClient.get('/requests/export', { params })
-  },
 
   // 统计信息
   getSystemStats() {

@@ -36,7 +36,7 @@ func (h *StatsHandler) GetSystemStats(c *gin.Context) {
 		return
 	}
 
-	requests, err := h.storage.ListRequests(1000)
+	requests, err := h.storage.ListRequests(&storage.RequestQueryParams{Limit: 1000})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get requests"})
 		return
@@ -105,7 +105,7 @@ func (h *StatsHandler) GetUserStats(c *gin.Context) {
 // GetLLMResourceUsageStats 获取LLM资源使用统计（按资源分组）
 func (h *StatsHandler) GetLLMResourceUsageStats(c *gin.Context) {
 	// 获取所有请求记录
-	requests, err := h.storage.ListRequests(100000) // 获取足够多的记录
+	requests, err := h.storage.ListRequests(&storage.RequestQueryParams{Limit: 100000}) // 获取足够多的记录
 	if err != nil {
 		logger.Error("Failed to get requests for usage stats", logger.F("component", "handler"), logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get requests: " + err.Error()})

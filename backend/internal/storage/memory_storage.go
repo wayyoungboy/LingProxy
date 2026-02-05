@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -320,12 +321,32 @@ func (m *MemoryStorage) GetRequest(id string) (*Request, error) {
 	return nil, ErrNotFound
 }
 
-func (m *MemoryStorage) ListRequests(limit int) ([]*Request, error) {
+func (m *MemoryStorage) ListRequests(params *RequestQueryParams) ([]*Request, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	requests := make([]*Request, 0, len(m.requests))
+	
+	// 过滤数据
 	for _, request := range m.requests {
+		// 时间范围过滤
+		if params.StartTime != nil && request.CreatedAt.Before(*params.StartTime) {
+			continue
+		}
+		if params.EndTime != nil && request.CreatedAt.After(*params.EndTime) {
+			continue
+		}
+		
+		// 请求路径过滤（支持模糊匹配）
+		if params.Endpoint != "" && !contains(request.Endpoint, params.Endpoint) {
+			continue
+		}
+		
+		// 状态过滤
+		if params.Status != "" && request.Status != params.Status {
+			continue
+		}
+		
 		requests = append(requests, request)
 	}
 
@@ -335,10 +356,16 @@ func (m *MemoryStorage) ListRequests(limit int) ([]*Request, error) {
 	})
 
 	// 简单的分页
+	limit := params.Limit
 	if limit > 0 && len(requests) > limit {
 		return requests[:limit], nil
 	}
 	return requests, nil
+}
+
+// contains 检查字符串是否包含子字符串（不区分大小写）
+func contains(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
 // Response methods

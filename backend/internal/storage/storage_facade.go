@@ -82,8 +82,8 @@ func (f *StorageFacade) GetRequest(id string) (*Request, error) {
 	return f.storage.GetRequest(id)
 }
 
-func (f *StorageFacade) ListRequests(limit int) ([]*Request, error) {
-	return f.storage.ListRequests(limit)
+func (f *StorageFacade) ListRequests(params *RequestQueryParams) ([]*Request, error) {
+	return f.storage.ListRequests(params)
 }
 
 func (f *StorageFacade) CreateModel(model *Model) error {

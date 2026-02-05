@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <span class="page-title">{{ $t('requests.title') }}</span>
-          <el-button type="primary" @click="exportRequests">
-            <el-icon><Download /></el-icon>
-            {{ $t('requests.export') }}
-          </el-button>
         </div>
       </template>
       
@@ -117,8 +113,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import api from '../api'
 
 const { t } = useI18n()
@@ -143,49 +138,37 @@ const pagination = reactive({
 const getRequests = async () => {
   loading.value = true
   try {
+    // 获取足够的数据用于客户端分页（最多1000条）
     const params = {
-      limit: pagination.size * pagination.current  // 后端使用limit参数
+      limit: 1000
+    }
+    
+    // 添加搜索参数
+    if (searchForm.path) {
+      params.endpoint = searchForm.path
+    }
+    
+    if (searchForm.status) {
+      params.status = searchForm.status
+    }
+    
+    // 时间范围参数
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      const start = new Date(searchForm.dateRange[0])
+      const end = new Date(searchForm.dateRange[1])
+      end.setHours(23, 59, 59, 999) // 包含结束日期
+      params.start_time = start.toISOString()
+      params.end_time = end.toISOString()
     }
     
     const response = await api.getRequests(params)
-    // 后端返回格式: { "data": [...] }
     if (response && response.data) {
-      // 如果是数组，直接使用
-      if (Array.isArray(response.data)) {
-        // 客户端分页和过滤
-        let filtered = response.data
-        
-        // 按路径过滤
-        if (searchForm.path) {
-          filtered = filtered.filter(r => r.endpoint && r.endpoint.includes(searchForm.path))
-        }
-        
-        // 按状态过滤
-        if (searchForm.status) {
-          filtered = filtered.filter(r => r.status === searchForm.status)
-        }
-        
-        // 按时间范围过滤
-        if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-          const start = new Date(searchForm.dateRange[0])
-          const end = new Date(searchForm.dateRange[1])
-          end.setHours(23, 59, 59, 999) // 包含结束日期
-          filtered = filtered.filter(r => {
-            const createdAt = new Date(r.created_at)
-            return createdAt >= start && createdAt <= end
-          })
-        }
-        
-        // 客户端分页
-        const start = (pagination.current - 1) * pagination.size
-        const end = start + pagination.size
-        requestsList.value = filtered.slice(start, end)
-        pagination.total = filtered.length
-      } else {
-        // 如果后端返回分页格式
-        requestsList.value = response.data.items || []
-        pagination.total = response.data.total || 0
-      }
+      const allRequests = response.data
+      // 客户端分页
+      const start = (pagination.current - 1) * pagination.size
+      const end = start + pagination.size
+      requestsList.value = allRequests.slice(start, end)
+      pagination.total = allRequests.length
     } else {
       requestsList.value = []
       pagination.total = 0
@@ -207,15 +190,6 @@ const viewRequestDetail = async (request) => {
     detailDialogVisible.value = true
   } catch (error) {
     ElMessage.error(t('requests.getDetailFailed'))
-  }
-}
-
-const exportRequests = async () => {
-  try {
-    await api.exportRequests(searchForm)
-    ElMessage.success(t('requests.exportSuccess'))
-  } catch (error) {
-    ElMessage.error(t('requests.exportFailed'))
   }
 }
 
@@ -242,17 +216,6 @@ const formatDate = (dateString) => {
   if (!dateString) return '-'
   const date = new Date(dateString)
   return date.toLocaleString('zh-CN')
-}
-
-const formatJson = (jsonString) => {
-  try {
-    if (typeof jsonString === 'string') {
-      return JSON.stringify(JSON.parse(jsonString), null, 2)
-    }
-    return JSON.stringify(jsonString, null, 2)
-  } catch (error) {
-    return jsonString
-  }
 }
 
 onMounted(() => {

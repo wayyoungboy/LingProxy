@@ -64,6 +64,15 @@ type Request struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+// RequestQueryParams 请求查询参数
+type RequestQueryParams struct {
+	Limit     int       // 限制返回数量
+	StartTime *time.Time // 开始时间（可选）
+	EndTime   *time.Time // 结束时间（可选）
+	Endpoint  string    // 请求路径（可选，支持模糊匹配）
+	Status    string    // 状态（可选）
+}
+
 // Response 响应模型
 type Response struct {
 	ID        string    `json:"id"`

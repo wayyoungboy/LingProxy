@@ -17,7 +17,7 @@
           <!-- 语言切换 -->
           <el-dropdown @command="handleLanguageChange" class="language-dropdown">
             <span class="language-selector">
-              <el-icon><Globe /></el-icon>
+              <el-icon><Setting /></el-icon>
               <span>{{ currentLanguageLabel }}</span>
             </span>
             <template #dropdown>
@@ -67,7 +67,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { UserFilled, Switch, Globe } from '@element-plus/icons-vue'
+import { UserFilled, Switch, Setting } from '@element-plus/icons-vue'
 import ElementPlus from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import en from 'element-plus/es/locale/lang/en'

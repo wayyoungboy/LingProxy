@@ -250,12 +250,34 @@ func (g *GormStorage) GetRequest(id string) (*Request, error) {
 	return &request, nil
 }
 
-func (g *GormStorage) ListRequests(limit int) ([]*Request, error) {
+func (g *GormStorage) ListRequests(params *RequestQueryParams) ([]*Request, error) {
 	var requests []*Request
-	query := g.db.Order("created_at desc")
-	if limit > 0 {
-		query = query.Limit(limit)
+	query := g.db.Model(&Request{})
+	
+	// 时间范围过滤
+	if params.StartTime != nil {
+		query = query.Where("created_at >= ?", *params.StartTime)
 	}
+	if params.EndTime != nil {
+		query = query.Where("created_at <= ?", *params.EndTime)
+	}
+	
+	// 请求路径过滤（支持模糊匹配）
+	if params.Endpoint != "" {
+		query = query.Where("endpoint LIKE ?", "%"+params.Endpoint+"%")
+	}
+	
+	// 状态过滤
+	if params.Status != "" {
+		query = query.Where("status = ?", params.Status)
+	}
+	
+	// 排序和分页
+	query = query.Order("created_at desc")
+	if params.Limit > 0 {
+		query = query.Limit(params.Limit)
+	}
+	
 	if err := query.Find(&requests).Error; err != nil {
 		return nil, err
 	}

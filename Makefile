@@ -210,7 +210,7 @@ start: start-backend start-frontend
 ## 启动后端服务（后台运行）
 start-backend:
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Starting backend service...$(COLOR_RESET)"
-	@mkdir -p $(RUN_DIR)
+	@mkdir -p $(RUN_DIR) $(LOGS_DIR)
 	@if [ -f $(RUN_DIR)/backend.pid ]; then \
 		OLD_PID=$$(cat $(RUN_DIR)/backend.pid 2>/dev/null); \
 		if [ -n "$$OLD_PID" ] && ps -p $$OLD_PID > /dev/null 2>&1; then \
@@ -238,7 +238,7 @@ start-backend:
 ## 启动前端服务（后台运行）
 start-frontend:
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Starting frontend service...$(COLOR_RESET)"
-	@mkdir -p $(RUN_DIR)
+	@mkdir -p $(RUN_DIR) $(LOGS_DIR)
 	@if [ -f $(RUN_DIR)/frontend.pid ]; then \
 		OLD_PID=$$(cat $(RUN_DIR)/frontend.pid 2>/dev/null); \
 		if [ -n "$$OLD_PID" ] && ps -p $$OLD_PID > /dev/null 2>&1; then \

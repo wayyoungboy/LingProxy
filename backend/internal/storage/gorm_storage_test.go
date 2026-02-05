@@ -302,7 +302,7 @@ func TestGormStorage(t *testing.T) {
 		}
 
 		// 列出请求
-		requests, err := storage.ListRequests(10)
+		requests, err := storage.ListRequests(&RequestQueryParams{Limit: 10})
 		if err != nil {
 			t.Errorf("ListRequests failed: %v", err)
 		}

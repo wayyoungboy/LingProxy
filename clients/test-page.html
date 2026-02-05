@@ -231,6 +231,43 @@
             color: #495057;
         }
 
+        .result-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .result-tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .result-tab:hover {
+            color: #667eea;
+        }
+
+        .result-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .result-tab-content {
+            display: none;
+        }
+
+        .result-tab-content.active {
+            display: block;
+        }
+
         .result-content {
             background: white;
             padding: 15px;
@@ -250,6 +287,49 @@
         .result-content.error {
             border-left: 4px solid #dc3545;
             color: #dc3545;
+        }
+
+        .request-info {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .request-info-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .request-info-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .request-info-label {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .request-info-value {
+            color: #495057;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .json-viewer {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
         }
 
         .loading {
@@ -361,6 +441,7 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('chat')">💬 对话接口</button>
             <button class="tab" onclick="switchTab('completion')">📝 文本补全</button>
+            <button class="tab" onclick="switchTab('embedding')">🔢 文本向量化</button>
             <button class="tab" onclick="switchTab('models')">📋 模型列表</button>
         </div>
 
@@ -408,9 +489,22 @@
             </form>
 
             <div id="chat-result" class="result-section" style="display: none;">
-                <h3>响应结果:</h3>
-                <div id="chat-result-content" class="result-content"></div>
-                <div id="chat-stats" class="stats" style="display: none;"></div>
+                <h3>请求与响应:</h3>
+                <div class="result-tabs">
+                    <button class="result-tab active" onclick="switchResultTab('chat', 'response')">响应结果</button>
+                    <button class="result-tab" onclick="switchResultTab('chat', 'request')">请求参数</button>
+                    <button class="result-tab" onclick="switchResultTab('chat', 'response-detail')">响应详情</button>
+                </div>
+                <div id="chat-result-response" class="result-tab-content active">
+                    <div id="chat-result-content" class="result-content"></div>
+                    <div id="chat-stats" class="stats" style="display: none;"></div>
+                </div>
+                <div id="chat-result-request" class="result-tab-content">
+                    <div id="chat-request-info" class="request-info"></div>
+                </div>
+                <div id="chat-result-response-detail" class="result-tab-content">
+                    <div id="chat-response-detail-info" class="request-info"></div>
+                </div>
             </div>
         </div>
 
@@ -444,9 +538,62 @@
             </form>
 
             <div id="completion-result" class="result-section" style="display: none;">
-                <h3>响应结果:</h3>
-                <div id="completion-result-content" class="result-content"></div>
-                <div id="completion-stats" class="stats" style="display: none;"></div>
+                <h3>请求与响应:</h3>
+                <div class="result-tabs">
+                    <button class="result-tab active" onclick="switchResultTab('completion', 'response')">响应结果</button>
+                    <button class="result-tab" onclick="switchResultTab('completion', 'request')">请求参数</button>
+                    <button class="result-tab" onclick="switchResultTab('completion', 'response-detail')">响应详情</button>
+                </div>
+                <div id="completion-result-response" class="result-tab-content active">
+                    <div id="completion-result-content" class="result-content"></div>
+                    <div id="completion-stats" class="stats" style="display: none;"></div>
+                </div>
+                <div id="completion-result-request" class="result-tab-content">
+                    <div id="completion-request-info" class="request-info"></div>
+                </div>
+                <div id="completion-result-response-detail" class="result-tab-content">
+                    <div id="completion-response-detail-info" class="request-info"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文本向量化接口 -->
+        <div id="embedding-tab" class="tab-content">
+            <form id="embedding-form" onsubmit="testEmbedding(event)">
+                <div class="form-group">
+                    <label>模型名称:</label>
+                    <input type="text" id="embedding-model" value="text-embedding-3-small" placeholder="text-embedding-3-small">
+                    <small>例如: text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002 等</small>
+                </div>
+
+                <div class="form-group">
+                    <label>输入文本:</label>
+                    <textarea id="embedding-input" placeholder="输入要向量化的文本...">这是一个测试文本，将被转换为向量表示</textarea>
+                    <small>支持单个文本字符串</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="embedding-submit">
+                    <span>发送请求</span>
+                </button>
+            </form>
+
+            <div id="embedding-result" class="result-section" style="display: none;">
+                <h3>请求与响应:</h3>
+                <div class="result-tabs">
+                    <button class="result-tab active" onclick="switchResultTab('embedding', 'response')">响应结果</button>
+                    <button class="result-tab" onclick="switchResultTab('embedding', 'request')">请求参数</button>
+                    <button class="result-tab" onclick="switchResultTab('embedding', 'response-detail')">响应详情</button>
+                </div>
+                <div id="embedding-result-response" class="result-tab-content active">
+                    <div id="embedding-result-content" class="result-content"></div>
+                    <div id="embedding-stats" class="stats" style="display: none;"></div>
+                </div>
+                <div id="embedding-result-request" class="result-tab-content">
+                    <div id="embedding-request-info" class="request-info"></div>
+                </div>
+                <div id="embedding-result-response-detail" class="result-tab-content">
+                    <div id="embedding-response-detail-info" class="request-info"></div>
+                </div>
             </div>
         </div>
 
@@ -477,6 +624,30 @@
             // 显示选中的标签页
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
+        }
+
+        // 切换结果标签页
+        function switchResultTab(prefix, tabName) {
+            const resultSection = document.getElementById(prefix + '-result');
+            if (!resultSection) return;
+
+            // 隐藏所有结果标签页内容
+            resultSection.querySelectorAll('.result-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            resultSection.querySelectorAll('.result-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // 显示选中的结果标签页
+            const targetContent = document.getElementById(prefix + '-result-' + tabName);
+            const targetTab = event.target;
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
         }
 
         // 添加消息
@@ -510,6 +681,64 @@
                 baseUrl: document.getElementById('baseUrl').value.trim(),
                 apiKey: document.getElementById('apiKey').value.trim()
             };
+        }
+
+        // 显示请求信息
+        function showRequestInfo(prefix, url, method, headers, body) {
+            const requestInfoDiv = document.getElementById(prefix + '-request-info');
+            if (!requestInfoDiv) return;
+
+            const headersHtml = Object.entries(headers).map(([key, value]) => {
+                // 隐藏敏感信息
+                const displayValue = key.toLowerCase() === 'authorization' 
+                    ? value.substring(0, 20) + '...' 
+                    : value;
+                return `${key}: ${displayValue}`;
+            }).join('\n');
+
+            const bodyHtml = body ? JSON.stringify(body, null, 2) : '(无请求体)';
+
+            requestInfoDiv.innerHTML = `
+                <div class="request-info-item">
+                    <div class="request-info-label">请求 URL</div>
+                    <div class="request-info-value">${method} ${url}</div>
+                </div>
+                <div class="request-info-item">
+                    <div class="request-info-label">请求头 (Headers)</div>
+                    <div class="request-info-value json-viewer">${headersHtml}</div>
+                </div>
+                <div class="request-info-item">
+                    <div class="request-info-label">请求体 (Body)</div>
+                    <div class="request-info-value json-viewer">${bodyHtml}</div>
+                </div>
+            `;
+        }
+
+        // 显示响应详情
+        function showResponseDetail(prefix, status, statusText, headers, body) {
+            const responseDetailDiv = document.getElementById(prefix + '-response-detail-info');
+            if (!responseDetailDiv) return;
+
+            const headersHtml = Object.entries(headers).map(([key, value]) => {
+                return `${key}: ${value}`;
+            }).join('\n');
+
+            const bodyHtml = body ? JSON.stringify(body, null, 2) : '(无响应体)';
+
+            responseDetailDiv.innerHTML = `
+                <div class="request-info-item">
+                    <div class="request-info-label">状态码</div>
+                    <div class="request-info-value">${status} ${statusText}</div>
+                </div>
+                <div class="request-info-item">
+                    <div class="request-info-label">响应头 (Headers)</div>
+                    <div class="request-info-value json-viewer">${headersHtml || '(无响应头)'}</div>
+                </div>
+                <div class="request-info-item">
+                    <div class="request-info-label">响应体 (Body)</div>
+                    <div class="request-info-value json-viewer">${bodyHtml}</div>
+                </div>
+            `;
         }
 
         // 显示结果
@@ -587,18 +816,36 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="loading"></span> 请求中...';
 
+            // 显示请求信息
+            const requestUrl = `${config.baseUrl}/chat/completions`;
+            const requestHeaders = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.apiKey}`
+            };
+            showRequestInfo('chat', requestUrl, 'POST', requestHeaders, requestBody);
+
             try {
-                const response = await fetch(`${config.baseUrl}/chat/completions`, {
+                const response = await fetch(requestUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${config.apiKey}`
-                    },
+                    headers: requestHeaders,
                     body: JSON.stringify(requestBody)
+                });
+
+                // 显示响应详情
+                const responseHeaders = {};
+                response.headers.forEach((value, key) => {
+                    responseHeaders[key] = value;
                 });
 
                 if (!response.ok) {
                     const errorText = await response.text();
+                    let errorBody;
+                    try {
+                        errorBody = JSON.parse(errorText);
+                    } catch {
+                        errorBody = errorText;
+                    }
+                    showResponseDetail('chat', response.status, response.statusText, responseHeaders, errorBody);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
 
@@ -641,6 +888,10 @@
                     }
 
                     showResult('chat-result', fullContent || '未收到内容', false);
+                    showResponseDetail('chat', response.status, response.statusText, responseHeaders, { 
+                        content: fullContent,
+                        stream: true 
+                    });
                 } else {
                     // 处理普通响应
                     const data = await response.json();
@@ -649,6 +900,7 @@
                         : JSON.stringify(data, null, 2);
                     
                     showResult('chat-result', content, false, data.usage);
+                    showResponseDetail('chat', response.status, response.statusText, responseHeaders, data);
                 }
             } catch (error) {
                 showResult('chat-result', `错误: ${error.message}`, true);
@@ -680,18 +932,36 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="loading"></span> 请求中...';
 
+            // 显示请求信息
+            const requestUrl = `${config.baseUrl}/completions`;
+            const requestHeaders = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.apiKey}`
+            };
+            showRequestInfo('completion', requestUrl, 'POST', requestHeaders, requestBody);
+
             try {
-                const response = await fetch(`${config.baseUrl}/completions`, {
+                const response = await fetch(requestUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${config.apiKey}`
-                    },
+                    headers: requestHeaders,
                     body: JSON.stringify(requestBody)
+                });
+
+                // 显示响应详情
+                const responseHeaders = {};
+                response.headers.forEach((value, key) => {
+                    responseHeaders[key] = value;
                 });
 
                 if (!response.ok) {
                     const errorText = await response.text();
+                    let errorBody;
+                    try {
+                        errorBody = JSON.parse(errorText);
+                    } catch {
+                        errorBody = errorText;
+                    }
+                    showResponseDetail('completion', response.status, response.statusText, responseHeaders, errorBody);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
 
@@ -701,8 +971,91 @@
                     : JSON.stringify(data, null, 2);
                 
                 showResult('completion-result', content, false, data.usage);
+                showResponseDetail('completion', response.status, response.statusText, responseHeaders, data);
             } catch (error) {
                 showResult('completion-result', `错误: ${error.message}`, true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        // 测试文本向量化接口
+        async function testEmbedding(event) {
+            event.preventDefault();
+            const config = getConfig();
+            const submitBtn = document.getElementById('embedding-submit');
+            const originalText = submitBtn.innerHTML;
+
+            if (!config.baseUrl || !config.apiKey) {
+                alert('请填写 API Base URL 和 API Key');
+                return;
+            }
+
+            const requestBody = {
+                model: document.getElementById('embedding-model').value.trim(),
+                input: document.getElementById('embedding-input').value.trim()
+            };
+
+            if (!requestBody.input) {
+                alert('请输入要向量化的文本');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> 请求中...';
+
+            // 显示请求信息
+            const requestUrl = `${config.baseUrl}/embeddings`;
+            const requestHeaders = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.apiKey}`
+            };
+            showRequestInfo('embedding', requestUrl, 'POST', requestHeaders, requestBody);
+
+            try {
+                const response = await fetch(requestUrl, {
+                    method: 'POST',
+                    headers: requestHeaders,
+                    body: JSON.stringify(requestBody)
+                });
+
+                // 显示响应详情
+                const responseHeaders = {};
+                response.headers.forEach((value, key) => {
+                    responseHeaders[key] = value;
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorBody;
+                    try {
+                        errorBody = JSON.parse(errorText);
+                    } catch {
+                        errorBody = errorText;
+                    }
+                    showResponseDetail('embedding', response.status, response.statusText, responseHeaders, errorBody);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                
+                // 格式化显示向量结果
+                let displayContent = '';
+                if (data.data && data.data.length > 0) {
+                    const embedding = data.data[0];
+                    displayContent = `向量维度: ${embedding.embedding.length}\n\n`;
+                    displayContent += `前10个维度值:\n`;
+                    displayContent += embedding.embedding.slice(0, 10).map((v, i) => `  [${i}]: ${v.toFixed(6)}`).join('\n');
+                    displayContent += '\n\n... (完整向量数据请查看"响应详情"标签页)';
+                } else {
+                    displayContent = JSON.stringify(data, null, 2);
+                }
+                
+                showResult('embedding-result', displayContent, false, data.usage);
+                showResponseDetail('embedding', response.status, response.statusText, responseHeaders, data);
+            } catch (error) {
+                showResult('embedding-result', `错误: ${error.message}`, true);
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;

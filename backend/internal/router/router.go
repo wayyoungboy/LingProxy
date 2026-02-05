@@ -18,9 +18,10 @@ import (
 func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *service.UserService, policyService *service.PolicyService, cfg *config.Config) {
 	logger.Info("Starting route setup")
 
-	// 添加全局中间件：RequestID和RequestLogger（必须在最前面）
+	// 添加全局中间件：RequestID、RequestLogger 和 CORS（必须在最前面）
 	r.Use(middleware.RequestID())
 	r.Use(middleware.RequestLogger())
+	r.Use(middleware.CORS())
 
 	// 创建处理器
 	logger.Info("Initializing handlers")
@@ -63,6 +64,8 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		openai.POST("/chat/completions", openaiHandler.CreateChatCompletion)
 		logger.Debug("Adding OpenAI completions route")
 		openai.POST("/completions", openaiHandler.CreateCompletion)
+		logger.Debug("Adding OpenAI embeddings route")
+		openai.POST("/embeddings", openaiHandler.CreateEmbedding)
 	}
 
 	// API路由组

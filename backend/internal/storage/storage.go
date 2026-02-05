@@ -29,7 +29,7 @@ type Storage interface {
 
 	CreateRequest(request *Request) error
 	GetRequest(id string) (*Request, error)
-	ListRequests(limit int) ([]*Request, error)
+	ListRequests(params *RequestQueryParams) ([]*Request, error)
 
 	// Token methods
 	CreateToken(token *Token) error

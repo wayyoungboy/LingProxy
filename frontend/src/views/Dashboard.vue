@@ -198,8 +198,6 @@ const uptime = computed(() => {
   return systemInfo.value?.uptime || '--'
 })
 
-// 使用工具函数格式化日期（已在import中引入）
-
 // 获取系统统计信息
 const getSystemStats = async () => {
   try {

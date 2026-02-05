@@ -1163,3 +1163,245 @@ func (h *OpenAIHandler) GetModel(c *gin.Context) {
 		},
 	})
 }
+
+// EmbeddingRequest 嵌入请求
+type EmbeddingRequest struct {
+	Model string      `json:"model" binding:"required"`
+	Input interface{} `json:"input" binding:"required"` // 支持 string 或 []string
+	User  string      `json:"user,omitempty"`
+}
+
+// EmbeddingResponse 嵌入响应
+type EmbeddingResponse struct {
+	Object string `json:"object"`
+	Data   []struct {
+		Object    string    `json:"object"`
+		Embedding []float64 `json:"embedding"`
+		Index     int       `json:"index"`
+	} `json:"data"`
+	Model string `json:"model"`
+	Usage struct {
+		PromptTokens int `json:"prompt_tokens"`
+		TotalTokens  int `json:"total_tokens"`
+	} `json:"usage"`
+}
+
+// CreateEmbedding godoc
+// @Summary Create embeddings
+// @Description Create embeddings for text input
+// @Tags openai
+// @Accept json
+// @Produce json
+// @Param request body EmbeddingRequest true "Embedding request"
+// @Success 200 {object} EmbeddingResponse "Embedding response"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /llm/v1/embeddings [post]
+func (h *OpenAIHandler) CreateEmbedding(c *gin.Context) {
+	var req EmbeddingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": map[string]interface{}{
+				"message": err.Error(),
+				"type":    "invalid_request_error",
+				"param":   nil,
+				"code":    "invalid_request",
+			},
+		})
+		return
+	}
+
+	// 查找对应的LLM资源（embedding类型）
+	llmResource, err := h.findLLMResourceByModel(c, req.Model, "embedding")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Failed to find LLM resource: " + err.Error(),
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
+			},
+		})
+		return
+	}
+
+	requestID := middleware.GetRequestID(c)
+
+	// 处理输入：支持 string 或 []string
+	var inputStr string
+	switch v := req.Input.(type) {
+	case string:
+		inputStr = v
+	case []interface{}:
+		// 如果是数组，只取第一个元素（简化处理）
+		if len(v) > 0 {
+			if str, ok := v[0].(string); ok {
+				inputStr = str
+			} else {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": map[string]interface{}{
+						"message": "Input array must contain strings",
+						"type":    "invalid_request_error",
+						"param":   "input",
+						"code":    "invalid_request",
+					},
+				})
+				return
+			}
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": map[string]interface{}{
+					"message": "Input array cannot be empty",
+					"type":    "invalid_request_error",
+					"param":   "input",
+					"code":    "invalid_request",
+				},
+			})
+			return
+		}
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": map[string]interface{}{
+				"message": "Input must be a string or array of strings",
+				"type":    "invalid_request_error",
+				"param":   "input",
+				"code":    "invalid_request",
+			},
+		})
+		return
+	}
+
+	if inputStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": map[string]interface{}{
+				"message": "Input cannot be empty",
+				"type":    "invalid_request_error",
+				"param":   "input",
+				"code":    "invalid_request",
+			},
+		})
+		return
+	}
+
+	// 使用资源中配置的model覆写请求中的model（如果资源配置了model）
+	modelToUse := req.Model
+	if llmResource.Model != "" {
+		modelToUse = llmResource.Model
+		logger.Debug("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
+	}
+
+	// 获取用户ID
+	userID := ""
+	if token, exists := c.Get("token"); exists {
+		if t, ok := token.(*storage.Token); ok {
+			userID = t.ID
+		}
+	} else if user, exists := c.Get("user"); exists {
+		if u, ok := user.(*storage.User); ok {
+			userID = u.ID
+		}
+	}
+
+	// 构建服务层请求
+	serviceReq := service.EmbeddingRequest{
+		Model: modelToUse,
+		Input: inputStr,
+	}
+
+	// 调用服务层
+	ctx := c.Request.Context()
+	serviceResp, err := h.openaiService.CreateEmbedding(ctx, llmResource, serviceReq)
+	var duration int64
+	var embeddingResponse *openaiSDK.CreateEmbeddingResponse
+
+	if serviceResp != nil {
+		duration = serviceResp.Duration.Milliseconds()
+		embeddingResponse = serviceResp.Response
+	}
+
+	// 记录请求到数据库
+	requestRecord := &storage.Request{
+		UserID:        userID,
+		LLMResourceID: llmResource.ID,
+		Endpoint:      "/llm/v1/embeddings",
+		Method:        "POST",
+		Duration:      duration,
+		Status:        "success",
+		Tokens:        0,
+		CreatedAt:     time.Now(),
+	}
+
+	if err != nil {
+		requestRecord.Status = "error"
+		logger.Error("Embedding failed", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()), logger.F("request_model", req.Model), logger.F("actual_model", modelToUse), logger.F("resource_id", llmResource.ID), logger.F("resource_name", llmResource.Name))
+		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+			logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Failed to create embedding: " + err.Error(),
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
+			},
+		})
+		return
+	}
+
+	// 记录token使用量
+	if embeddingResponse != nil && embeddingResponse.Usage.TotalTokens > 0 {
+		requestRecord.Tokens = int(embeddingResponse.Usage.TotalTokens)
+		logger.Debug("Embedding token usage recorded", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("tokens", requestRecord.Tokens))
+	}
+
+	// 保存请求记录
+	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+		logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+	} else {
+		logger.Debug("Embedding request record saved successfully", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("resource_id", llmResource.ID), logger.F("user_id", userID), logger.F("tokens", requestRecord.Tokens), logger.F("status", requestRecord.Status))
+	}
+
+	if embeddingResponse == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Received nil response from embedding API",
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
+			},
+		})
+		return
+	}
+
+	// 转换响应格式
+	response := EmbeddingResponse{
+		Object: string(embeddingResponse.Object),
+		Model:  string(embeddingResponse.Model),
+		Data:   make([]struct {
+			Object    string    `json:"object"`
+			Embedding []float64 `json:"embedding"`
+			Index     int       `json:"index"`
+		}, len(embeddingResponse.Data)),
+		Usage: struct {
+			PromptTokens int `json:"prompt_tokens"`
+			TotalTokens  int `json:"total_tokens"`
+		}{
+			PromptTokens: int(embeddingResponse.Usage.PromptTokens),
+			TotalTokens:  int(embeddingResponse.Usage.TotalTokens),
+		},
+	}
+
+	for i, data := range embeddingResponse.Data {
+		response.Data[i] = struct {
+			Object    string    `json:"object"`
+			Embedding []float64 `json:"embedding"`
+			Index     int       `json:"index"`
+		}{
+			Object:    string(data.Object),
+			Embedding: data.Embedding,
+			Index:     i,
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
+}
