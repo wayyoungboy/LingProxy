@@ -9,13 +9,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lingproxy/lingproxy/internal/client/openai"
 	"github.com/lingproxy/lingproxy/internal/middleware"
 	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/service"
 	"github.com/lingproxy/lingproxy/internal/storage"
 	openaiSDK "github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/packages/param"
 )
 
 // OpenAIHandler 处理OpenAI兼容的API请求
@@ -30,6 +28,7 @@ type OpenAIHandler struct {
 	storage       *storage.StorageFacade
 	policyService *service.PolicyService
 	tokenService  *service.TokenService
+	openaiService *service.OpenAIService
 }
 
 // NewOpenAIHandler 创建新的OpenAI处理器
@@ -38,6 +37,7 @@ func NewOpenAIHandler(storage *storage.StorageFacade, policyService *service.Pol
 		storage:       storage,
 		policyService: policyService,
 		tokenService:  tokenService,
+		openaiService: service.NewOpenAIService(),
 	}
 }
 
@@ -269,11 +269,6 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		return
 	}
 
-	// 创建OpenAI客户端，使用LLM资源的API密钥和基础URL
-	client := openai.NewClient(llmResource.APIKey, llmResource.BaseURL)
-	logger.Debug("Created OpenAI client", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("base_url", llmResource.BaseURL), logger.F("api_key", llmResource.APIKey))
-	defer client.Close()
-
 	// 转换消息格式
 	messages := make([]openaiSDK.ChatCompletionMessageParamUnion, 0, len(req.Messages))
 	for _, msg := range req.Messages {
@@ -289,7 +284,6 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		}
 	}
 
-	// 构建请求参数
 	// 使用资源中配置的model覆写请求中的model（如果资源配置了model）
 	requestID := middleware.GetRequestID(c)
 	modelToUse := req.Model
@@ -297,39 +291,7 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		modelToUse = llmResource.Model
 		logger.Info("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
 	}
-	params := openaiSDK.ChatCompletionNewParams{
-		Model:    modelToUse,
-		Messages: messages,
-	}
 	logger.Debug("Request parameters prepared", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse), logger.F("base_url", llmResource.BaseURL), logger.F("message_count", len(messages)))
-
-	// 设置可选参数
-	if req.MaxTokens > 0 {
-		params.MaxTokens = param.NewOpt(int64(req.MaxTokens))
-	}
-	if req.Temperature > 0 {
-		params.Temperature = param.NewOpt(req.Temperature)
-	}
-	if req.TopP > 0 {
-		params.TopP = param.NewOpt(req.TopP)
-	}
-	if len(req.Stop) > 0 {
-		params.Stop = openaiSDK.ChatCompletionNewParamsStopUnion{
-			OfStringArray: req.Stop,
-		}
-	}
-	if req.PresencePenalty != 0 {
-		params.PresencePenalty = param.NewOpt(req.PresencePenalty)
-	}
-	if req.FrequencyPenalty != 0 {
-		params.FrequencyPenalty = param.NewOpt(req.FrequencyPenalty)
-	}
-	if req.User != "" {
-		params.User = param.NewOpt(req.User)
-	}
-
-	// 记录请求开始时间
-	startTime := time.Now()
 
 	// 获取用户ID（从token或user中）
 	userID := ""
@@ -343,21 +305,35 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		}
 	}
 
-	// 调用真实的API
+	// 构建服务层请求
+	serviceReq := service.ChatCompletionRequest{
+		Model:            modelToUse,
+		Messages:         messages,
+		MaxTokens:        int64(req.MaxTokens),
+		Temperature:      req.Temperature,
+		TopP:             req.TopP,
+		Stop:             req.Stop,
+		PresencePenalty:  req.PresencePenalty,
+		FrequencyPenalty: req.FrequencyPenalty,
+		User:             req.User,
+	}
+
+	// 调用统一的API服务
 	ctx := c.Request.Context()
-	chatClient := client.Chat().Completions()
-	openaiResponse, err := chatClient.New(ctx, params)
-	duration := time.Since(startTime).Milliseconds()
+	serviceResp, err := h.openaiService.CreateChatCompletion(ctx, llmResource, serviceReq)
+	duration := serviceResp.Duration.Milliseconds()
+	openaiResponse := serviceResp.Response
 
 	// 记录请求到数据库
 	requestRecord := &storage.Request{
-		UserID:    userID,
-		Endpoint:  "/llm/v1/chat/completions",
-		Method:    "POST",
-		Duration:  duration,
-		Status:    "success",
-		Tokens:    0,
-		CreatedAt: time.Now(),
+		UserID:        userID,
+		LLMResourceID: llmResource.ID,
+		Endpoint:      "/llm/v1/chat/completions",
+		Method:        "POST",
+		Duration:      duration,
+		Status:        "success",
+		Tokens:        0,
+		CreatedAt:     time.Now(),
 	}
 
 	if err != nil {
@@ -379,7 +355,9 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 	}
 
 	// 记录token使用量
-	requestRecord.Tokens = int(openaiResponse.Usage.TotalTokens)
+	if openaiResponse != nil {
+		requestRecord.Tokens = int(openaiResponse.Usage.TotalTokens)
+	}
 
 	// 保存请求记录
 	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
@@ -499,11 +477,6 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 		return
 	}
 
-	// 创建OpenAI客户端，使用LLM资源的API密钥和基础URL
-	client := openai.NewClient(llmResource.APIKey, llmResource.BaseURL)
-	defer client.Close()
-
-	// 构建请求参数
 	// 使用资源中配置的model覆写请求中的model（如果资源配置了model）
 	requestID := middleware.GetRequestID(c)
 	modelToUse := req.Model
@@ -511,41 +484,7 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 		modelToUse = llmResource.Model
 		logger.Info("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
 	}
-	params := openaiSDK.CompletionNewParams{
-		Model: openaiSDK.CompletionNewParamsModel(modelToUse),
-		Prompt: openaiSDK.CompletionNewParamsPromptUnion{
-			OfString: param.NewOpt(req.Prompt),
-		},
-	}
 	logger.Debug("Request parameters prepared", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse), logger.F("base_url", llmResource.BaseURL))
-
-	// 设置可选参数
-	if req.MaxTokens > 0 {
-		params.MaxTokens = param.NewOpt(int64(req.MaxTokens))
-	}
-	if req.Temperature > 0 {
-		params.Temperature = param.NewOpt(req.Temperature)
-	}
-	if req.TopP > 0 {
-		params.TopP = param.NewOpt(req.TopP)
-	}
-	if len(req.Stop) > 0 {
-		params.Stop = openaiSDK.CompletionNewParamsStopUnion{
-			OfStringArray: req.Stop,
-		}
-	}
-	if req.PresencePenalty != 0 {
-		params.PresencePenalty = param.NewOpt(req.PresencePenalty)
-	}
-	if req.FrequencyPenalty != 0 {
-		params.FrequencyPenalty = param.NewOpt(req.FrequencyPenalty)
-	}
-	if req.User != "" {
-		params.User = param.NewOpt(req.User)
-	}
-
-	// 记录请求开始时间
-	startTime := time.Now()
 
 	// 获取用户ID（从token或user中）
 	userID := ""
@@ -559,21 +498,35 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 		}
 	}
 
-	// 调用真实的API
+	// 构建服务层请求
+	serviceReq := service.CompletionRequest{
+		Model:            modelToUse,
+		Prompt:           req.Prompt,
+		MaxTokens:        int64(req.MaxTokens),
+		Temperature:      req.Temperature,
+		TopP:             req.TopP,
+		Stop:             req.Stop,
+		PresencePenalty:  req.PresencePenalty,
+		FrequencyPenalty: req.FrequencyPenalty,
+		User:             req.User,
+	}
+
+	// 调用统一的API服务
 	ctx := c.Request.Context()
-	completionClient := client.Completions()
-	openaiResponse, err := completionClient.New(ctx, params)
-	duration := time.Since(startTime).Milliseconds()
+	serviceResp, err := h.openaiService.CreateCompletion(ctx, llmResource, serviceReq)
+	duration := serviceResp.Duration.Milliseconds()
+	openaiResponse := serviceResp.Response
 
 	// 记录请求到数据库
 	requestRecord := &storage.Request{
-		UserID:    userID,
-		Endpoint:  "/llm/v1/completions",
-		Method:    "POST",
-		Duration:  duration,
-		Status:    "success",
-		Tokens:    0,
-		CreatedAt: time.Now(),
+		UserID:        userID,
+		LLMResourceID: llmResource.ID,
+		Endpoint:      "/llm/v1/completions",
+		Method:        "POST",
+		Duration:      duration,
+		Status:        "success",
+		Tokens:        0,
+		CreatedAt:     time.Now(),
 	}
 
 	if err != nil {
@@ -595,7 +548,9 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	}
 
 	// 记录token使用量
-	requestRecord.Tokens = int(openaiResponse.Usage.TotalTokens)
+	if openaiResponse != nil {
+		requestRecord.Tokens = int(openaiResponse.Usage.TotalTokens)
+	}
 
 	// 保存请求记录
 	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {

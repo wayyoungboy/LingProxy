@@ -3,8 +3,11 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span>系统设置</span>
-          <el-button type="primary" @click="saveSettings">保存设置</el-button>
+          <span class="page-title">系统设置</span>
+          <el-button type="primary" @click="saveSettings">
+            <el-icon><Check /></el-icon>
+            保存设置
+          </el-button>
         </div>
       </template>
       
@@ -293,6 +296,7 @@
 </template>
 
 <script setup>
+import { Check } from '@element-plus/icons-vue'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -603,6 +607,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .el-tabs {

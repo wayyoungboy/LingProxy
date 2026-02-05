@@ -1,9 +1,9 @@
 <template>
   <div class="policies-container">
-    <el-card>
+    <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span>策略管理</span>
+          <span class="page-title">策略管理</span>
           <el-button type="primary" @click="handleAddPolicy">
             <el-icon><Plus /></el-icon>
             创建策略
@@ -17,6 +17,7 @@
         :data="policies"
         style="width: 100%"
         border
+        stripe
       >
         <el-table-column prop="name" label="策略名称" width="200">
           <template #default="scope">
@@ -725,6 +726,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .dialog-footer {

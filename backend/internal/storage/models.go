@@ -27,16 +27,17 @@ type User struct {
 // 一个LLM资源代表一个可调用的AI服务配置，包含base_url、api_key和model三个核心要素
 // 这三个要素共同构成一个完整的可调用资源
 type LLMResource struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Type      string    `json:"type"`     // 模型类别: chat(对话), image(生图), embedding(嵌入), rerank(重排序), audio(语音), video(视频)
-	Driver    string    `json:"driver"`   // 驱动: openai（目前仅支持openai）
-	Model     string    `json:"model"`    // 模型标识：此资源对应的模型标识（如gpt-4, gpt-3.5-turbo），与base_url和api_key共同构成可调用资源
-	BaseURL   string    `json:"base_url"` // API基础URL：此资源的API端点地址
-	APIKey    string    `json:"api_key"`  // API密钥：此资源的认证密钥
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	Type       string    `json:"type"`        // 模型类别: chat(对话), image(生图), embedding(嵌入), rerank(重排序), audio(语音), video(视频)
+	Driver     string    `json:"driver"`      // 驱动: openai（目前仅支持openai）
+	Model      string    `json:"model"`       // 模型标识：此资源对应的模型标识（如gpt-4, gpt-3.5-turbo），与base_url和api_key共同构成可调用资源
+	BaseURL    string    `json:"base_url"`    // API基础URL：此资源的API端点地址
+	APIKey     string    `json:"api_key"`     // API密钥：此资源的认证密钥
+	Status     string    `json:"status"`      // 资源状态: active(活跃), inactive(禁用)
+	TestStatus string    `json:"test_status"` // 测试状态: untested(未测试), passed(测试通过), failed(测试失败)
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // Endpoint 端点模型
@@ -52,14 +53,15 @@ type Endpoint struct {
 
 // Request 请求模型
 type Request struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	Endpoint  string    `json:"endpoint"`
-	Method    string    `json:"method"`
-	Status    string    `json:"status"`
-	Duration  int64     `json:"duration"`
-	Tokens    int       `json:"tokens"`
-	CreatedAt time.Time `json:"created_at"`
+	ID            string    `json:"id"`
+	UserID        string    `json:"user_id"`
+	LLMResourceID string    `json:"llm_resource_id"` // LLM资源ID，用于关联资源
+	Endpoint      string    `json:"endpoint"`
+	Method        string    `json:"method"`
+	Status        string    `json:"status"`
+	Duration      int64     `json:"duration"`
+	Tokens        int       `json:"tokens"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // Response 响应模型

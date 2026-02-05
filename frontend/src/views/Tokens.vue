@@ -1,9 +1,9 @@
 <template>
   <div class="tokens-container">
-    <el-card>
+    <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span>Token管理</span>
+          <span class="page-title">Token管理</span>
           <el-button type="primary" @click="handleAddToken">
             <el-icon><Plus /></el-icon>
             创建Token
@@ -17,6 +17,7 @@
         :data="tokens"
         style="width: 100%"
         border
+        stripe
       >
         <el-table-column prop="name" label="Token名称" />
         <el-table-column prop="token" label="Token值" width="200">
@@ -506,6 +507,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .dialog-footer {

@@ -20,6 +20,7 @@ export const ROUTE_PATHS = {
   DASHBOARD: '/dashboard',
   TOKENS: '/tokens',
   LLM_RESOURCES: '/llm-resources',
+  LLM_RESOURCE_USAGE: '/llm-resources/usage',
   MODELS: '/models',
   REQUESTS: '/requests',
   POLICIES: '/policies',
@@ -128,3 +129,6 @@ export const MESSAGE_DURATION = {
   WARNING: 2500,
   INFO: 2000
 }
+
+// 菜单相关工具函数（从menu.js导入）
+export { getMenuTitle } from '../config/menu'

@@ -31,10 +31,16 @@ const routes = [
         meta: { title: 'Token管理' }
       },
       {
-        path: 'llm-resources',
+        path: 'llm-resources/list',
         name: 'LLMResources',
         component: () => import('../views/LLMResources.vue'),
         meta: { title: 'LLM资源管理' }
+      },
+      {
+        path: 'llm-resources/usage',
+        name: 'LLMResourceUsage',
+        component: () => import('../views/LLMResourceUsage.vue'),
+        meta: { title: '用量统计' }
       },
       {
         path: 'requests',

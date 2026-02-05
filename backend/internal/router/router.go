@@ -191,6 +191,7 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		}
 		statsRoutes.GET("/system", statsHandler.GetSystemStats)
 		statsRoutes.GET("/llm-resources/:id", statsHandler.GetLLMResourceStats)
+		statsRoutes.GET("/llm-resources/usage", statsHandler.GetLLMResourceUsageStats)
 		statsRoutes.GET("/users/:id", statsHandler.GetUserStats)
 	}
 

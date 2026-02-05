@@ -1,9 +1,9 @@
 <template>
   <div class="llm-resources">
-    <el-card>
+    <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span>LLM资源管理</span>
+          <span class="page-title">LLM资源管理</span>
           <div class="header-actions">
             <el-button type="success" @click="handleDownloadTemplate">
               <el-icon><Download /></el-icon>
@@ -74,6 +74,7 @@
         :data="filteredResources"
         style="width: 100%; margin-top: 20px"
         border
+        stripe
       >
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="name" label="资源名称" />
@@ -100,6 +101,15 @@
               :type="scope.row.status === 'active' ? 'success' : 'danger'"
             >
               {{ scope.row.status === 'active' ? '活跃' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="test_status" label="测试状态" width="120">
+          <template #default="scope">
+            <el-tag
+              :type="scope.row.test_status === 'passed' ? 'success' : scope.row.test_status === 'failed' ? 'danger' : 'info'"
+            >
+              {{ scope.row.test_status === 'passed' ? '通过' : scope.row.test_status === 'failed' ? '失败' : '未测试' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -598,10 +608,14 @@ const handleTestResource = async (resource) => {
         type: 'success',
         dangerouslyUseHTMLString: false
       })
+      // 刷新资源列表以显示更新后的测试状态
+      await getResourceList()
     } else {
       // 测试失败
       const errorMsg = result?.message || result?.error || '测试失败'
       ElMessage.error(errorMsg)
+      // 即使失败也刷新资源列表以显示更新后的测试状态
+      await getResourceList()
     }
   } catch (error) {
     console.error('测试LLM资源失败:', error)
@@ -797,6 +811,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .header-actions {

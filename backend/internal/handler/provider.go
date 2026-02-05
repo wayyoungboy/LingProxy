@@ -8,24 +8,23 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lingproxy/lingproxy/internal/client/embedding"
-	"github.com/lingproxy/lingproxy/internal/client/openai"
 	"github.com/lingproxy/lingproxy/internal/pkg/logger"
+	"github.com/lingproxy/lingproxy/internal/service"
 	"github.com/lingproxy/lingproxy/internal/storage"
-	openaiSDK "github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/packages/param"
 	"github.com/xuri/excelize/v2"
 )
 
 // LLMResourceHandler LLM资源处理器
 type LLMResourceHandler struct {
-	storage *storage.StorageFacade
+	storage       *storage.StorageFacade
+	openaiService *service.OpenAIService
 }
 
 // NewLLMResourceHandler 创建新的LLM资源处理器
 func NewLLMResourceHandler(storage *storage.StorageFacade) *LLMResourceHandler {
 	return &LLMResourceHandler{
-		storage: storage,
+		storage:       storage,
+		openaiService: service.NewOpenAIService(),
 	}
 }
 
@@ -122,6 +121,10 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 		logger.Warn("创建LLM资源失败：API Key为空")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "API Key是必填项"})
 		return
+	}
+	// 默认测试状态为未测试
+	if resource.TestStatus == "" {
+		resource.TestStatus = "untested"
 	}
 
 	if err := h.storage.CreateLLMResource(&resource); err != nil {
@@ -287,132 +290,44 @@ func (h *LLMResourceHandler) TestLLMResource(c *gin.Context) {
 		return
 	}
 
+	// 更新测试状态
 	if testResult["success"].(bool) {
+		resource.TestStatus = "passed"
 		logger.Info("测试LLM资源成功", logger.F("id", id), logger.F("name", resource.Name), logger.F("type", resource.Type))
-		c.JSON(http.StatusOK, testResult)
 	} else {
+		resource.TestStatus = "failed"
 		logger.Warn("测试LLM资源失败", logger.F("id", id), logger.F("name", resource.Name), logger.F("type", resource.Type), logger.F("error", testResult["error"]))
-		c.JSON(http.StatusOK, testResult) // 即使失败也返回200，但success为false
 	}
+
+	// 保存更新后的测试状态
+	if err := h.storage.UpdateLLMResource(resource); err != nil {
+		logger.Error("更新LLM资源测试状态失败", logger.F("id", id), logger.F("error", err.Error()))
+		// 即使更新失败也继续返回测试结果
+	}
+
+	c.JSON(http.StatusOK, testResult)
 }
 
 // testChatResource 测试chat类型资源
 func (h *LLMResourceHandler) testChatResource(resource *storage.LLMResource) map[string]interface{} {
-	// 创建客户端
-	client := openai.NewClient(resource.APIKey, resource.BaseURL)
-	defer client.Close()
-
-	// 准备测试消息
-	modelToUse := resource.Model
-	if modelToUse == "" {
-		modelToUse = "gpt-3.5-turbo" // 默认模型
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 构建测试请求
-	params := openaiSDK.ChatCompletionNewParams{
-		Model: modelToUse,
-		Messages: []openaiSDK.ChatCompletionMessageParamUnion{
-			openaiSDK.UserMessage("Hello"),
-		},
-		MaxTokens: param.NewOpt(int64(10)), // 限制token数量，快速测试
-	}
-	logger.Debug("Test chat resource", logger.F("component", "handler"), logger.F("base_url", resource.BaseURL), logger.F("model", modelToUse))
+	logger.Debug("Test chat resource", logger.F("component", "handler"), logger.F("base_url", resource.BaseURL), logger.F("model", resource.Model))
 
-	startTime := time.Now()
-	response, err := client.Chat().Completions().New(ctx, params)
-	duration := time.Since(startTime).Milliseconds()
-
-	if err != nil {
-		return map[string]interface{}{
-			"success":     false,
-			"error":       err.Error(),
-			"message":     fmt.Sprintf("测试失败: %s", err.Error()),
-			"duration_ms": duration,
-		}
-	}
-
-	// 检查响应
-	if response == nil || len(response.Choices) == 0 {
-		return map[string]interface{}{
-			"success":     false,
-			"error":       "Empty response",
-			"message":     "API返回了空响应",
-			"duration_ms": duration,
-		}
-	}
-
-	return map[string]interface{}{
-		"success":  true,
-		"message":  "测试成功",
-		"model":    string(response.Model),
-		"response": response.Choices[0].Message.Content,
-		"usage": map[string]interface{}{
-			"prompt_tokens":     response.Usage.PromptTokens,
-			"completion_tokens": response.Usage.CompletionTokens,
-			"total_tokens":      response.Usage.TotalTokens,
-		},
-		"duration_ms": duration,
-	}
+	// 使用统一的服务层进行测试
+	return h.openaiService.TestChatResource(ctx, resource)
 }
 
 // testEmbeddingResource 测试embedding类型资源
 func (h *LLMResourceHandler) testEmbeddingResource(resource *storage.LLMResource) map[string]interface{} {
-	// 创建客户端
-	modelToUse := resource.Model
-	if modelToUse == "" {
-		modelToUse = "text-embedding-3-small" // 默认模型
-	}
-	client := embedding.NewClient(resource.APIKey, resource.BaseURL, modelToUse)
-	defer client.Close()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 构建测试请求
-	params := openaiSDK.EmbeddingNewParams{
-		Model: modelToUse,
-		Input: openaiSDK.EmbeddingNewParamsInputUnion{
-			OfString: openaiSDK.String("test"),
-		},
-	}
+	logger.Debug("Test embedding resource", logger.F("component", "handler"), logger.F("base_url", resource.BaseURL), logger.F("model", resource.Model))
 
-	startTime := time.Now()
-	response, err := client.New(ctx, params)
-	duration := time.Since(startTime).Milliseconds()
-
-	if err != nil {
-		return map[string]interface{}{
-			"success":     false,
-			"error":       err.Error(),
-			"message":     fmt.Sprintf("测试失败: %s", err.Error()),
-			"duration_ms": duration,
-		}
-	}
-
-	// 检查响应
-	if response == nil || len(response.Data) == 0 {
-		return map[string]interface{}{
-			"success":     false,
-			"error":       "Empty response",
-			"message":     "API返回了空响应",
-			"duration_ms": duration,
-		}
-	}
-
-	return map[string]interface{}{
-		"success":             true,
-		"message":             "测试成功",
-		"model":               string(response.Model),
-		"embedding_dimension": len(response.Data[0].Embedding),
-		"usage": map[string]interface{}{
-			"prompt_tokens": response.Usage.PromptTokens,
-			"total_tokens":  response.Usage.TotalTokens,
-		},
-		"duration_ms": duration,
-	}
+	// 使用统一的服务层进行测试
+	return h.openaiService.TestEmbeddingResource(ctx, resource)
 }
 
 // testRerankResource 测试rerank类型资源
@@ -597,13 +512,14 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 
 		// 创建资源
 		resource := &storage.LLMResource{
-			Name:    name,
-			Type:    strings.ToLower(typeVal),
-			Driver:  strings.ToLower(driver),
-			Model:   model,
-			BaseURL: baseURL,
-			APIKey:  apiKey,
-			Status:  strings.ToLower(status),
+			Name:       name,
+			Type:       strings.ToLower(typeVal),
+			Driver:     strings.ToLower(driver),
+			Model:      model,
+			BaseURL:    baseURL,
+			APIKey:     apiKey,
+			Status:     strings.ToLower(status),
+			TestStatus: "untested", // 导入的资源默认为未测试状态
 		}
 
 		if err := h.storage.CreateLLMResource(resource); err != nil {
@@ -686,10 +602,11 @@ func (h *LLMResourceHandler) importLLMResourcesFromJSON(c *gin.Context) {
 
 		// 创建资源对象（用于重复检查）
 		resourceToCheck := &storage.LLMResource{
-			Type:    strings.ToLower(typeVal),
-			Model:   model,
-			BaseURL: baseURL,
-			APIKey:  apiKey,
+			Type:       strings.ToLower(typeVal),
+			Model:      model,
+			BaseURL:    baseURL,
+			APIKey:     apiKey,
+			TestStatus: "untested", // 导入的资源默认为未测试状态
 		}
 
 		// 检查是否重复
@@ -706,13 +623,14 @@ func (h *LLMResourceHandler) importLLMResourcesFromJSON(c *gin.Context) {
 		}
 
 		resource := &storage.LLMResource{
-			Name:    name,
-			Type:    strings.ToLower(typeVal),
-			Driver:  strings.ToLower(driver),
-			Model:   model,
-			BaseURL: baseURL,
-			APIKey:  apiKey,
-			Status:  strings.ToLower(status),
+			Name:       name,
+			Type:       strings.ToLower(typeVal),
+			Driver:     strings.ToLower(driver),
+			Model:      model,
+			BaseURL:    baseURL,
+			APIKey:     apiKey,
+			Status:     strings.ToLower(status),
+			TestStatus: "untested", // 导入的资源默认为未测试状态
 		}
 
 		if err := h.storage.CreateLLMResource(resource); err != nil {

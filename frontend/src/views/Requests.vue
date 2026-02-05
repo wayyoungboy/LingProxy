@@ -3,12 +3,15 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span>请求管理</span>
-          <el-button type="primary" @click="exportRequests">导出请求</el-button>
+          <span class="page-title">请求管理</span>
+          <el-button type="primary" @click="exportRequests">
+            <el-icon><Download /></el-icon>
+            导出请求
+          </el-button>
         </div>
       </template>
       
-      <el-form :inline="true" :model="searchForm" class="mb-4">
+      <el-form :inline="true" :model="searchForm" class="search-form mb-4">
         <el-form-item label="请求路径">
           <el-input v-model="searchForm.path" placeholder="请输入请求路径" />
         </el-form-item>
@@ -34,7 +37,13 @@
         </el-form-item>
       </el-form>
       
-      <el-table :data="requestsList" style="width: 100%" v-loading="loading">
+      <el-table 
+        :data="requestsList" 
+        style="width: 100%" 
+        v-loading="loading"
+        border
+        stripe
+      >
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="endpoint" label="请求路径" />
         <el-table-column prop="method" label="方法" width="100" />
@@ -108,6 +117,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import api from '../api'
 
 const requestsList = ref([])
@@ -256,6 +266,16 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.search-form {
+  margin-bottom: 20px;
 }
 
 .pagination-container {

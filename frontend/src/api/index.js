@@ -222,6 +222,9 @@ const api = {
   getLLMResourceStats(id) {
     return apiClient.get(`/stats/llm-resources/${id}`)
   },
+  getLLMResourceUsageStats() {
+    return apiClient.get('/stats/llm-resources/usage')
+  },
   getUserStats(id) {
     return apiClient.get(`/stats/users/${id}`)
   },

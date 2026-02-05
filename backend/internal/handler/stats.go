@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lingproxy/lingproxy/internal/storage"
@@ -98,4 +99,94 @@ func (h *StatsHandler) GetUserStats(c *gin.Context) {
 		"avg_response_time": 130,
 	}
 	c.JSON(http.StatusOK, gin.H{"data": stats})
+}
+
+// GetLLMResourceUsageStats 获取LLM资源使用统计（按资源分组）
+func (h *StatsHandler) GetLLMResourceUsageStats(c *gin.Context) {
+	// 获取所有请求记录
+	requests, err := h.storage.ListRequests(100000) // 获取足够多的记录
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get requests: " + err.Error()})
+		return
+	}
+
+	// 获取所有LLM资源
+	resources, err := h.storage.ListLLMResources()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get llm resources: " + err.Error()})
+		return
+	}
+
+	// 创建资源映射
+	resourceMap := make(map[string]*storage.LLMResource)
+	for _, resource := range resources {
+		resourceMap[resource.ID] = resource
+	}
+
+	// 按资源分组统计
+	usageMap := make(map[string]map[string]interface{})
+	for _, request := range requests {
+		resourceID := request.LLMResourceID
+		if resourceID == "" {
+			continue // 跳过没有关联资源的请求
+		}
+
+		if _, exists := usageMap[resourceID]; !exists {
+			resource, ok := resourceMap[resourceID]
+			if !ok {
+				continue // 资源不存在，跳过
+			}
+			usageMap[resourceID] = map[string]interface{}{
+				"resource_id":      resourceID,
+				"resource_name":    resource.Name,
+				"resource_type":    resource.Type,
+				"model":            resource.Model,
+				"total_tokens":     0,
+				"total_requests":   0,
+				"success_requests": 0,
+				"failed_requests": 0,
+				"last_request_time": nil,
+			}
+		}
+
+		usage := usageMap[resourceID]
+		usage["total_tokens"] = usage["total_tokens"].(int) + request.Tokens
+		usage["total_requests"] = usage["total_requests"].(int) + 1
+
+		if request.Status == "success" {
+			usage["success_requests"] = usage["success_requests"].(int) + 1
+		} else {
+			usage["failed_requests"] = usage["failed_requests"].(int) + 1
+		}
+
+		// 更新最后请求时间
+		lastTime, ok := usage["last_request_time"].(time.Time)
+		if !ok || request.CreatedAt.After(lastTime) {
+			usage["last_request_time"] = request.CreatedAt
+		}
+	}
+
+	// 转换为数组并计算成功率
+	var usageList []map[string]interface{}
+	for _, usage := range usageMap {
+		totalRequests := usage["total_requests"].(int)
+		successRequests := usage["success_requests"].(int)
+		totalTokens := usage["total_tokens"].(int)
+
+		var successRate float64
+		if totalRequests > 0 {
+			successRate = float64(successRequests) / float64(totalRequests) * 100
+		}
+
+		var avgTokensPerRequest float64
+		if totalRequests > 0 {
+			avgTokensPerRequest = float64(totalTokens) / float64(totalRequests)
+		}
+
+		usage["success_rate"] = successRate
+		usage["avg_tokens_per_request"] = avgTokensPerRequest
+		usageList = append(usageList, usage)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": usageList})
 }

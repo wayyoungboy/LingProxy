@@ -2,8 +2,8 @@
   <div class="dashboard">
     <el-card class="dashboard-card">
       <template #header>
-        <div class="dashboard-header">
-          <h2>系统仪表盘</h2>
+        <div class="card-header">
+          <span class="page-title">系统仪表盘</span>
           <el-button
             type="primary"
             size="small"
@@ -71,8 +71,8 @@
       <div class="charts-section">
         <el-card class="chart-card" shadow="hover">
           <template #header>
-            <div class="chart-header">
-              <h3>系统性能</h3>
+            <div class="card-header">
+              <span class="page-title">系统性能</span>
             </div>
           </template>
           <div class="chart-content">
@@ -102,8 +102,8 @@
       <div class="recent-requests-section">
         <el-card class="requests-card" shadow="hover">
           <template #header>
-            <div class="requests-header">
-              <h3>最近请求</h3>
+            <div class="card-header">
+              <span class="page-title">最近请求</span>
               <el-button
                 type="primary"
                 size="small"
@@ -118,6 +118,7 @@
             :data="recentRequests"
             style="width: 100%"
             border
+            stripe
             size="small"
           >
             <el-table-column prop="id" label="请求ID" width="180" />
@@ -277,16 +278,16 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.dashboard-header {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.dashboard-header h2 {
+.page-title {
   font-size: 18px;
   font-weight: 600;
-  margin: 0;
+  color: #303133;
 }
 
 /* 统计卡片 */
@@ -386,17 +387,6 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.chart-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
 
 .chart-content {
   padding: 20px;
@@ -441,17 +431,6 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.requests-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.requests-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
 
 .no-data {
   padding: 40px 0;
@@ -468,19 +447,7 @@ onMounted(() => {
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
-  .chart-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
-  .requests-header {
+  .card-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
