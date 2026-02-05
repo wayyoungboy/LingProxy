@@ -108,8 +108,17 @@
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240">
+        <el-table-column label="操作" width="300">
           <template #default="scope">
+            <el-button
+              type="success"
+              size="small"
+              @click="handleTestResource(scope.row)"
+              :loading="testingResources[scope.row.id]"
+              style="margin-right: 5px"
+            >
+              测试
+            </el-button>
             <el-button
               type="primary"
               size="small"
@@ -283,6 +292,9 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const uploadRef = ref(null)
+
+// 测试相关
+const testingResources = ref({}) // 记录正在测试的资源ID
 
 // JSON 导入相关
 const jsonImportDialogVisible = ref(false)
@@ -543,6 +555,61 @@ const handleDeleteResource = async (id) => {
       console.error('删除LLM资源失败:', error)
       ElMessage.error('删除LLM资源失败')
     }
+  }
+}
+
+// 处理测试资源
+const handleTestResource = async (resource) => {
+  // 检查资源状态
+  if (resource.status !== 'active') {
+    ElMessage.warning('只能测试活跃状态的资源')
+    return
+  }
+
+  // 设置测试状态
+  testingResources.value[resource.id] = true
+
+  try {
+    const result = await api.testLLMResource(resource.id)
+    
+    if (result && result.success) {
+      // 测试成功，显示详细信息
+      let message = `测试成功！\n`
+      message += `耗时: ${result.duration_ms}ms\n`
+      
+      if (result.model) {
+        message += `模型: ${result.model}\n`
+      }
+      
+      if (result.response) {
+        message += `响应: ${result.response}\n`
+      }
+      
+      if (result.embedding_dimension) {
+        message += `向量维度: ${result.embedding_dimension}\n`
+      }
+      
+      if (result.usage) {
+        message += `Token使用: ${JSON.stringify(result.usage, null, 2)}`
+      }
+      
+      ElMessageBox.alert(message, '测试成功', {
+        confirmButtonText: '确定',
+        type: 'success',
+        dangerouslyUseHTMLString: false
+      })
+    } else {
+      // 测试失败
+      const errorMsg = result?.message || result?.error || '测试失败'
+      ElMessage.error(errorMsg)
+    }
+  } catch (error) {
+    console.error('测试LLM资源失败:', error)
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || '测试失败'
+    ElMessage.error(errorMsg)
+  } finally {
+    // 清除测试状态
+    testingResources.value[resource.id] = false
   }
 }
 

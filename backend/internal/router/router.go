@@ -18,6 +18,10 @@ import (
 func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *service.UserService, policyService *service.PolicyService, cfg *config.Config) {
 	logger.Info("Starting route setup")
 
+	// 添加全局中间件：RequestID和RequestLogger（必须在最前面）
+	r.Use(middleware.RequestID())
+	r.Use(middleware.RequestLogger())
+
 	// 创建处理器
 	logger.Info("Initializing handlers")
 	tokenService := service.NewTokenService(storage)
@@ -145,6 +149,7 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		llmResourceRoutes.POST("", llmResourceHandler.CreateLLMResource)
 		llmResourceRoutes.PUT("/:id", llmResourceHandler.UpdateLLMResource)
 		llmResourceRoutes.DELETE("/:id", llmResourceHandler.DeleteLLMResource)
+		llmResourceRoutes.POST("/:id/test", llmResourceHandler.TestLLMResource)
 		llmResourceRoutes.POST("/import", llmResourceHandler.ImportLLMResources)
 		llmResourceRoutes.GET("/import/template", llmResourceHandler.DownloadImportTemplate)
 

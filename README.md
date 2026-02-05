@@ -27,7 +27,7 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **Admin Management**: Single admin mode with password and API key management
 - **Token Management**: Create and manage request-side tokens with policy binding
 - **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances
-- **LLM Resource Management**: Supports configuration of AI service resources with driver-based architecture (currently supports OpenAI driver), supports model categories (chat, image, embedding, rerank, audio, video), supports batch import/export via Excel templates
+- **LLM Resource Management**: Supports configuration of AI service resources with driver-based architecture (currently supports OpenAI driver), supports model categories (chat, image, embedding, rerank, audio, video), supports batch import/export via Excel templates or JSON format, includes resource testing functionality to verify connectivity
 - **Model Management**: Flexible model configuration, supports pricing, usage limits and other parameters
 - **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing configurations
 - **System Monitoring**: Real-time system information (CPU, memory, uptime, etc.)
@@ -254,14 +254,25 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
 - `GET /api/v1/llm-resources/:id` - Get LLM resource details
 - `PUT /api/v1/llm-resources/:id` - Update LLM resource
 - `DELETE /api/v1/llm-resources/:id` - Delete LLM resource
-- `POST /api/v1/llm-resources/import` - Batch import LLM resources from Excel file
+- `POST /api/v1/llm-resources/:id/test` - Test LLM resource connectivity
+- `POST /api/v1/llm-resources/import` - Batch import LLM resources (Excel or JSON)
 - `GET /api/v1/llm-resources/import/template` - Download Excel import template
 
 **Batch Import**:
-- Supports batch importing LLM resources via Excel files
+- Supports batch importing LLM resources via Excel files or JSON format
 - Excel template includes fields: Name, Type, Driver, Model, BaseURL, APIKey, Status
+- JSON import accepts an array of resource objects with the same fields
 - Driver field currently only supports "openai", will be auto-set to "openai" if empty or invalid
-- Import results return success/failure counts and error details
+- Import results return success/failure/duplicate counts and detailed error/duplicate information
+- Duplicate detection: Resources with same type, model, base_url, and api_key are considered duplicates
+- Automatic trimming: Leading and trailing whitespace are removed from all fields during import
+
+**Resource Testing**:
+- Test button available in the LLM Resources management interface
+- Only resources with `active` status can be tested
+- Supports testing for `chat` and `embedding` resource types
+- Returns detailed test results including response time, model information, token usage, and response content
+- Test timeout: 30 seconds
 
 **Search Functionality**:
 - Frontend supports fuzzy search on resource name, base URL, and model identifier

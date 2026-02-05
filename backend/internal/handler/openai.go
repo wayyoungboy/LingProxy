@@ -1,12 +1,16 @@
 package handler
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lingproxy/lingproxy/internal/client/openai"
+	"github.com/lingproxy/lingproxy/internal/middleware"
 	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/service"
 	"github.com/lingproxy/lingproxy/internal/storage"
@@ -38,7 +42,7 @@ func NewOpenAIHandler(storage *storage.StorageFacade, policyService *service.Pol
 }
 
 // findLLMResourceByModel 根据模型名称和Token查找对应的LLM资源
-func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string) (*storage.LLMResource, error) {
+func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string, resourceType string) (*storage.LLMResource, error) {
 	// 获取所有LLM资源
 	resources, err := h.storage.ListLLMResources()
 	if err != nil {
@@ -49,61 +53,99 @@ func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string)
 		return nil, fmt.Errorf("no LLM resources available")
 	}
 
+	// 根据资源类型过滤资源（只选择同类型的资源）
+	typeFiltered := make([]*storage.LLMResource, 0)
+	for _, r := range resources {
+		if r.Type == resourceType {
+			typeFiltered = append(typeFiltered, r)
+		}
+	}
+
+	if len(typeFiltered) == 0 {
+		logger.Warn("No resources found for type", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("resource_type", resourceType), logger.F("model", modelName))
+		return nil, fmt.Errorf("no LLM resources available for type: %s", resourceType)
+	}
+
+	logger.Debug("Filtered resources by type", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("resource_type", resourceType), logger.F("original_count", len(resources)), logger.F("filtered_count", len(typeFiltered)))
+
 	// 从上下文获取Token（由认证中间件设置）
 	tokenValue := h.getTokenFromContext(c)
 	if tokenValue == "" {
 		// 没有Token，使用默认策略
-		logger.Info("未找到Token，使用默认策略", logger.F("model_name", modelName))
-		return h.selectResourceWithDefaultPolicy(modelName, resources)
+		logger.Debug("No token found, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("model", modelName), logger.F("resource_type", resourceType))
+		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
 
 	// 获取Token信息
 	token, err := h.tokenService.ValidateToken(tokenValue)
 	if err != nil {
 		// Token验证失败，使用默认策略
-		logger.Warn("Token验证失败，使用默认策略", logger.F("error", err.Error()), logger.F("model_name", modelName))
-		return h.selectResourceWithDefaultPolicy(modelName, resources)
+		logger.Warn("Token validation failed, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("error", err.Error()), logger.F("model", modelName), logger.F("resource_type", resourceType))
+		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
 
 	// 检查Token是否有策略
 	if token.PolicyID == "" {
-		// Token没有配置策略
-		// 如果Token是"ling-"开头，建议配置策略，但这里使用默认策略
-		// 注意：ling-开头的Token建议配置策略，但这里先使用默认策略以保证向后兼容
-		logger.Info("Token未配置策略，使用默认策略", logger.F("token_id", token.ID), logger.F("model_name", modelName))
-		return h.selectResourceWithDefaultPolicy(modelName, resources)
+		// Token没有配置策略，使用默认策略
+		logger.Debug("Token has no policy, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("model", modelName), logger.F("resource_type", resourceType))
+		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
 
 	// 使用Token的策略选择资源
-	logger.Info("使用Token策略选择资源", logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("model_name", modelName))
-	resource, err := h.policyService.ExecutePolicy(token.PolicyID, modelName, resources)
+	logger.Debug("Executing policy for token", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("model", modelName), logger.F("resource_type", resourceType))
+	resource, err := h.policyService.ExecutePolicy(token.PolicyID, modelName, typeFiltered)
 	if err != nil {
 		// 策略执行失败，降级到默认策略
-		logger.Warn("策略执行失败，降级到默认策略", logger.F("error", err.Error()), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID))
-		return h.selectResourceWithDefaultPolicy(modelName, resources)
+		logger.Warn("Policy execution failed, falling back to default", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("error", err.Error()), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID))
+		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
-	logger.Info("策略执行成功", logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+	logger.Info("Resource selected successfully", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("resource_type", resource.Type))
 
 	return resource, nil
 }
 
-// selectResourceWithDefaultPolicy 使用默认策略选择资源
-func (h *OpenAIHandler) selectResourceWithDefaultPolicy(modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
-	// 默认策略：返回第一个可用的LLM资源
+// selectResourceWithDefaultPolicy 使用默认策略选择资源（随机策略）
+func (h *OpenAIHandler) selectResourceWithDefaultPolicy(c *gin.Context, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
+	// 默认策略：从所有可用资源中随机选择
+	activeResources := make([]*storage.LLMResource, 0)
 	for _, resource := range resources {
 		if resource.Status == "active" {
-			logger.Info("默认策略选择资源", logger.F("model_name", modelName), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
-			return resource, nil
+			activeResources = append(activeResources, resource)
 		}
 	}
 
-	// 如果没有找到活跃的LLM资源，返回第一个可用的
+	// 如果有活跃资源，随机选择一个
+	if len(activeResources) > 0 {
+		// 使用crypto/rand确保真正的随机性
+		randomIndex, err := h.getRandomInt(len(activeResources))
+		if err != nil {
+			// 如果crypto/rand失败，使用math/rand作为后备
+			randomIndex = int(time.Now().UnixNano()) % len(activeResources)
+		}
+		selected := activeResources[randomIndex]
+		logger.Info("Default policy (random) selected resource", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("model", modelName), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name), logger.F("total_active", len(activeResources)))
+		return selected, nil
+	}
+
+	// 如果没有活跃资源，返回第一个可用的（降级处理）
 	if len(resources) > 0 {
-		logger.Info("默认策略选择非活跃资源", logger.F("model_name", modelName), logger.F("resource_id", resources[0].ID), logger.F("resource_name", resources[0].Name))
+		logger.Warn("Default policy selected inactive resource (no active resources available)", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("model", modelName), logger.F("resource_id", resources[0].ID), logger.F("resource_name", resources[0].Name), logger.F("resource_status", resources[0].Status))
 		return resources[0], nil
 	}
 
 	return nil, fmt.Errorf("no LLM resources available")
+}
+
+// getRandomInt 使用crypto/rand生成随机整数
+func (h *OpenAIHandler) getRandomInt(max int) (int, error) {
+	if max <= 0 {
+		return 0, fmt.Errorf("max must be positive")
+	}
+	var n uint32
+	if err := binary.Read(rand.Reader, binary.BigEndian, &n); err != nil {
+		return 0, err
+	}
+	return int(n) % max, nil
 }
 
 // getTokenFromContext 从上下文获取Token
@@ -213,8 +255,8 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		return
 	}
 
-	// 查找对应的LLM资源
-	llmResource, err := h.findLLMResourceByModel(c, req.Model)
+	// 查找对应的LLM资源（chat类型）
+	llmResource, err := h.findLLMResourceByModel(c, req.Model, "chat")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": map[string]interface{}{
@@ -229,6 +271,7 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 
 	// 创建OpenAI客户端，使用LLM资源的API密钥和基础URL
 	client := openai.NewClient(llmResource.APIKey, llmResource.BaseURL)
+	logger.Debug("Created OpenAI client", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("base_url", llmResource.BaseURL), logger.F("api_key", llmResource.APIKey))
 	defer client.Close()
 
 	// 转换消息格式
@@ -247,10 +290,18 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 	}
 
 	// 构建请求参数
+	// 使用资源中配置的model覆写请求中的model（如果资源配置了model）
+	requestID := middleware.GetRequestID(c)
+	modelToUse := req.Model
+	if llmResource.Model != "" {
+		modelToUse = llmResource.Model
+		logger.Info("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
+	}
 	params := openaiSDK.ChatCompletionNewParams{
-		Model:    req.Model,
+		Model:    modelToUse,
 		Messages: messages,
 	}
+	logger.Debug("Request parameters prepared", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse), logger.F("base_url", llmResource.BaseURL), logger.F("message_count", len(messages)))
 
 	// 设置可选参数
 	if req.MaxTokens > 0 {
@@ -277,12 +328,45 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 		params.User = param.NewOpt(req.User)
 	}
 
+	// 记录请求开始时间
+	startTime := time.Now()
+
+	// 获取用户ID（从token或user中）
+	userID := ""
+	if token, exists := c.Get("token"); exists {
+		if t, ok := token.(*storage.Token); ok {
+			userID = t.ID // 使用Token ID作为用户标识
+		}
+	} else if user, exists := c.Get("user"); exists {
+		if u, ok := user.(*storage.User); ok {
+			userID = u.ID
+		}
+	}
+
 	// 调用真实的API
 	ctx := c.Request.Context()
 	chatClient := client.Chat().Completions()
 	openaiResponse, err := chatClient.New(ctx, params)
+	duration := time.Since(startTime).Milliseconds()
+
+	// 记录请求到数据库
+	requestRecord := &storage.Request{
+		UserID:    userID,
+		Endpoint:  "/llm/v1/chat/completions",
+		Method:    "POST",
+		Duration:  duration,
+		Status:    "success",
+		Tokens:    0,
+		CreatedAt: time.Now(),
+	}
+
 	if err != nil {
-		logger.Error("Chat completion failed", logger.F("error", err.Error()), logger.F("model", req.Model))
+		requestRecord.Status = "error"
+		logger.Error("Chat completion failed", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()), logger.F("request_model", req.Model), logger.F("actual_model", modelToUse), logger.F("resource_id", llmResource.ID), logger.F("resource_name", llmResource.Name))
+		// 保存失败的请求记录
+		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+			logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": map[string]interface{}{
 				"message": "Failed to create chat completion: " + err.Error(),
@@ -292,6 +376,14 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 			},
 		})
 		return
+	}
+
+	// 记录token使用量
+	requestRecord.Tokens = int(openaiResponse.Usage.TotalTokens)
+
+	// 保存请求记录
+	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+		logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
 	}
 
 	// 转换响应格式
@@ -393,8 +485,8 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 		return
 	}
 
-	// 查找对应的LLM资源
-	llmResource, err := h.findLLMResourceByModel(c, req.Model)
+	// 查找对应的LLM资源（chat类型，completion也使用chat类型）
+	llmResource, err := h.findLLMResourceByModel(c, req.Model, "chat")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": map[string]interface{}{
@@ -412,12 +504,20 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	defer client.Close()
 
 	// 构建请求参数
+	// 使用资源中配置的model覆写请求中的model（如果资源配置了model）
+	requestID := middleware.GetRequestID(c)
+	modelToUse := req.Model
+	if llmResource.Model != "" {
+		modelToUse = llmResource.Model
+		logger.Info("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
+	}
 	params := openaiSDK.CompletionNewParams{
-		Model: openaiSDK.CompletionNewParamsModel(req.Model),
+		Model: openaiSDK.CompletionNewParamsModel(modelToUse),
 		Prompt: openaiSDK.CompletionNewParamsPromptUnion{
 			OfString: param.NewOpt(req.Prompt),
 		},
 	}
+	logger.Debug("Request parameters prepared", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse), logger.F("base_url", llmResource.BaseURL))
 
 	// 设置可选参数
 	if req.MaxTokens > 0 {
@@ -444,12 +544,45 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 		params.User = param.NewOpt(req.User)
 	}
 
+	// 记录请求开始时间
+	startTime := time.Now()
+
+	// 获取用户ID（从token或user中）
+	userID := ""
+	if token, exists := c.Get("token"); exists {
+		if t, ok := token.(*storage.Token); ok {
+			userID = t.ID // 使用Token ID作为用户标识
+		}
+	} else if user, exists := c.Get("user"); exists {
+		if u, ok := user.(*storage.User); ok {
+			userID = u.ID
+		}
+	}
+
 	// 调用真实的API
 	ctx := c.Request.Context()
 	completionClient := client.Completions()
 	openaiResponse, err := completionClient.New(ctx, params)
+	duration := time.Since(startTime).Milliseconds()
+
+	// 记录请求到数据库
+	requestRecord := &storage.Request{
+		UserID:    userID,
+		Endpoint:  "/llm/v1/completions",
+		Method:    "POST",
+		Duration:  duration,
+		Status:    "success",
+		Tokens:    0,
+		CreatedAt: time.Now(),
+	}
+
 	if err != nil {
-		logger.Error("Completion failed", logger.F("error", err.Error()), logger.F("model", req.Model))
+		requestRecord.Status = "error"
+		logger.Error("Completion failed", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()), logger.F("request_model", req.Model), logger.F("actual_model", modelToUse), logger.F("resource_id", llmResource.ID), logger.F("resource_name", llmResource.Name))
+		// 保存失败的请求记录
+		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+			logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": map[string]interface{}{
 				"message": "Failed to create completion: " + err.Error(),
@@ -459,6 +592,14 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 			},
 		})
 		return
+	}
+
+	// 记录token使用量
+	requestRecord.Tokens = int(openaiResponse.Usage.TotalTokens)
+
+	// 保存请求记录
+	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+		logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
 	}
 
 	// 转换响应格式

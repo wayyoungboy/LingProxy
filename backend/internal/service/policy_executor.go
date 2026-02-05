@@ -1,10 +1,12 @@
 package service
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
+	mathrand "math/rand"
 	"regexp"
 	"sort"
 	"strings"
@@ -14,6 +16,17 @@ import (
 	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/storage"
 )
+
+// init 初始化随机数生成器，使用crypto/rand作为种子源以确保真正的随机性
+func init() {
+	// 使用crypto/rand生成种子，确保每次程序启动时都有不同的随机序列
+	var seed int64
+	if err := binary.Read(rand.Reader, binary.BigEndian, &seed); err != nil {
+		// 如果crypto/rand失败，使用时间戳作为后备
+		seed = time.Now().UnixNano()
+	}
+	mathrand.Seed(seed)
+}
 
 var (
 	ErrNoResourcesAvailable = errors.New("no resources available")
@@ -30,7 +43,7 @@ type PolicyExecutor interface {
 type RandomPolicyExecutor struct{}
 
 func (e *RandomPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
-	logger.Info("执行随机策略", logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model_name", modelName))
+	logger.Debug("Executing random policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
 
 	var params struct {
 		Resources      []string `json:"resources"`
@@ -38,22 +51,22 @@ func (e *RandomPolicyExecutor) Execute(policy *storage.Policy, modelName string,
 	}
 
 	if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
-		logger.Error("解析随机策略参数失败", logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
+		logger.Error("Failed to parse random policy parameters", logger.F("component", "service"), logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
 		return nil, fmt.Errorf("%w: %v", ErrInvalidPolicyParams, err)
 	}
 
 	// 过滤资源
 	filtered := filterResources(resources, params.Resources, params.FilterByStatus)
-	logger.Info("随机策略资源过滤结果", logger.F("policy_id", policy.ID), logger.F("original_count", len(resources)), logger.F("filtered_count", len(filtered)))
+	logger.Debug("Random policy filtered resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("original_count", len(resources)), logger.F("filtered_count", len(filtered)))
 
 	if len(filtered) == 0 {
-		logger.Warn("随机策略无可用资源", logger.F("policy_id", policy.ID), logger.F("model_name", modelName))
+		logger.Warn("Random policy: no available resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
 		return nil, ErrNoResourcesAvailable
 	}
 
-	// 随机选择（Go 1.20+ 全局随机数生成器已自动初始化）
-	selected := filtered[rand.Intn(len(filtered))]
-	logger.Info("随机策略选择结果", logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name), logger.F("resource_name_base_url", selected.BaseURL))
+	// 随机选择（使用已初始化的随机数生成器）
+	selected := filtered[mathrand.Intn(len(filtered))]
+	logger.Info("Random policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name), logger.F("base_url", selected.BaseURL))
 
 	return selected, nil
 }
@@ -71,7 +84,7 @@ func NewRoundRobinPolicyExecutor() *RoundRobinPolicyExecutor {
 }
 
 func (e *RoundRobinPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
-	logger.Info("执行轮询策略", logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model_name", modelName))
+	logger.Debug("Executing round-robin policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
 
 	var params struct {
 		Resources      []string `json:"resources"`
@@ -79,16 +92,16 @@ func (e *RoundRobinPolicyExecutor) Execute(policy *storage.Policy, modelName str
 	}
 
 	if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
-		logger.Error("解析轮询策略参数失败", logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
+		logger.Error("Failed to parse round-robin policy parameters", logger.F("component", "service"), logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
 		return nil, fmt.Errorf("%w: %v", ErrInvalidPolicyParams, err)
 	}
 
 	// 过滤资源
 	filtered := filterResources(resources, params.Resources, params.FilterByStatus)
-	logger.Info("轮询策略资源过滤结果", logger.F("policy_id", policy.ID), logger.F("original_count", len(resources)), logger.F("filtered_count", len(filtered)))
+	logger.Debug("Round-robin policy filtered resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("original_count", len(resources)), logger.F("filtered_count", len(filtered)))
 
 	if len(filtered) == 0 {
-		logger.Warn("轮询策略无可用资源", logger.F("policy_id", policy.ID), logger.F("model_name", modelName))
+		logger.Warn("Round-robin policy: no available resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
 		return nil, ErrNoResourcesAvailable
 	}
 
@@ -100,7 +113,7 @@ func (e *RoundRobinPolicyExecutor) Execute(policy *storage.Policy, modelName str
 	e.mu.Unlock()
 
 	selected := filtered[index]
-	logger.Info("轮询策略选择结果", logger.F("policy_id", policy.ID), logger.F("current_index", index), logger.F("next_index", nextIndex), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name))
+	logger.Info("Round-robin policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("current_index", index), logger.F("next_index", nextIndex), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name))
 
 	return selected, nil
 }
@@ -109,7 +122,7 @@ func (e *RoundRobinPolicyExecutor) Execute(policy *storage.Policy, modelName str
 type WeightedPolicyExecutor struct{}
 
 func (e *WeightedPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
-	logger.Info("执行加权策略", logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model_name", modelName))
+	logger.Debug("Executing weighted policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
 
 	var params struct {
 		Resources []struct {
@@ -120,11 +133,17 @@ func (e *WeightedPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 	}
 
 	if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
-		logger.Error("解析加权策略参数失败", logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
+		logger.Error("Failed to parse weighted policy parameters", logger.F("component", "service"), logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
 		return nil, fmt.Errorf("%w: %v", ErrInvalidPolicyParams, err)
 	}
 
-	// 构建资源映射
+	// 构建资源映射（包含所有资源，用于存在性验证）
+	allResourceMap := make(map[string]*storage.LLMResource)
+	for _, r := range resources {
+		allResourceMap[r.ID] = r
+	}
+
+	// 构建可用资源映射（根据FilterByStatus过滤）
 	resourceMap := make(map[string]*storage.LLMResource)
 	for _, r := range resources {
 		if params.FilterByStatus && r.Status != "active" {
@@ -133,14 +152,21 @@ func (e *WeightedPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 		resourceMap[r.ID] = r
 	}
 
-	// 计算总权重
+	// 验证配置的资源是否存在，并计算总权重
 	totalWeight := 0
 	validResources := make([]struct {
 		Resource *storage.LLMResource
 		Weight   int
 	}, 0)
+	missingResources := make([]string, 0)
 
 	for _, wr := range params.Resources {
+		// 首先验证资源是否存在（在所有资源中）
+		if _, exists := allResourceMap[wr.ID]; !exists {
+			missingResources = append(missingResources, wr.ID)
+			continue
+		}
+		// 然后检查资源是否在可用资源映射中
 		if r, exists := resourceMap[wr.ID]; exists {
 			totalWeight += wr.Weight
 			validResources = append(validResources, struct {
@@ -150,28 +176,33 @@ func (e *WeightedPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 		}
 	}
 
-	logger.Info("加权策略资源处理结果", logger.F("policy_id", policy.ID), logger.F("original_count", len(resources)), logger.F("valid_count", len(validResources)), logger.F("total_weight", totalWeight))
+	// 记录缺失资源的警告
+	if len(missingResources) > 0 {
+		logger.Warn("Weighted policy: some configured resources are not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("missing_resource_ids", missingResources), logger.F("total_configured", len(params.Resources)))
+	}
+
+	logger.Debug("Weighted policy processed resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("original_count", len(resources)), logger.F("valid_count", len(validResources)), logger.F("total_weight", totalWeight))
 
 	if len(validResources) == 0 {
-		logger.Warn("加权策略无可用资源", logger.F("policy_id", policy.ID), logger.F("model_name", modelName))
+		logger.Warn("Weighted policy: no available resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
 		return nil, ErrNoResourcesAvailable
 	}
 
-	// 根据权重随机选择（Go 1.20+ 全局随机数生成器已自动初始化）
-	random := rand.Intn(totalWeight)
+	// 根据权重随机选择（使用已初始化的随机数生成器）
+	random := mathrand.Intn(totalWeight)
 	currentWeight := 0
 
 	for _, wr := range validResources {
 		currentWeight += wr.Weight
 		if random < currentWeight {
-			logger.Info("加权策略选择结果", logger.F("policy_id", policy.ID), logger.F("resource_id", wr.Resource.ID), logger.F("resource_name", wr.Resource.Name), logger.F("weight", wr.Weight))
+			logger.Info("Weighted policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", wr.Resource.ID), logger.F("resource_name", wr.Resource.Name), logger.F("weight", wr.Weight))
 			return wr.Resource, nil
 		}
 	}
 
 	// 兜底返回第一个资源
 	selected := validResources[0].Resource
-	logger.Info("加权策略兜底选择", logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name))
+	logger.Info("Weighted policy fallback selection", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name))
 	return selected, nil
 }
 
@@ -179,7 +210,7 @@ func (e *WeightedPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 type ModelMatchPolicyExecutor struct{}
 
 func (e *ModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
-	logger.Info("执行模型匹配策略", logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model_name", modelName))
+	logger.Debug("Executing model-match policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
 
 	var params struct {
 		Mappings []struct {
@@ -190,11 +221,17 @@ func (e *ModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 	}
 
 	if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
-		logger.Error("解析模型匹配策略参数失败", logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
+		logger.Error("Failed to parse model-match policy parameters", logger.F("component", "service"), logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
 		return nil, fmt.Errorf("%w: %v", ErrInvalidPolicyParams, err)
 	}
 
-	// 构建资源映射
+	// 构建所有资源映射（用于存在性验证）
+	allResourceMap := make(map[string]*storage.LLMResource)
+	for _, r := range resources {
+		allResourceMap[r.ID] = r
+	}
+
+	// 构建可用资源映射（只包含active状态）
 	resourceMap := make(map[string]*storage.LLMResource)
 	for _, r := range resources {
 		if r.Status == "active" {
@@ -205,26 +242,36 @@ func (e *ModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 	// 匹配模型名（支持通配符）
 	for _, mapping := range params.Mappings {
 		if matchPattern(modelName, mapping.ModelPattern) {
-			logger.Info("模型匹配策略找到匹配", logger.F("policy_id", policy.ID), logger.F("model_name", modelName), logger.F("pattern", mapping.ModelPattern), logger.F("resource_id", mapping.ResourceID))
+			logger.Debug("Model-match policy found match", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName), logger.F("pattern", mapping.ModelPattern), logger.F("resource_id", mapping.ResourceID))
+			// 首先验证资源是否存在
+			if _, exists := allResourceMap[mapping.ResourceID]; !exists {
+				logger.Warn("Model-match policy: configured resource not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", mapping.ResourceID), logger.F("pattern", mapping.ModelPattern))
+				continue
+			}
+			// 然后检查资源是否可用
 			if resource, exists := resourceMap[mapping.ResourceID]; exists {
-				logger.Info("模型匹配策略选择结果", logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+				logger.Info("Model-match policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
 				return resource, nil
 			}
-			logger.Warn("模型匹配策略资源不存在", logger.F("policy_id", policy.ID), logger.F("resource_id", mapping.ResourceID))
+			logger.Warn("Model-match policy: resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", mapping.ResourceID))
 		}
 	}
 
 	// 使用默认资源
 	if params.DefaultResourceID != "" {
-		logger.Info("模型匹配策略使用默认资源", logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
-		if resource, exists := resourceMap[params.DefaultResourceID]; exists {
-			logger.Info("模型匹配策略默认资源选择结果", logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+		logger.Debug("Model-match policy using default resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
+		// 首先验证默认资源是否存在
+		if _, exists := allResourceMap[params.DefaultResourceID]; !exists {
+			logger.Warn("Model-match policy: configured default resource not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
+		} else if resource, exists := resourceMap[params.DefaultResourceID]; exists {
+			logger.Info("Model-match policy selected default resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
 			return resource, nil
+		} else {
+			logger.Warn("Model-match policy: default resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
 		}
-		logger.Warn("模型匹配策略默认资源不存在", logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
 	}
 
-	logger.Warn("模型匹配策略无可用资源", logger.F("policy_id", policy.ID), logger.F("model_name", modelName))
+	logger.Warn("Model-match policy: no available resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
 	return nil, ErrNoResourcesAvailable
 }
 
@@ -232,7 +279,7 @@ func (e *ModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 type RegexMatchPolicyExecutor struct{}
 
 func (e *RegexMatchPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
-	logger.Info("执行正则匹配策略", logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model_name", modelName))
+	logger.Debug("Executing regex-match policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
 
 	var params struct {
 		Rules []struct {
@@ -243,11 +290,17 @@ func (e *RegexMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 	}
 
 	if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
-		logger.Error("解析正则匹配策略参数失败", logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
+		logger.Error("Failed to parse regex-match policy parameters", logger.F("component", "service"), logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
 		return nil, fmt.Errorf("%w: %v", ErrInvalidPolicyParams, err)
 	}
 
-	// 构建资源映射
+	// 构建所有资源映射（用于存在性验证）
+	allResourceMap := make(map[string]*storage.LLMResource)
+	for _, r := range resources {
+		allResourceMap[r.ID] = r
+	}
+
+	// 构建可用资源映射（只包含active状态）
 	resourceMap := make(map[string]*storage.LLMResource)
 	for _, r := range resources {
 		if r.Status == "active" {
@@ -259,30 +312,40 @@ func (e *RegexMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 	for _, rule := range params.Rules {
 		matched, err := regexp.MatchString(rule.Pattern, modelName)
 		if err != nil {
-			logger.Warn("正则匹配策略规则无效", logger.F("policy_id", policy.ID), logger.F("pattern", rule.Pattern), logger.F("error", err.Error()))
+			logger.Warn("Regex-match policy: invalid pattern", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("pattern", rule.Pattern), logger.F("error", err.Error()))
 			continue // 跳过无效的正则表达式
 		}
 		if matched {
-			logger.Info("正则匹配策略找到匹配", logger.F("policy_id", policy.ID), logger.F("model_name", modelName), logger.F("pattern", rule.Pattern), logger.F("resource_id", rule.ResourceID))
+			logger.Debug("Regex-match policy found match", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName), logger.F("pattern", rule.Pattern), logger.F("resource_id", rule.ResourceID))
+			// 首先验证资源是否存在
+			if _, exists := allResourceMap[rule.ResourceID]; !exists {
+				logger.Warn("Regex-match policy: configured resource not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", rule.ResourceID), logger.F("pattern", rule.Pattern))
+				continue
+			}
+			// 然后检查资源是否可用
 			if resource, exists := resourceMap[rule.ResourceID]; exists {
-				logger.Info("正则匹配策略选择结果", logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+				logger.Info("Regex-match policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
 				return resource, nil
 			}
-			logger.Warn("正则匹配策略资源不存在", logger.F("policy_id", policy.ID), logger.F("resource_id", rule.ResourceID))
+			logger.Warn("Regex-match policy: resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", rule.ResourceID))
 		}
 	}
 
 	// 使用默认资源
 	if params.DefaultResourceID != "" {
-		logger.Info("正则匹配策略使用默认资源", logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
-		if resource, exists := resourceMap[params.DefaultResourceID]; exists {
-			logger.Info("正则匹配策略默认资源选择结果", logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
+		logger.Debug("Regex-match policy using default resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
+		// 首先验证默认资源是否存在
+		if _, exists := allResourceMap[params.DefaultResourceID]; !exists {
+			logger.Warn("Regex-match policy: configured default resource not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
+		} else if resource, exists := resourceMap[params.DefaultResourceID]; exists {
+			logger.Info("Regex-match policy selected default resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name))
 			return resource, nil
+		} else {
+			logger.Warn("Regex-match policy: default resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
 		}
-		logger.Warn("正则匹配策略默认资源不存在", logger.F("policy_id", policy.ID), logger.F("default_resource_id", params.DefaultResourceID))
 	}
 
-	logger.Warn("正则匹配策略无可用资源", logger.F("policy_id", policy.ID), logger.F("model_name", modelName))
+	logger.Warn("Regex-match policy: no available resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
 	return nil, ErrNoResourcesAvailable
 }
 
@@ -290,7 +353,7 @@ func (e *RegexMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 type PriorityPolicyExecutor struct{}
 
 func (e *PriorityPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
-	logger.Info("执行优先级策略", logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model_name", modelName))
+	logger.Debug("Executing priority policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
 
 	var params struct {
 		Resources []struct {
@@ -301,16 +364,33 @@ func (e *PriorityPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 	}
 
 	if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
-		logger.Error("解析优先级策略参数失败", logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
+		logger.Error("Failed to parse priority policy parameters", logger.F("component", "service"), logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
 		return nil, fmt.Errorf("%w: %v", ErrInvalidPolicyParams, err)
 	}
 
-	// 构建资源映射
+	// 构建所有资源映射（用于存在性验证）
+	allResourceMap := make(map[string]*storage.LLMResource)
+	for _, r := range resources {
+		allResourceMap[r.ID] = r
+	}
+
+	// 构建可用资源映射（只包含active状态）
 	resourceMap := make(map[string]*storage.LLMResource)
 	for _, r := range resources {
 		if r.Status == "active" {
 			resourceMap[r.ID] = r
 		}
+	}
+
+	// 验证配置的资源是否存在
+	missingResources := make([]string, 0)
+	for _, pr := range params.Resources {
+		if _, exists := allResourceMap[pr.ID]; !exists {
+			missingResources = append(missingResources, pr.ID)
+		}
+	}
+	if len(missingResources) > 0 {
+		logger.Warn("Priority policy: some configured resources are not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("missing_resource_ids", missingResources), logger.F("total_configured", len(params.Resources)))
 	}
 
 	// 按优先级排序
@@ -320,25 +400,29 @@ func (e *PriorityPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 
 	// 选择第一个可用的资源
 	for _, pr := range params.Resources {
+		// 跳过不存在的资源
+		if _, exists := allResourceMap[pr.ID]; !exists {
+			continue
+		}
 		if resource, exists := resourceMap[pr.ID]; exists {
-			logger.Info("优先级策略选择结果", logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("priority", pr.Priority))
+			logger.Info("Priority policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("priority", pr.Priority))
 			return resource, nil
 		}
-		logger.Warn("优先级策略资源不可用", logger.F("policy_id", policy.ID), logger.F("resource_id", pr.ID), logger.F("priority", pr.Priority))
+		logger.Debug("Priority policy: resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", pr.ID), logger.F("priority", pr.Priority))
 	}
 
 	if params.FallbackEnabled {
 		// 降级：使用任何可用的资源
-		logger.Info("优先级策略启用降级", logger.F("policy_id", policy.ID))
+		logger.Debug("Priority policy: fallback enabled", logger.F("component", "service"), logger.F("policy_id", policy.ID))
 		for _, r := range resources {
 			if r.Status == "active" {
-				logger.Info("优先级策略降级选择结果", logger.F("policy_id", policy.ID), logger.F("resource_id", r.ID), logger.F("resource_name", r.Name))
+				logger.Info("Priority policy selected fallback resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", r.ID), logger.F("resource_name", r.Name))
 				return r, nil
 			}
 		}
 	}
 
-	logger.Warn("优先级策略无可用资源", logger.F("policy_id", policy.ID), logger.F("model_name", modelName))
+	logger.Warn("Priority policy: no available resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
 	return nil, ErrNoResourcesAvailable
 }
 
@@ -357,7 +441,7 @@ func NewFailoverPolicyExecutor() *FailoverPolicyExecutor {
 }
 
 func (e *FailoverPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
-	logger.Info("执行故障转移策略", logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model_name", modelName))
+	logger.Debug("Executing failover policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
 
 	var params struct {
 		PrimaryResourceID   string   `json:"primary_resource_id"`
@@ -367,11 +451,17 @@ func (e *FailoverPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 	}
 
 	if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
-		logger.Error("解析故障转移策略参数失败", logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
+		logger.Error("Failed to parse failover policy parameters", logger.F("component", "service"), logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
 		return nil, fmt.Errorf("%w: %v", ErrInvalidPolicyParams, err)
 	}
 
-	// 构建资源映射
+	// 构建所有资源映射（用于存在性验证）
+	allResourceMap := make(map[string]*storage.LLMResource)
+	for _, r := range resources {
+		allResourceMap[r.ID] = r
+	}
+
+	// 构建可用资源映射（只包含active状态）
 	resourceMap := make(map[string]*storage.LLMResource)
 	for _, r := range resources {
 		if r.Status == "active" {
@@ -379,38 +469,64 @@ func (e *FailoverPolicyExecutor) Execute(policy *storage.Policy, modelName strin
 		}
 	}
 
-	// 检查主资源
-	if primary, exists := resourceMap[params.PrimaryResourceID]; exists {
-		isHealthy := !params.HealthCheckEnabled || e.isResourceHealthy(params.PrimaryResourceID, params.HealthCheckInterval)
-		logger.Info("故障转移策略检查主资源", logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID), logger.F("exists", exists), logger.F("is_healthy", isHealthy))
-
-		if isHealthy {
-			logger.Info("故障转移策略选择主资源", logger.F("policy_id", policy.ID), logger.F("resource_id", primary.ID), logger.F("resource_name", primary.Name))
-			return primary, nil
+	// 验证主资源是否存在
+	if params.PrimaryResourceID != "" {
+		if _, exists := allResourceMap[params.PrimaryResourceID]; !exists {
+			logger.Warn("Failover policy: configured primary resource not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID))
 		}
-		logger.Warn("故障转移策略主资源不健康", logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID))
-	} else {
-		logger.Warn("故障转移策略主资源不存在", logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID))
+	}
+
+	// 验证备用资源是否存在
+	missingFallbackResources := make([]string, 0)
+	for _, fallbackID := range params.FallbackResources {
+		if _, exists := allResourceMap[fallbackID]; !exists {
+			missingFallbackResources = append(missingFallbackResources, fallbackID)
+		}
+	}
+	if len(missingFallbackResources) > 0 {
+		logger.Warn("Failover policy: some configured fallback resources are not found", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("missing_fallback_resource_ids", missingFallbackResources), logger.F("total_configured", len(params.FallbackResources)))
+	}
+
+	// 检查主资源
+	if params.PrimaryResourceID != "" {
+		if _, exists := allResourceMap[params.PrimaryResourceID]; exists {
+			if primary, exists := resourceMap[params.PrimaryResourceID]; exists {
+				isHealthy := !params.HealthCheckEnabled || e.isResourceHealthy(params.PrimaryResourceID, params.HealthCheckInterval)
+				logger.Debug("Failover policy checking primary resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID), logger.F("is_healthy", isHealthy))
+
+				if isHealthy {
+					logger.Info("Failover policy selected primary resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", primary.ID), logger.F("resource_name", primary.Name))
+					return primary, nil
+				}
+				logger.Warn("Failover policy: primary resource unhealthy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID))
+			} else {
+				logger.Warn("Failover policy: primary resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("primary_resource_id", params.PrimaryResourceID))
+			}
+		}
 	}
 
 	// 使用备用资源
-	logger.Info("故障转移策略尝试备用资源", logger.F("policy_id", policy.ID), logger.F("fallback_count", len(params.FallbackResources)))
+	logger.Debug("Failover policy trying fallback resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("fallback_count", len(params.FallbackResources)))
 	for _, fallbackID := range params.FallbackResources {
+		// 跳过不存在的资源
+		if _, exists := allResourceMap[fallbackID]; !exists {
+			continue
+		}
 		if fallback, exists := resourceMap[fallbackID]; exists {
 			isHealthy := !params.HealthCheckEnabled || e.isResourceHealthy(fallbackID, params.HealthCheckInterval)
-			logger.Info("故障转移策略检查备用资源", logger.F("policy_id", policy.ID), logger.F("fallback_resource_id", fallbackID), logger.F("exists", exists), logger.F("is_healthy", isHealthy))
+			logger.Debug("Failover policy checking fallback resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("fallback_resource_id", fallbackID), logger.F("is_healthy", isHealthy))
 
 			if isHealthy {
-				logger.Info("故障转移策略选择备用资源", logger.F("policy_id", policy.ID), logger.F("resource_id", fallback.ID), logger.F("resource_name", fallback.Name))
+				logger.Info("Failover policy selected fallback resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", fallback.ID), logger.F("resource_name", fallback.Name))
 				return fallback, nil
 			}
-			logger.Warn("故障转移策略备用资源不健康", logger.F("policy_id", policy.ID), logger.F("fallback_resource_id", fallbackID))
+			logger.Debug("Failover policy: fallback resource unhealthy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("fallback_resource_id", fallbackID))
 		} else {
-			logger.Warn("故障转移策略备用资源不存在", logger.F("policy_id", policy.ID), logger.F("fallback_resource_id", fallbackID))
+			logger.Debug("Failover policy: fallback resource exists but not active", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("fallback_resource_id", fallbackID))
 		}
 	}
 
-	logger.Warn("故障转移策略无可用资源", logger.F("policy_id", policy.ID), logger.F("model_name", modelName))
+	logger.Warn("Failover policy: no available resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
 	return nil, ErrNoResourcesAvailable
 }
 
@@ -422,12 +538,12 @@ func (e *FailoverPolicyExecutor) isResourceHealthy(resourceID string, checkInter
 	if !exists || time.Since(lastCheck) > time.Duration(checkInterval)*time.Second {
 		// 需要检查，这里简化处理，假设资源是健康的
 		// 实际应该进行健康检查
-		logger.Debug("资源健康检查（需要检查）", logger.F("resource_id", resourceID), logger.F("last_check", lastCheck), logger.F("check_interval", checkInterval))
+		logger.Debug("Resource health check (needs check)", logger.F("component", "service"), logger.F("resource_id", resourceID), logger.F("last_check", lastCheck), logger.F("check_interval", checkInterval))
 		return true
 	}
 
 	isHealthy := e.resourceStatus[resourceID]
-	logger.Debug("资源健康检查结果", logger.F("resource_id", resourceID), logger.F("is_healthy", isHealthy), logger.F("last_check", lastCheck))
+	logger.Debug("Resource health check result", logger.F("component", "service"), logger.F("resource_id", resourceID), logger.F("is_healthy", isHealthy), logger.F("last_check", lastCheck))
 	return isHealthy
 }
 
@@ -445,50 +561,62 @@ func NewPolicyExecutorFactory() *PolicyExecutorFactory {
 }
 
 func (f *PolicyExecutorFactory) GetExecutor(policyType string) PolicyExecutor {
-	logger.Info("获取策略执行器", logger.F("policy_type", policyType))
+	logger.Debug("Getting policy executor", logger.F("component", "service"), logger.F("policy_type", policyType))
 
 	switch policyType {
 	case "random":
-		logger.Info("使用随机策略执行器", logger.F("policy_type", policyType))
 		return &RandomPolicyExecutor{}
 	case "round_robin":
-		logger.Info("使用轮询策略执行器", logger.F("policy_type", policyType))
 		return f.roundRobinExecutor
 	case "weighted":
-		logger.Info("使用加权策略执行器", logger.F("policy_type", policyType))
 		return &WeightedPolicyExecutor{}
 	case "model_match":
-		logger.Info("使用模型匹配策略执行器", logger.F("policy_type", policyType))
 		return &ModelMatchPolicyExecutor{}
 	case "regex_match":
-		logger.Info("使用正则匹配策略执行器", logger.F("policy_type", policyType))
 		return &RegexMatchPolicyExecutor{}
 	case "priority":
-		logger.Info("使用优先级策略执行器", logger.F("policy_type", policyType))
 		return &PriorityPolicyExecutor{}
 	case "failover":
-		logger.Info("使用故障转移策略执行器", logger.F("policy_type", policyType))
 		return f.failoverExecutor
 	default:
-		logger.Warn("未知策略类型，使用默认随机策略", logger.F("policy_type", policyType))
+		logger.Warn("Unknown policy type, using random executor", logger.F("component", "service"), logger.F("policy_type", policyType))
 		return &RandomPolicyExecutor{} // 默认使用随机策略
 	}
 }
 
-// filterResources 过滤资源
+// filterResources 过滤资源，并验证资源是否存在
+// 如果resourceIDs不为空，只返回在resourceIDs中且存在于resources列表中的资源
+// 如果策略参数中配置的资源ID不存在，会记录警告日志
 func filterResources(resources []*storage.LLMResource, resourceIDs []string, filterByStatus bool) []*storage.LLMResource {
 	filtered := make([]*storage.LLMResource, 0)
 
-	logger.Debug("开始过滤资源", logger.F("original_count", len(resources)), logger.F("filter_by_status", filterByStatus), logger.F("resource_ids_count", len(resourceIDs)))
+	// 构建资源映射，用于快速查找
+	resourceMap := make(map[string]*storage.LLMResource)
+	for _, r := range resources {
+		resourceMap[r.ID] = r
+	}
 
+	// 如果指定了资源ID列表，验证每个ID是否存在
+	if len(resourceIDs) > 0 {
+		missingResources := make([]string, 0)
+		for _, id := range resourceIDs {
+			if _, exists := resourceMap[id]; !exists {
+				missingResources = append(missingResources, id)
+			}
+		}
+		if len(missingResources) > 0 {
+			logger.Warn("Some resources configured in policy are not found", logger.F("component", "service"), logger.F("missing_resource_ids", missingResources), logger.F("total_configured", len(resourceIDs)), logger.F("available_resources", len(resources)))
+		}
+	}
+
+	// 过滤资源
 	for _, r := range resources {
 		// 状态过滤
 		if filterByStatus && r.Status != "active" {
-			logger.Debug("资源过滤：状态不活跃", logger.F("resource_id", r.ID), logger.F("resource_name", r.Name), logger.F("status", r.Status))
 			continue
 		}
 
-		// ID过滤
+		// ID过滤：如果指定了resourceIDs，只返回匹配的资源
 		if len(resourceIDs) > 0 {
 			found := false
 			for _, id := range resourceIDs {
@@ -498,16 +626,13 @@ func filterResources(resources []*storage.LLMResource, resourceIDs []string, fil
 				}
 			}
 			if !found {
-				logger.Debug("资源过滤：ID不在列表中", logger.F("resource_id", r.ID), logger.F("resource_name", r.Name))
 				continue
 			}
 		}
 
 		filtered = append(filtered, r)
-		logger.Debug("资源过滤：通过", logger.F("resource_id", r.ID), logger.F("resource_name", r.Name))
 	}
 
-	logger.Debug("资源过滤完成", logger.F("filtered_count", len(filtered)))
 	return filtered
 }
 
@@ -517,10 +642,10 @@ func matchPattern(text, pattern string) bool {
 	if strings.Contains(pattern, "*") {
 		regexPattern := "^" + strings.ReplaceAll(strings.ReplaceAll(pattern, ".", "\\."), "*", ".*") + "$"
 		matched, _ := regexp.MatchString(regexPattern, text)
-		logger.Debug("模式匹配结果（通配符）", logger.F("text", text), logger.F("pattern", pattern), logger.F("regex_pattern", regexPattern), logger.F("matched", matched))
+		logger.Debug("Pattern match result (wildcard)", logger.F("component", "service"), logger.F("text", text), logger.F("pattern", pattern), logger.F("regex_pattern", regexPattern), logger.F("matched", matched))
 		return matched
 	}
 	matched := text == pattern
-	logger.Debug("模式匹配结果（精确）", logger.F("text", text), logger.F("pattern", pattern), logger.F("matched", matched))
+	logger.Debug("Pattern match result (exact)", logger.F("component", "service"), logger.F("text", text), logger.F("pattern", pattern), logger.F("matched", matched))
 	return matched
 }

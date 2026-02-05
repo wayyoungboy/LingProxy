@@ -206,22 +206,98 @@ List available models.
 
 **Endpoint:** `POST /api/v1/llm-resources/import`
 
-**Request:** Multipart form data with Excel file
+**Request:** 
+- Excel: Multipart form data with Excel file
+- JSON: `Content-Type: application/json` with JSON array in request body
+
+**JSON Request Example:**
+```json
+[
+  {
+    "name": "OpenAI GPT-4",
+    "type": "chat",
+    "driver": "openai",
+    "model": "gpt-4",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "sk-...",
+    "status": "active"
+  }
+]
+```
 
 **Response:**
 ```json
 {
-  "message": "Import completed",
+  "message": "导入完成",
   "success": 3,
-  "failed": 0
+  "fail": 0,
+  "duplicate": 2,
+  "total": 5,
+  "errors": [],
+  "duplicates": [
+    {
+      "row": 1,
+      "name": "OpenAI GPT-4",
+      "type": "chat",
+      "model": "gpt-4",
+      "base_url": "https://api.openai.com/v1"
+    }
+  ]
 }
 ```
+
+**Notes:**
+- Duplicate detection: Resources with same `type`, `model`, `base_url`, and `api_key` are considered duplicates
+- Automatic trimming: Leading and trailing whitespace are removed from all fields during import
+- Duplicate resources are not imported and are reported in the response
 
 #### Download Import Template
 
 **Endpoint:** `GET /api/v1/llm-resources/import/template`
 
 **Response:** Excel file download
+
+#### Test LLM Resource
+
+**Endpoint:** `POST /api/v1/llm-resources/:id/test`
+
+**Description:** Test if an LLM resource can be called successfully. Only resources with `active` status can be tested.
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "message": "测试成功",
+  "model": "THUDM/GLM-4-9B-0414",
+  "response": "\nHello 👋! I'm ChatGLM",
+  "usage": {
+    "prompt_tokens": 6,
+    "completion_tokens": 10,
+    "total_tokens": 16
+  },
+  "duration_ms": 529
+}
+```
+
+**Response (Failure):**
+```json
+{
+  "success": false,
+  "error": "context deadline exceeded",
+  "message": "测试失败: context deadline exceeded",
+  "duration_ms": 30000
+}
+```
+
+**Supported Resource Types:**
+- `chat`: Tests by sending a simple "Hello" message with MaxTokens=10
+- `embedding`: Tests by embedding the text "test"
+- `rerank`: Currently not implemented
+
+**Notes:**
+- Test timeout is 30 seconds
+- For chat resources, MaxTokens is limited to 10 to minimize costs
+- Returns detailed information including model, response content, token usage, and duration
 
 ### Tokens
 

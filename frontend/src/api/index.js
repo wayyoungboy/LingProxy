@@ -177,6 +177,9 @@ const api = {
       responseType: 'blob'
     })
   },
+  testLLMResource(id) {
+    return apiClient.post(`/llm-resources/${id}/test`)
+  },
 
   // 模型管理
   getModels(params) {

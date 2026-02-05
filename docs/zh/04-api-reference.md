@@ -206,22 +206,98 @@ Authorization: Bearer YOUR_API_KEY_OR_TOKEN
 
 **端点：** `POST /api/v1/llm-resources/import`
 
-**请求：** 包含 Excel 文件的多部分表单数据
+**请求：** 
+- Excel: 包含 Excel 文件的多部分表单数据
+- JSON: `Content-Type: application/json`，请求体为 JSON 数组
+
+**JSON 请求示例：**
+```json
+[
+  {
+    "name": "OpenAI GPT-4",
+    "type": "chat",
+    "driver": "openai",
+    "model": "gpt-4",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "sk-...",
+    "status": "active"
+  }
+]
+```
 
 **响应：**
 ```json
 {
-  "message": "Import completed",
+  "message": "导入完成",
   "success": 3,
-  "failed": 0
+  "fail": 0,
+  "duplicate": 2,
+  "total": 5,
+  "errors": [],
+  "duplicates": [
+    {
+      "row": 1,
+      "name": "OpenAI GPT-4",
+      "type": "chat",
+      "model": "gpt-4",
+      "base_url": "https://api.openai.com/v1"
+    }
+  ]
 }
 ```
+
+**注意事项：**
+- 重复检测：`type`、`model`、`base_url`、`api_key` 都相同的资源会被识别为重复
+- 自动去空格：导入时会自动去除所有字段的前后空格
+- 重复资源不会被导入，并在响应中报告
 
 #### 下载导入模板
 
 **端点：** `GET /api/v1/llm-resources/import/template`
 
 **响应：** Excel 文件下载
+
+#### 测试 LLM 资源
+
+**端点：** `POST /api/v1/llm-resources/:id/test`
+
+**描述：** 测试 LLM 资源是否可以正常调用。只有状态为 `active` 的资源才能被测试。
+
+**响应（成功）：**
+```json
+{
+  "success": true,
+  "message": "测试成功",
+  "model": "THUDM/GLM-4-9B-0414",
+  "response": "\nHello 👋! I'm ChatGLM",
+  "usage": {
+    "prompt_tokens": 6,
+    "completion_tokens": 10,
+    "total_tokens": 16
+  },
+  "duration_ms": 529
+}
+```
+
+**响应（失败）：**
+```json
+{
+  "success": false,
+  "error": "context deadline exceeded",
+  "message": "测试失败: context deadline exceeded",
+  "duration_ms": 30000
+}
+```
+
+**支持的资源类型：**
+- `chat`: 通过发送简单的 "Hello" 消息进行测试，MaxTokens=10
+- `embedding`: 通过向量化文本 "test" 进行测试
+- `rerank`: 暂未实现
+
+**注意事项：**
+- 测试超时时间为 30 秒
+- 对于 chat 类型资源，MaxTokens 限制为 10 以节省成本
+- 返回详细信息包括模型、响应内容、Token 使用情况和耗时
 
 ### Token
 

@@ -1,13 +1,19 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lingproxy/lingproxy/internal/client/embedding"
+	"github.com/lingproxy/lingproxy/internal/client/openai"
 	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/storage"
+	openaiSDK "github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/packages/param"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -232,6 +238,193 @@ func (h *LLMResourceHandler) DeleteLLMResource(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// TestLLMResource 测试LLM资源是否可以正常调用
+// @Summary Test LLM resource
+// @Description Test if an LLM resource can be called successfully
+// @Tags llm-resources
+// @Accept json
+// @Produce json
+// @Param id path string true "LLM Resource ID"
+// @Success 200 {object} map[string]interface{} "Test result"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 404 {object} map[string]string "LLM resource not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/llm-resources/{id}/test [post]
+func (h *LLMResourceHandler) TestLLMResource(c *gin.Context) {
+	id := c.Param("id")
+	resource, err := h.storage.GetLLMResource(id)
+	if err != nil {
+		logger.Warn("测试LLM资源失败：资源不存在", logger.F("id", id))
+		c.JSON(http.StatusNotFound, gin.H{"error": "LLM resource not found"})
+		return
+	}
+
+	// 检查资源状态
+	if resource.Status != "active" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Resource is not active",
+			"message": "资源状态为禁用，无法测试",
+		})
+		return
+	}
+
+	// 根据资源类型进行测试
+	var testResult map[string]interface{}
+	switch resource.Type {
+	case "chat":
+		testResult = h.testChatResource(resource)
+	case "embedding":
+		testResult = h.testEmbeddingResource(resource)
+	case "rerank":
+		testResult = h.testRerankResource(resource)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Unsupported resource type",
+			"message": fmt.Sprintf("资源类型 %s 暂不支持测试", resource.Type),
+		})
+		return
+	}
+
+	if testResult["success"].(bool) {
+		logger.Info("测试LLM资源成功", logger.F("id", id), logger.F("name", resource.Name), logger.F("type", resource.Type))
+		c.JSON(http.StatusOK, testResult)
+	} else {
+		logger.Warn("测试LLM资源失败", logger.F("id", id), logger.F("name", resource.Name), logger.F("type", resource.Type), logger.F("error", testResult["error"]))
+		c.JSON(http.StatusOK, testResult) // 即使失败也返回200，但success为false
+	}
+}
+
+// testChatResource 测试chat类型资源
+func (h *LLMResourceHandler) testChatResource(resource *storage.LLMResource) map[string]interface{} {
+	// 创建客户端
+	client := openai.NewClient(resource.APIKey, resource.BaseURL)
+	defer client.Close()
+
+	// 准备测试消息
+	modelToUse := resource.Model
+	if modelToUse == "" {
+		modelToUse = "gpt-3.5-turbo" // 默认模型
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// 构建测试请求
+	params := openaiSDK.ChatCompletionNewParams{
+		Model: modelToUse,
+		Messages: []openaiSDK.ChatCompletionMessageParamUnion{
+			openaiSDK.UserMessage("Hello"),
+		},
+		MaxTokens: param.NewOpt(int64(10)), // 限制token数量，快速测试
+	}
+	logger.Debug("Test chat resource", logger.F("component", "handler"), logger.F("base_url", resource.BaseURL), logger.F("model", modelToUse))
+
+	startTime := time.Now()
+	response, err := client.Chat().Completions().New(ctx, params)
+	duration := time.Since(startTime).Milliseconds()
+
+	if err != nil {
+		return map[string]interface{}{
+			"success":     false,
+			"error":       err.Error(),
+			"message":     fmt.Sprintf("测试失败: %s", err.Error()),
+			"duration_ms": duration,
+		}
+	}
+
+	// 检查响应
+	if response == nil || len(response.Choices) == 0 {
+		return map[string]interface{}{
+			"success":     false,
+			"error":       "Empty response",
+			"message":     "API返回了空响应",
+			"duration_ms": duration,
+		}
+	}
+
+	return map[string]interface{}{
+		"success":  true,
+		"message":  "测试成功",
+		"model":    string(response.Model),
+		"response": response.Choices[0].Message.Content,
+		"usage": map[string]interface{}{
+			"prompt_tokens":     response.Usage.PromptTokens,
+			"completion_tokens": response.Usage.CompletionTokens,
+			"total_tokens":      response.Usage.TotalTokens,
+		},
+		"duration_ms": duration,
+	}
+}
+
+// testEmbeddingResource 测试embedding类型资源
+func (h *LLMResourceHandler) testEmbeddingResource(resource *storage.LLMResource) map[string]interface{} {
+	// 创建客户端
+	modelToUse := resource.Model
+	if modelToUse == "" {
+		modelToUse = "text-embedding-3-small" // 默认模型
+	}
+	client := embedding.NewClient(resource.APIKey, resource.BaseURL, modelToUse)
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// 构建测试请求
+	params := openaiSDK.EmbeddingNewParams{
+		Model: modelToUse,
+		Input: openaiSDK.EmbeddingNewParamsInputUnion{
+			OfString: openaiSDK.String("test"),
+		},
+	}
+
+	startTime := time.Now()
+	response, err := client.New(ctx, params)
+	duration := time.Since(startTime).Milliseconds()
+
+	if err != nil {
+		return map[string]interface{}{
+			"success":     false,
+			"error":       err.Error(),
+			"message":     fmt.Sprintf("测试失败: %s", err.Error()),
+			"duration_ms": duration,
+		}
+	}
+
+	// 检查响应
+	if response == nil || len(response.Data) == 0 {
+		return map[string]interface{}{
+			"success":     false,
+			"error":       "Empty response",
+			"message":     "API返回了空响应",
+			"duration_ms": duration,
+		}
+	}
+
+	return map[string]interface{}{
+		"success":             true,
+		"message":             "测试成功",
+		"model":               string(response.Model),
+		"embedding_dimension": len(response.Data[0].Embedding),
+		"usage": map[string]interface{}{
+			"prompt_tokens": response.Usage.PromptTokens,
+			"total_tokens":  response.Usage.TotalTokens,
+		},
+		"duration_ms": duration,
+	}
+}
+
+// testRerankResource 测试rerank类型资源
+func (h *LLMResourceHandler) testRerankResource(resource *storage.LLMResource) map[string]interface{} {
+	// rerank类型暂时不支持测试，返回提示信息
+	return map[string]interface{}{
+		"success": false,
+		"error":   "Not implemented",
+		"message": "rerank类型资源测试功能暂未实现",
+	}
+}
+
 // ImportLLMResources 批量导入LLM资源
 // @Summary Import LLM resources
 // @Description Import multiple LLM resources from Excel file or JSON body
@@ -335,10 +528,20 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 	apiKeyCol := getColumnIndex(headerMap, []string{"api密钥", "api_key", "apikey"})
 	statusCol := getColumnIndex(headerMap, []string{"状态", "status"})
 
+	// 获取所有现有资源，用于重复检查
+	existingResources, err := h.storage.ListLLMResources()
+	if err != nil {
+		logger.Error("批量导入LLM资源失败：获取现有资源列表失败", logger.F("error", err.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取现有资源列表失败: " + err.Error()})
+		return
+	}
+
 	// 解析数据行
 	successCount := 0
 	failCount := 0
+	duplicateCount := 0
 	errors := []string{}
+	duplicates := []map[string]interface{}{}
 
 	for i, row := range rows[1:] {
 		rowNum := i + 2 // Excel行号（从2开始，因为第1行是表头）
@@ -348,14 +551,14 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 			continue
 		}
 
-		// 获取字段值
-		name := getCellValue(row, nameCol)
-		typeVal := getCellValue(row, typeCol)
-		driver := getCellValue(row, driverCol)
-		model := getCellValue(row, modelCol)
-		baseURL := getCellValue(row, baseURLCol)
-		apiKey := getCellValue(row, apiKeyCol)
-		status := getCellValue(row, statusCol)
+		// 获取字段值并去掉前后空格
+		name := strings.TrimSpace(getCellValue(row, nameCol))
+		typeVal := strings.TrimSpace(getCellValue(row, typeCol))
+		driver := strings.TrimSpace(getCellValue(row, driverCol))
+		model := strings.TrimSpace(getCellValue(row, modelCol))
+		baseURL := strings.TrimSpace(getCellValue(row, baseURLCol))
+		apiKey := strings.TrimSpace(getCellValue(row, apiKeyCol))
+		status := strings.TrimSpace(getCellValue(row, statusCol))
 		if status == "" {
 			status = "active"
 		}
@@ -368,6 +571,27 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 		if name == "" || typeVal == "" || model == "" || baseURL == "" || apiKey == "" {
 			failCount++
 			errors = append(errors, fmt.Sprintf("第%d行: 必填字段不能为空", rowNum))
+			continue
+		}
+
+		// 创建资源对象（用于重复检查）
+		resourceToCheck := &storage.LLMResource{
+			Type:    strings.ToLower(typeVal),
+			Model:   model,
+			BaseURL: baseURL,
+			APIKey:  apiKey,
+		}
+
+		// 检查是否重复
+		if h.isDuplicateResource(resourceToCheck, existingResources) {
+			duplicateCount++
+			duplicates = append(duplicates, map[string]interface{}{
+				"row":      rowNum,
+				"name":     name,
+				"type":     strings.ToLower(typeVal),
+				"model":    model,
+				"base_url": baseURL,
+			})
 			continue
 		}
 
@@ -388,16 +612,20 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 			continue
 		}
 
+		// 将新创建的资源添加到现有资源列表，避免后续重复检查时重复添加
+		existingResources = append(existingResources, resource)
 		successCount++
 	}
 
-	logger.Info("批量导入LLM资源完成", logger.F("success", successCount), logger.F("fail", failCount))
+	logger.Info("批量导入LLM资源完成", logger.F("success", successCount), logger.F("fail", failCount), logger.F("duplicate", duplicateCount))
 	c.JSON(http.StatusOK, gin.H{
-		"message": "导入完成",
-		"success": successCount,
-		"fail":    failCount,
-		"errors":  errors,
-		"total":   successCount + failCount,
+		"message":    "导入完成",
+		"success":    successCount,
+		"fail":       failCount,
+		"duplicate":  duplicateCount,
+		"errors":     errors,
+		"duplicates": duplicates,
+		"total":      successCount + failCount + duplicateCount,
 	})
 }
 
@@ -415,13 +643,24 @@ func (h *LLMResourceHandler) importLLMResourcesFromJSON(c *gin.Context) {
 		return
 	}
 
+	// 获取所有现有资源，用于重复检查
+	existingResources, err := h.storage.ListLLMResources()
+	if err != nil {
+		logger.Error("批量导入LLM资源失败：获取现有资源列表失败", logger.F("error", err.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取现有资源列表失败: " + err.Error()})
+		return
+	}
+
 	successCount := 0
 	failCount := 0
+	duplicateCount := 0
 	errors := []string{}
+	duplicates := []map[string]interface{}{}
 
 	for i, item := range resources {
 		rowNum := i + 1 // JSON数组下标，从1开始更易读
 
+		// 去掉所有字段的前后空格
 		name := strings.TrimSpace(item.Name)
 		typeVal := strings.TrimSpace(item.Type)
 		driver := strings.TrimSpace(item.Driver)
@@ -445,6 +684,27 @@ func (h *LLMResourceHandler) importLLMResourcesFromJSON(c *gin.Context) {
 			continue
 		}
 
+		// 创建资源对象（用于重复检查）
+		resourceToCheck := &storage.LLMResource{
+			Type:    strings.ToLower(typeVal),
+			Model:   model,
+			BaseURL: baseURL,
+			APIKey:  apiKey,
+		}
+
+		// 检查是否重复
+		if h.isDuplicateResource(resourceToCheck, existingResources) {
+			duplicateCount++
+			duplicates = append(duplicates, map[string]interface{}{
+				"row":      rowNum,
+				"name":     name,
+				"type":     strings.ToLower(typeVal),
+				"model":    model,
+				"base_url": baseURL,
+			})
+			continue
+		}
+
 		resource := &storage.LLMResource{
 			Name:    name,
 			Type:    strings.ToLower(typeVal),
@@ -461,16 +721,20 @@ func (h *LLMResourceHandler) importLLMResourcesFromJSON(c *gin.Context) {
 			continue
 		}
 
+		// 将新创建的资源添加到现有资源列表，避免后续重复检查时重复添加
+		existingResources = append(existingResources, resource)
 		successCount++
 	}
 
-	logger.Info("批量导入LLM资源(JSON)完成", logger.F("success", successCount), logger.F("fail", failCount))
+	logger.Info("批量导入LLM资源(JSON)完成", logger.F("success", successCount), logger.F("fail", failCount), logger.F("duplicate", duplicateCount))
 	c.JSON(http.StatusOK, gin.H{
-		"message": "导入完成",
-		"success": successCount,
-		"fail":    failCount,
-		"errors":  errors,
-		"total":   successCount + failCount,
+		"message":    "导入完成",
+		"success":    successCount,
+		"fail":       failCount,
+		"duplicate":  duplicateCount,
+		"errors":     errors,
+		"duplicates": duplicates,
+		"total":      successCount + failCount + duplicateCount,
 	})
 }
 
@@ -574,6 +838,20 @@ func (h *LLMResourceHandler) DownloadImportTemplate(c *gin.Context) {
 	}
 
 	logger.Info("Excel模板下载成功")
+}
+
+// isDuplicateResource 检查资源是否重复
+// 重复的定义：type、model、base_url、api_key 都一样
+func (h *LLMResourceHandler) isDuplicateResource(resource *storage.LLMResource, existingResources []*storage.LLMResource) bool {
+	for _, existing := range existingResources {
+		if existing.Type == resource.Type &&
+			existing.Model == resource.Model &&
+			existing.BaseURL == resource.BaseURL &&
+			existing.APIKey == resource.APIKey {
+			return true
+		}
+	}
+	return false
 }
 
 // getColumnIndex 获取列索引（支持多个可能的列名）

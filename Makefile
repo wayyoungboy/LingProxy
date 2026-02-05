@@ -220,7 +220,7 @@ stop:
 restart: stop
 	@echo "Waiting for services to stop..."
 	@sleep 2
-	@$(MAKE) run
+	@$(MAKE) start
 
 # 运行应用（前后端同时启动，前台运行）
 run:
