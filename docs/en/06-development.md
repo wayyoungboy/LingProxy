@@ -53,6 +53,10 @@ Follow the existing structure:
 - `src/components/`: Reusable components
 - `src/api/`: API client
 - `src/router/`: Route configuration
+- `src/locales/`: Internationalization language packs
+  - `zh/`: Chinese language pack
+  - `en/`: English language pack
+  - `index.js`: i18n configuration
 
 ## Coding Standards
 
@@ -272,6 +276,42 @@ docs: update API documentation
 2. Update storage implementations
 3. Add migration if needed
 4. Update API handlers/services
+
+### Frontend Internationalization Development
+
+1. **Add New Translation Keys**
+   - Add Chinese translation in `frontend/src/locales/zh/index.js`
+   - Add English translation in `frontend/src/locales/en/index.js`
+
+2. **Use Translations in Components**
+   ```vue
+   <script setup>
+   import { useI18n } from 'vue-i18n'
+   const { t } = useI18n()
+   </script>
+   
+   <template>
+     <div>{{ $t('common.home') }}</div>
+   </template>
+   ```
+
+3. **Form Validation Rules Internationalization**
+   ```javascript
+   const rules = computed(() => ({
+     name: [
+       { required: true, message: t('form.nameRequired'), trigger: 'blur' }
+     ]
+   }))
+   ```
+
+4. **Element Plus Messages Internationalization**
+   ```javascript
+   ElMessage.success(t('common.operationSuccess'))
+   ```
+
+5. **Language Switching**
+   - Language settings are saved in `localStorage` with key `lingproxy_locale`
+   - Switching language automatically updates Element Plus component language
 
 ## Troubleshooting
 

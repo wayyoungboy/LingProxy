@@ -3,37 +3,37 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="page-title">请求管理</span>
+          <span class="page-title">{{ $t('requests.title') }}</span>
           <el-button type="primary" @click="exportRequests">
             <el-icon><Download /></el-icon>
-            导出请求
+            {{ $t('requests.export') }}
           </el-button>
         </div>
       </template>
       
       <el-form :inline="true" :model="searchForm" class="search-form mb-4">
-        <el-form-item label="请求路径">
-          <el-input v-model="searchForm.path" placeholder="请输入请求路径" />
+        <el-form-item :label="$t('requests.path')">
+          <el-input v-model="searchForm.path" :placeholder="$t('requests.pathPlaceholder')" />
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态">
-            <el-option label="成功" value="success" />
-            <el-option label="失败" value="error" />
+        <el-form-item :label="$t('common.status')">
+          <el-select v-model="searchForm.status" :placeholder="$t('requests.selectStatus')">
+            <el-option :label="$t('requests.success')" value="success" />
+            <el-option :label="$t('requests.failed')" value="error" />
           </el-select>
         </el-form-item>
-        <el-form-item label="时间范围">
+        <el-form-item :label="$t('llmResourceUsage.timeRange')">
           <el-date-picker
             v-model="searchForm.dateRange"
             type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
+            :range-separator="$t('llmResourceUsage.to')"
+            :start-placeholder="$t('llmResourceUsage.startDate')"
+            :end-placeholder="$t('llmResourceUsage.endDate')"
             style="width: 250px"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="getRequests">查询</el-button>
-          <el-button @click="resetForm">重置</el-button>
+          <el-button type="primary" @click="getRequests">{{ $t('common.search') }}</el-button>
+          <el-button @click="resetForm">{{ $t('common.reset') }}</el-button>
         </el-form-item>
       </el-form>
       
@@ -45,26 +45,26 @@
         stripe
       >
         <el-table-column prop="id" label="ID" width="180" />
-        <el-table-column prop="endpoint" label="请求路径" />
-        <el-table-column prop="method" label="方法" width="100" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="endpoint" :label="$t('requests.path')" />
+        <el-table-column prop="method" :label="$t('requests.method')" width="100" />
+        <el-table-column prop="status" :label="$t('common.status')" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.status === 'success' ? 'success' : 'danger'">
-              {{ scope.row.status === 'success' ? '成功' : '失败' }}
+              {{ scope.row.status === 'success' ? $t('requests.success') : $t('requests.failed') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="duration" label="响应时间(ms)" width="120" />
-        <el-table-column prop="tokens" label="Token使用" width="120" />
-        <el-table-column prop="created_at" label="请求时间" width="180">
+        <el-table-column prop="duration" :label="$t('requests.duration')" width="120" />
+        <el-table-column prop="tokens" :label="$t('requests.tokens')" width="120" />
+        <el-table-column prop="created_at" :label="$t('requests.requestTime')" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column :label="$t('common.actions')" width="150" fixed="right">
           <template #default="scope">
             <el-button type="primary" size="small" @click="viewRequestDetail(scope.row)">
-              查看详情
+              {{ $t('requests.viewDetails') }}
             </el-button>
           </template>
         </el-table-column>
@@ -86,28 +86,28 @@
     <!-- 请求详情对话框 -->
     <el-dialog
       v-model="detailDialogVisible"
-      title="请求详情"
+      :title="$t('requests.detailTitle')"
       width="800px"
     >
       <div v-if="currentRequest" class="request-detail">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="请求ID">{{ currentRequest.id }}</el-descriptions-item>
-          <el-descriptions-item label="用户ID">{{ currentRequest.user_id || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="请求路径">{{ currentRequest.endpoint }}</el-descriptions-item>
-          <el-descriptions-item label="请求方法">{{ currentRequest.method }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
+          <el-descriptions-item :label="$t('requests.requestId')">{{ currentRequest.id }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('dashboard.userId')">{{ currentRequest.user_id || '-' }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.path')">{{ currentRequest.endpoint }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.method')">{{ currentRequest.method }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('common.status')">
             <el-tag :type="currentRequest.status === 'success' ? 'success' : 'danger'">
-              {{ currentRequest.status === 'success' ? '成功' : '失败' }}
+              {{ currentRequest.status === 'success' ? $t('requests.success') : $t('requests.failed') }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="响应时间">{{ currentRequest.duration }}ms</el-descriptions-item>
-          <el-descriptions-item label="Token使用">{{ currentRequest.tokens || 0 }}</el-descriptions-item>
-          <el-descriptions-item label="请求时间">{{ formatDate(currentRequest.created_at) }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.duration')">{{ currentRequest.duration }}ms</el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.tokens')">{{ currentRequest.tokens || 0 }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.requestTime')">{{ formatDate(currentRequest.created_at) }}</el-descriptions-item>
         </el-descriptions>
       </div>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="detailDialogVisible = false">关闭</el-button>
+          <el-button @click="detailDialogVisible = false">{{ $t('common.close') }}</el-button>
         </span>
       </template>
     </el-dialog>
@@ -116,9 +116,12 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import api from '../api'
+
+const { t } = useI18n()
 
 const requestsList = ref([])
 const loading = ref(false)
@@ -189,7 +192,7 @@ const getRequests = async () => {
     }
   } catch (error) {
     console.error('获取请求列表失败:', error)
-    ElMessage.error('获取请求列表失败')
+    ElMessage.error(t('requests.getListFailed'))
     requestsList.value = []
     pagination.total = 0
   } finally {
@@ -203,16 +206,16 @@ const viewRequestDetail = async (request) => {
     currentRequest.value = response.data
     detailDialogVisible.value = true
   } catch (error) {
-    ElMessage.error('获取请求详情失败')
+    ElMessage.error(t('requests.getDetailFailed'))
   }
 }
 
 const exportRequests = async () => {
   try {
     await api.exportRequests(searchForm)
-    ElMessage.success('导出请求成功')
+    ElMessage.success(t('requests.exportSuccess'))
   } catch (error) {
-    ElMessage.error('导出请求失败')
+    ElMessage.error(t('requests.exportFailed'))
   }
 }
 

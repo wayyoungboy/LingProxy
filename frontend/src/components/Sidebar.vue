@@ -34,7 +34,7 @@
         <el-icon v-if="item.icon">
           <component :is="item.icon" />
         </el-icon>
-        <template #title>{{ item.title }}</template>
+        <template #title>{{ getMenuTitle(item) }}</template>
       </el-menu-item>
     </el-menu>
 
@@ -54,16 +54,23 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Expand, Fold, Cpu } from '@element-plus/icons-vue'
 import { menuItems } from '../config/menu'
 
 const route = useRoute()
+const { t } = useI18n()
 const isCollapsed = ref(false)
 
 // 计算当前活动菜单
 const activeMenu = computed(() => {
   return route.path
 })
+
+// 获取菜单标题（国际化）
+const getMenuTitle = (item) => {
+  return t(item.titleKey)
+}
 
 // 切换折叠状态
 const toggleCollapse = () => {

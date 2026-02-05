@@ -3,10 +3,10 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="page-title">用量统计</span>
+          <span class="page-title">{{ $t('llmResourceUsage.title') }}</span>
           <el-button type="primary" @click="refreshData">
             <el-icon><Refresh /></el-icon>
-            刷新
+            {{ $t('dashboard.refreshData') }}
           </el-button>
         </div>
       </template>
@@ -16,7 +16,7 @@
         <el-col :span="6">
           <el-card shadow="hover" class="stat-card">
             <div class="stat-content">
-              <div class="stat-label">总Token使用量</div>
+              <div class="stat-label">{{ $t('llmResourceUsage.totalTokens') }}</div>
               <div class="stat-value">{{ formatNumber(totalTokens) }}</div>
             </div>
           </el-card>
@@ -24,7 +24,7 @@
         <el-col :span="6">
           <el-card shadow="hover" class="stat-card">
             <div class="stat-content">
-              <div class="stat-label">总请求数</div>
+              <div class="stat-label">{{ $t('llmResourceUsage.totalRequests') }}</div>
               <div class="stat-value">{{ formatNumber(totalRequests) }}</div>
             </div>
           </el-card>
@@ -32,7 +32,7 @@
         <el-col :span="6">
           <el-card shadow="hover" class="stat-card">
             <div class="stat-content">
-              <div class="stat-label">成功请求数</div>
+              <div class="stat-label">{{ $t('llmResourceUsage.successRequests') }}</div>
               <div class="stat-value">{{ formatNumber(successRequests) }}</div>
             </div>
           </el-card>
@@ -40,7 +40,7 @@
         <el-col :span="6">
           <el-card shadow="hover" class="stat-card">
             <div class="stat-content">
-              <div class="stat-label">平均Token/请求</div>
+              <div class="stat-label">{{ $t('llmResourceUsage.averageTokens') }}</div>
               <div class="stat-value">{{ formatNumber(avgTokensPerRequest) }}</div>
             </div>
           </el-card>
@@ -49,28 +49,28 @@
 
       <!-- 筛选表单 -->
       <el-form :inline="true" :model="searchForm" class="mb-4">
-        <el-form-item label="时间范围">
+        <el-form-item :label="$t('llmResourceUsage.timeRange')">
           <el-date-picker
             v-model="searchForm.dateRange"
             type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
+            :range-separator="$t('llmResourceUsage.to')"
+            :start-placeholder="$t('llmResourceUsage.startDate')"
+            :end-placeholder="$t('llmResourceUsage.endDate')"
             style="width: 250px"
             @change="handleDateRangeChange"
           />
         </el-form-item>
-        <el-form-item label="资源名称">
+        <el-form-item :label="$t('llmResourceUsage.resourceName')">
           <el-input
             v-model="searchForm.resourceName"
-            placeholder="请输入资源名称"
+            :placeholder="$t('llmResourceUsage.resourceNamePlaceholder')"
             clearable
             style="width: 200px"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadUsageData">查询</el-button>
-          <el-button @click="resetForm">重置</el-button>
+          <el-button type="primary" @click="loadUsageData">{{ $t('common.search') }}</el-button>
+          <el-button @click="resetForm">{{ $t('common.reset') }}</el-button>
         </el-form-item>
       </el-form>
 
@@ -82,29 +82,29 @@
         :default-sort="{ prop: 'total_tokens', order: 'descending' }"
         stripe
       >
-        <el-table-column prop="resource_name" label="资源名称" width="200" show-overflow-tooltip />
-        <el-table-column prop="resource_type" label="资源类型" width="120">
+        <el-table-column prop="resource_name" :label="$t('llmResourceUsage.resourceName')" width="200" show-overflow-tooltip />
+        <el-table-column prop="resource_type" :label="$t('llmResourceUsage.resourceType')" width="120">
           <template #default="scope">
             <el-tag type="info">{{ getTypeLabel(scope.row.resource_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="model" label="模型标识" width="180" show-overflow-tooltip />
-        <el-table-column prop="total_tokens" label="Token使用量" width="150" sortable>
+        <el-table-column prop="model" :label="$t('llmResourceUsage.modelId')" width="180" show-overflow-tooltip />
+        <el-table-column prop="total_tokens" :label="$t('llmResourceUsage.tokenUsage')" width="150" sortable>
           <template #default="scope">
             <span class="token-value">{{ formatNumber(scope.row.total_tokens || 0) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="total_requests" label="请求数" width="120" sortable>
+        <el-table-column prop="total_requests" :label="$t('llmResourceUsage.requestCount')" width="120" sortable>
           <template #default="scope">
             {{ formatNumber(scope.row.total_requests || 0) }}
           </template>
         </el-table-column>
-        <el-table-column prop="success_requests" label="成功数" width="120">
+        <el-table-column prop="success_requests" :label="$t('llmResourceUsage.successCount')" width="120">
           <template #default="scope">
             <el-tag type="success" size="small">{{ formatNumber(scope.row.success_requests || 0) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="failed_requests" label="失败数" width="120">
+        <el-table-column prop="failed_requests" :label="$t('llmResourceUsage.failedCount')" width="120">
           <template #default="scope">
             <el-tag type="danger" size="small" v-if="scope.row.failed_requests > 0">
               {{ formatNumber(scope.row.failed_requests || 0) }}
@@ -112,19 +112,19 @@
             <span v-else>0</span>
           </template>
         </el-table-column>
-        <el-table-column prop="success_rate" label="成功率" width="120" sortable>
+        <el-table-column prop="success_rate" :label="$t('llmResourceUsage.successRate')" width="120" sortable>
           <template #default="scope">
             <el-tag :type="getSuccessRateType(scope.row.success_rate)" size="small">
               {{ (scope.row.success_rate || 0).toFixed(2) }}%
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="avg_tokens_per_request" label="平均Token/请求" width="150" sortable>
+        <el-table-column prop="avg_tokens_per_request" :label="$t('llmResourceUsage.avgTokensPerRequest')" width="150" sortable>
           <template #default="scope">
             {{ formatNumber(Math.round(scope.row.avg_tokens_per_request || 0)) }}
           </template>
         </el-table-column>
-        <el-table-column prop="last_request_time" label="最后请求时间" width="180" sortable>
+        <el-table-column prop="last_request_time" :label="$t('llmResourceUsage.lastRequestTime')" width="180" sortable>
           <template #default="scope">
             {{ scope.row.last_request_time ? formatDate(scope.row.last_request_time) : '-' }}
           </template>
@@ -149,10 +149,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import api from '../api'
 import { MODEL_TYPE_LABELS } from '../utils/constants'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const usageList = ref([])
@@ -221,7 +224,7 @@ const loadUsageData = async () => {
     
   } catch (error) {
     console.error('加载使用量数据失败:', error)
-    ElMessage.error('加载使用量数据失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error(t('llmResourceUsage.loadFailed') + ': ' + (error.response?.data?.error || error.message))
   } finally {
     loading.value = false
   }
@@ -281,7 +284,15 @@ const formatDate = (dateString) => {
 
 // 获取类型标签
 const getTypeLabel = (type) => {
-  return MODEL_TYPE_LABELS[type] || type || '-'
+  const labels = {
+    chat: t('llmResources.typeChat'),
+    image: t('llmResources.typeImage'),
+    embedding: t('llmResources.typeEmbedding'),
+    rerank: t('llmResources.typeRerank'),
+    audio: t('llmResources.typeAudio'),
+    video: t('llmResources.typeVideo')
+  }
+  return labels[type] || MODEL_TYPE_LABELS[type] || type || '-'
 }
 
 // 获取成功率标签类型

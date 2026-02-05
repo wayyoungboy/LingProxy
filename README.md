@@ -12,6 +12,7 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 
 ### 🚀 Core Features
 - **Unified API Interface**: Supports OpenAI compatible API, seamlessly integrates with various AI services
+- **Streaming Support**: Full support for Server-Sent Events (SSE) streaming responses for chat completions
 - **Intelligent Load Balancing**: Round-robin load balancing strategy, automatically distributes requests to multiple resources
 - **Circuit Breaking**: Automatically detects service failures and triggers circuit breaking to prevent cascading failures
 - **Request Logging**: Complete request chain tracing and logging
@@ -24,22 +25,27 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **Secure Storage**: Encrypted storage for API keys and passwords
 
 ### 📊 Management Features
+- **Admin Dashboard**: Modern web-based management interface built with Vue 3 + Element Plus
+- **Internationalization (i18n)**: Full support for Chinese and English language switching in the frontend interface
 - **Admin Management**: Single admin mode with password and API key management
 - **Token Management**: Create and manage request-side tokens with policy binding, supports token copying functionality
-- **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances
+- **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances, supports LLM resource pool configuration for random selection policy
 - **LLM Resource Management**: Supports configuration of AI service resources with driver-based architecture (currently supports OpenAI driver), supports model categories (chat, image, embedding, rerank, audio, video), supports batch import/export via Excel templates or JSON format, includes resource testing functionality to verify connectivity
 - **Model Management**: Flexible model configuration, supports pricing, usage limits and other parameters
 - **Request Management**: Complete request logging and tracking, supports request detail viewing and export
 - **Usage Statistics**: Detailed usage statistics grouped by LLM resources, including token usage, request count, success rate, average tokens per request, and more, with support for time range and resource name filtering
 - **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing configurations
 - **System Monitoring**: Real-time system information (CPU, memory, uptime, etc.)
+- **Log Management**: View and manage system logs with filtering and search capabilities
 
 ### 🏗️ Architecture Design
 - **Frontend-Backend Separation**: Modern architecture with Vue 3 + Element Plus frontend and Go backend
+- **Internationalization**: Full i18n support with vue-i18n, supporting Chinese and English
 - **Simplified Models**: Removed redundant features, core code is concise and efficient
 - **Dual Storage**: Supports memory storage (development and debugging) and SQLite storage (production environment)
 - **Modular Design**: Clear hierarchical structure, easy to extend and maintain
 - **RESTful API**: Complete REST API interface, easy to integrate
+- **Client Libraries**: Standard client implementations available in `clients/` directory (Python, JavaScript, Go)
 
 ## Quick Start
 
@@ -309,7 +315,7 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
 #### OpenAI Compatible API
 - `GET /llm/v1/models` - List all available models
 - `GET /llm/v1/models/:model` - Get model information
-- `POST /llm/v1/chat/completions` - Create chat completion
+- `POST /llm/v1/chat/completions` - Create chat completion (supports streaming with `stream: true`)
 - `POST /llm/v1/completions` - Create text completion
 
 ## Configuration
@@ -664,6 +670,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Email**: support@lingproxy.com
 
 ## Changelog
+
+### v1.4.0 (2026-02-05)
+- **Internationalization**: Full frontend i18n support with Chinese and English language switching
+- **Streaming Support**: Added Server-Sent Events (SSE) streaming support for chat completions
+- **Policy Enhancement**: Random selection policy now supports LLM resource pool configuration
+- **Client Libraries**: Standard client implementations added for Python, JavaScript, and Go
+- **Code Cleanup**: Removed redundant `backend/examples` directory, unified client examples in `clients/` directory
+- **Documentation**: Comprehensive documentation updates across all languages
 
 ### v1.3.0 (2026-02-03)
 - **Driver Architecture**: Changed from "Provider" to "Driver" concept, currently supports OpenAI driver only

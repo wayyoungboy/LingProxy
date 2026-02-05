@@ -17,9 +17,9 @@ import {
  * 菜单项类型
  * @typedef {Object} MenuItem
  * @property {string} index - 路由路径
- * @property {string} title - 菜单标题
+ * @property {string} titleKey - 菜单标题的i18n key
  * @property {string|Component} icon - 图标组件
- * @property {string} [meta.title] - 页面标题（用于面包屑）
+ * @property {string} [meta.titleKey] - 页面标题的i18n key（用于面包屑）
  */
 
 /**
@@ -28,66 +28,66 @@ import {
 export const menuItems = [
   {
     index: '/dashboard',
-    title: '仪表盘',
+    titleKey: 'menu.dashboard',
     icon: DataLine,
     meta: {
-      title: '仪表盘'
+      titleKey: 'menu.dashboard'
     }
   },
   {
     index: '/tokens',
-    title: 'Token管理',
+    titleKey: 'menu.tokens',
     icon: Key,
     meta: {
-      title: 'Token管理'
+      titleKey: 'menu.tokens'
     }
   },
   {
     index: '/llm-resources/list',
-    title: 'LLM资源管理',
+    titleKey: 'menu.llmResources',
     icon: Cpu,
     meta: {
-      title: 'LLM资源管理'
+      titleKey: 'menu.llmResources'
     }
   },
   {
     index: '/llm-resources/usage',
-    title: '用量统计',
+    titleKey: 'menu.llmResourceUsage',
     icon: DataAnalysis,
     meta: {
-      title: '用量统计'
+      titleKey: 'menu.llmResourceUsage'
     }
   },
   {
     index: '/requests',
-    title: '请求管理',
+    titleKey: 'menu.requests',
     icon: Message,
     meta: {
-      title: '请求管理'
+      titleKey: 'menu.requests'
     }
   },
   {
     index: '/policies',
-    title: '策略管理',
+    titleKey: 'menu.policies',
     icon: Operation,
     meta: {
-      title: '策略管理'
+      titleKey: 'menu.policies'
     }
   },
   {
     index: '/settings',
-    title: '系统设置',
+    titleKey: 'menu.settings',
     icon: Setting,
     meta: {
-      title: '系统设置'
+      titleKey: 'menu.settings'
     }
   },
   {
     index: '/logs',
-    title: '日志管理',
+    titleKey: 'menu.logs',
     icon: Document,
     meta: {
-      title: '日志管理'
+      titleKey: 'menu.logs'
     }
   }
 ]
@@ -107,14 +107,19 @@ export function findMenuItemByPath(path) {
 }
 
 /**
- * 获取菜单项的页面标题
+ * 获取菜单项的页面标题（需要传入i18n实例）
  * @param {string} path - 路由路径
+ * @param {Function} t - i18n的t函数
  * @returns {string}
  */
-export function getMenuTitle(path) {
+export function getMenuTitle(path, t) {
   const item = findMenuItemByPath(path)
-  if (item) {
-    return item.meta?.title || item.title
+  if (item && t) {
+    return t(item.meta?.titleKey || item.titleKey)
   }
-  return '首页'
+  // 兼容旧代码，如果没有传入t函数，返回默认值
+  if (item) {
+    return item.titleKey || 'common.home'
+  }
+  return 'common.home'
 }

@@ -3,10 +3,10 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>模型管理</span>
+          <span>{{ $t('models.title') }}</span>
           <el-button type="primary" @click="handleAddModel">
             <el-icon><Plus /></el-icon>
-            添加模型
+            {{ $t('models.addModel') }}
           </el-button>
         </div>
       </template>
@@ -15,29 +15,29 @@
       <div class="search-filter">
         <el-input
           v-model="searchQuery"
-          placeholder="搜索模型名称"
+          :placeholder="$t('models.searchModelName')"
           prefix-icon="Search"
           style="width: 240px; margin-right: 10px"
         ></el-input>
         <el-select
           v-model="typeFilter"
-          placeholder="筛选类型"
+          :placeholder="$t('models.filterType')"
           style="width: 120px; margin-right: 10px"
         >
-          <el-option label="全部" value=""></el-option>
-          <el-option label="聊天" value="chat"></el-option>
-          <el-option label="补全" value="completion"></el-option>
-          <el-option label="嵌入" value="embedding"></el-option>
-          <el-option label="图像" value="image"></el-option>
+          <el-option :label="$t('models.all')" value=""></el-option>
+          <el-option :label="$t('models.chat')" value="chat"></el-option>
+          <el-option :label="$t('models.completion')" value="completion"></el-option>
+          <el-option :label="$t('models.embedding')" value="embedding"></el-option>
+          <el-option :label="$t('models.image')" value="image"></el-option>
         </el-select>
         <el-select
           v-model="statusFilter"
-          placeholder="筛选状态"
+          :placeholder="$t('models.filterStatus')"
           style="width: 120px"
         >
-          <el-option label="全部" value=""></el-option>
-          <el-option label="活跃" value="active"></el-option>
-          <el-option label="禁用" value="inactive"></el-option>
+          <el-option :label="$t('models.all')" value=""></el-option>
+          <el-option :label="$t('models.active')" value="active"></el-option>
+          <el-option :label="$t('models.inactive')" value="inactive"></el-option>
         </el-select>
       </div>
       
@@ -48,44 +48,44 @@
         style="width: 100%; margin-top: 20px"
         border
       >
-        <el-table-column prop="id" label="ID" width="180" />
-        <el-table-column prop="name" label="模型名称" />
-        <el-table-column prop="model_id" label="模型ID" width="150">
+        <el-table-column prop="id" :label="$t('models.id')" width="180" />
+        <el-table-column prop="name" :label="$t('models.name')" />
+        <el-table-column prop="model_id" :label="$t('models.modelId')" width="150">
           <template #default="scope">
             <el-tag type="info">{{ scope.row.model_id }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="type" label="类型" width="100">
+        <el-table-column prop="type" :label="$t('models.type')" width="100">
           <template #default="scope">
             <el-tag>{{ scope.row.type }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="category" label="分类" width="100">
+        <el-table-column prop="category" :label="$t('models.category')" width="100">
           <template #default="scope">
             <el-tag type="success" v-if="scope.row.category">{{ scope.row.category }}</el-tag>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="llm_resource_id" label="LLM资源" width="180">
+        <el-table-column prop="llm_resource_id" :label="$t('models.llmResource')" width="180">
           <template #default="scope">
             {{ getLLMResourceName(scope.row.llm_resource_id) }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" :label="$t('models.status')" width="100">
           <template #default="scope">
             <el-tag
               :type="scope.row.status === 'active' ? 'success' : scope.row.status === 'deprecated' ? 'warning' : 'danger'"
             >
-              {{ scope.row.status === 'active' ? '活跃' : scope.row.status === 'deprecated' ? '已弃用' : '禁用' }}
+              {{ scope.row.status === 'active' ? $t('models.active') : scope.row.status === 'deprecated' ? $t('models.deprecated') : $t('models.inactive') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
+        <el-table-column prop="created_at" :label="$t('models.createdAt')" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240">
+        <el-table-column :label="$t('models.actions')" width="240">
           <template #default="scope">
             <el-button
               type="primary"
@@ -93,7 +93,7 @@
               @click="handleEditModel(scope.row)"
               style="margin-right: 5px"
             >
-              编辑
+              {{ $t('models.edit') }}
             </el-button>
             <el-button
               type="info"
@@ -101,14 +101,14 @@
               @click="handleViewPricing(scope.row.id)"
               style="margin-right: 5px"
             >
-              价格
+              {{ $t('models.pricing') }}
             </el-button>
             <el-button
               type="danger"
               size="small"
               @click="handleDeleteModel(scope.row.id)"
             >
-              删除
+              {{ $t('models.delete') }}
             </el-button>
           </template>
         </el-table-column>
@@ -140,31 +140,31 @@
         :rules="modelRules"
         label-width="100px"
       >
-        <el-form-item label="模型名称" prop="name">
-          <el-input v-model="modelForm.name" placeholder="请输入模型名称"></el-input>
+        <el-form-item :label="$t('models.modelName')" prop="name">
+          <el-input v-model="modelForm.name" :placeholder="$t('models.modelNamePlaceholder')"></el-input>
         </el-form-item>
-        <el-form-item label="模型ID" prop="model_id">
-          <el-input v-model="modelForm.model_id" placeholder="提供商内部的模型标识，如 gpt-3.5-turbo"></el-input>
+        <el-form-item :label="$t('models.modelId')" prop="model_id">
+          <el-input v-model="modelForm.model_id" :placeholder="$t('models.modelIdPlaceholder')"></el-input>
         </el-form-item>
-        <el-form-item label="模型类型" prop="type">
-          <el-select v-model="modelForm.type" placeholder="请选择模型类型">
-            <el-option label="聊天" value="chat"></el-option>
-            <el-option label="补全" value="completion"></el-option>
-            <el-option label="嵌入" value="embedding"></el-option>
-            <el-option label="图像" value="image"></el-option>
+        <el-form-item :label="$t('models.modelType')" prop="type">
+          <el-select v-model="modelForm.type" :placeholder="$t('models.selectModelType')">
+            <el-option :label="$t('models.chat')" value="chat"></el-option>
+            <el-option :label="$t('models.completion')" value="completion"></el-option>
+            <el-option :label="$t('models.embedding')" value="embedding"></el-option>
+            <el-option :label="$t('models.image')" value="image"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="模型分类" prop="category">
-          <el-select v-model="modelForm.category" placeholder="请选择模型分类">
-            <el-option label="GPT" value="gpt"></el-option>
-            <el-option label="Claude" value="claude"></el-option>
-            <el-option label="Gemini" value="gemini"></el-option>
-            <el-option label="Llama" value="llama"></el-option>
-            <el-option label="自定义" value="custom"></el-option>
+        <el-form-item :label="$t('models.modelCategory')" prop="category">
+          <el-select v-model="modelForm.category" :placeholder="$t('models.selectModelCategory')">
+            <el-option :label="$t('models.gpt')" value="gpt"></el-option>
+            <el-option :label="$t('models.claude')" value="claude"></el-option>
+            <el-option :label="$t('models.gemini')" value="gemini"></el-option>
+            <el-option :label="$t('models.llama')" value="llama"></el-option>
+            <el-option :label="$t('models.custom')" value="custom"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="LLM资源" prop="llm_resource_id">
-          <el-select v-model="modelForm.llm_resource_id" placeholder="请选择LLM资源">
+        <el-form-item :label="$t('models.llmResource')" prop="llm_resource_id">
+          <el-select v-model="modelForm.llm_resource_id" :placeholder="$t('models.selectLLMResource')">
             <el-option
               v-for="resource in llmResources"
               :key="resource.id"
@@ -173,17 +173,17 @@
             ></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-select v-model="modelForm.status" placeholder="请选择状态">
-            <el-option label="活跃" value="active"></el-option>
-            <el-option label="禁用" value="inactive"></el-option>
-            <el-option label="已弃用" value="deprecated"></el-option>
+        <el-form-item :label="$t('models.status')" prop="status">
+          <el-select v-model="modelForm.status" :placeholder="$t('models.selectStatus')">
+            <el-option :label="$t('models.active')" value="active"></el-option>
+            <el-option :label="$t('models.inactive')" value="inactive"></el-option>
+            <el-option :label="$t('models.deprecated')" value="deprecated"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="描述" prop="description">
+        <el-form-item :label="$t('models.description')" prop="description">
           <el-input
             v-model="modelForm.description"
-            placeholder="请输入模型描述"
+            :placeholder="$t('models.descriptionPlaceholder')"
             type="textarea"
             rows="3"
           ></el-input>
@@ -191,8 +191,8 @@
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSaveModel">确定</el-button>
+          <el-button @click="dialogVisible = false">{{ $t('models.cancel') }}</el-button>
+          <el-button type="primary" @click="handleSaveModel">{{ $t('models.confirm') }}</el-button>
         </span>
       </template>
     </el-dialog>
@@ -200,35 +200,35 @@
     <!-- 模型价格对话框 -->
     <el-dialog
       v-model="pricingVisible"
-      title="模型价格信息"
+      :title="$t('models.pricingInfo')"
       width="500px"
     >
       <el-card v-if="modelPricing" class="pricing-card">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="输入价格" v-if="modelPricing.input_token_price">
+          <el-descriptions-item :label="$t('models.inputPrice')" v-if="modelPricing.input_token_price">
             ${{ modelPricing.input_token_price }} / 1K tokens
           </el-descriptions-item>
-          <el-descriptions-item label="输出价格" v-if="modelPricing.output_token_price">
+          <el-descriptions-item :label="$t('models.outputPrice')" v-if="modelPricing.output_token_price">
             ${{ modelPricing.output_token_price }} / 1K tokens
           </el-descriptions-item>
-          <el-descriptions-item label="图片价格" v-if="modelPricing.image_price">
+          <el-descriptions-item :label="$t('models.imagePrice')" v-if="modelPricing.image_price">
             ${{ modelPricing.image_price }} / image
           </el-descriptions-item>
-          <el-descriptions-item label="音频价格" v-if="modelPricing.audio_price">
+          <el-descriptions-item :label="$t('models.audioPrice')" v-if="modelPricing.audio_price">
             ${{ modelPricing.audio_price }} / minute
           </el-descriptions-item>
-          <el-descriptions-item label="货币单位" v-if="modelPricing.currency">
+          <el-descriptions-item :label="$t('models.currency')" v-if="modelPricing.currency">
             {{ modelPricing.currency }}
           </el-descriptions-item>
-          <el-descriptions-item label="原始数据" v-if="modelPricing.raw">
+          <el-descriptions-item :label="$t('models.rawData')" v-if="modelPricing.raw">
             <pre>{{ modelPricing.raw }}</pre>
           </el-descriptions-item>
         </el-descriptions>
       </el-card>
-      <el-empty v-else description="暂无价格信息"></el-empty>
+      <el-empty v-else :description="$t('models.noPricingInfo')"></el-empty>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="pricingVisible = false">关闭</el-button>
+          <el-button @click="pricingVisible = false">{{ $t('models.close') }}</el-button>
         </span>
       </template>
     </el-dialog>
@@ -239,7 +239,10 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, PriceTag } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import api from '../api'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const models = ref([])
@@ -276,23 +279,23 @@ const pricingVisible = ref(false)
 const modelPricing = ref(null)
 
 // 表单验证规则
-const modelRules = {
+const modelRules = computed(() => ({
   name: [
-    { required: true, message: '请输入模型名称', trigger: 'blur' }
+    { required: true, message: t('models.nameRequired'), trigger: 'blur' }
   ],
   model_id: [
-    { required: true, message: '请输入模型ID', trigger: 'blur' }
+    { required: true, message: t('models.modelIdRequired'), trigger: 'blur' }
   ],
   type: [
-    { required: true, message: '请选择模型类型', trigger: 'change' }
+    { required: true, message: t('models.typeRequired'), trigger: 'change' }
   ],
   llm_resource_id: [
-    { required: true, message: '请选择LLM资源', trigger: 'change' }
+    { required: true, message: t('models.llmResourceRequired'), trigger: 'change' }
   ],
   status: [
-    { required: true, message: '请选择状态', trigger: 'change' }
+    { required: true, message: t('models.statusRequired'), trigger: 'change' }
   ]
-}
+}))
 
 // 获取模型列表
 const getModelList = async () => {
@@ -306,7 +309,7 @@ const getModelList = async () => {
     }
   } catch (error) {
     console.error('获取模型列表失败:', error)
-    ElMessage.error('获取模型列表失败')
+    ElMessage.error(t('models.getListFailed'))
   } finally {
     loading.value = false
   }
@@ -355,13 +358,13 @@ const filteredModels = computed(() => {
 // 获取LLM资源名称
 const getLLMResourceName = (resourceId) => {
   const resource = llmResources.value.find(r => r.id === resourceId)
-  return resource ? resource.name : '未知'
+  return resource ? resource.name : t('models.unknown')
 }
 
 // 处理添加模型
 const handleAddModel = () => {
   isAddMode.value = true
-  dialogTitle.value = '添加模型'
+  dialogTitle.value = t('models.addModel')
   // 重置表单
   Object.assign(modelForm, {
     id: '',
@@ -383,7 +386,7 @@ const handleAddModel = () => {
 // 处理编辑模型
 const handleEditModel = (model) => {
   isAddMode.value = false
-  dialogTitle.value = '编辑模型'
+  dialogTitle.value = t('models.editModel')
   // 填充表单
   Object.assign(modelForm, model)
   dialogVisible.value = true
@@ -398,11 +401,11 @@ const handleSaveModel = async () => {
     if (isAddMode.value) {
       // 创建模型
       await api.createModel(modelForm)
-      ElMessage.success('模型创建成功')
+      ElMessage.success(t('models.createSuccess'))
     } else {
       // 更新模型
       await api.updateModel(modelForm.id, modelForm)
-      ElMessage.success('模型更新成功')
+      ElMessage.success(t('models.updateSuccess'))
     }
     
     // 关闭对话框
@@ -411,7 +414,7 @@ const handleSaveModel = async () => {
     getModelList()
   } catch (error) {
     console.error('保存模型失败:', error)
-    ElMessage.error('保存模型失败')
+    ElMessage.error(t('models.saveFailed'))
   }
 }
 
@@ -419,23 +422,23 @@ const handleSaveModel = async () => {
 const handleDeleteModel = async (id) => {
   try {
     await ElMessageBox.confirm(
-      '确定要删除这个模型吗？',
-      '删除确认',
+      t('models.deleteConfirmMessage'),
+      t('models.deleteConfirm'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'danger'
       }
     )
     
     await api.deleteModel(id)
-    ElMessage.success('模型删除成功')
+    ElMessage.success(t('models.deleteSuccess'))
     // 重新获取模型列表
     getModelList()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除模型失败:', error)
-      ElMessage.error('删除模型失败')
+      ElMessage.error(t('models.deleteFailed'))
     }
   }
 }
@@ -461,7 +464,7 @@ const handleViewPricing = async (id) => {
     pricingVisible.value = true
   } catch (error) {
     console.error('获取模型价格失败:', error)
-    ElMessage.error('获取模型价格失败')
+    ElMessage.error(t('models.getPricingFailed'))
   }
 }
 

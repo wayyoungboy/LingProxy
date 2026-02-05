@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { STORAGE_KEYS, ROUTE_PATHS } from '../utils/constants'
+import { getMenuTitle } from '../config/menu'
+import i18n from '../locales'
 
 const routes = [
   {
@@ -8,7 +10,7 @@ const routes = [
     component: () => import('../views/Login.vue'),
     meta: { 
       requiresAuth: false,
-      title: '登录'
+      titleKey: 'login.title'
     }
   },
   {
@@ -22,49 +24,49 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('../views/Dashboard.vue'),
-        meta: { title: '仪表盘' }
+        meta: { titleKey: 'menu.dashboard' }
       },
       {
         path: 'tokens',
         name: 'Tokens',
         component: () => import('../views/Tokens.vue'),
-        meta: { title: 'Token管理' }
+        meta: { titleKey: 'menu.tokens' }
       },
       {
         path: 'llm-resources/list',
         name: 'LLMResources',
         component: () => import('../views/LLMResources.vue'),
-        meta: { title: 'LLM资源管理' }
+        meta: { titleKey: 'menu.llmResources' }
       },
       {
         path: 'llm-resources/usage',
         name: 'LLMResourceUsage',
         component: () => import('../views/LLMResourceUsage.vue'),
-        meta: { title: '用量统计' }
+        meta: { titleKey: 'menu.llmResourceUsage' }
       },
       {
         path: 'requests',
         name: 'Requests',
         component: () => import('../views/Requests.vue'),
-        meta: { title: '请求管理' }
+        meta: { titleKey: 'menu.requests' }
       },
       {
         path: 'policies',
         name: 'Policies',
         component: () => import('../views/Policies.vue'),
-        meta: { title: '策略管理' }
+        meta: { titleKey: 'menu.policies' }
       },
       {
         path: 'settings',
         name: 'Settings',
         component: () => import('../views/Settings.vue'),
-        meta: { title: '系统设置' }
+        meta: { titleKey: 'menu.settings' }
       },
       {
         path: 'logs',
         name: 'Logs',
         component: () => import('../views/Logs.vue'),
-        meta: { title: '日志管理' }
+        meta: { titleKey: 'menu.logs' }
       }
     ]
   },
@@ -85,8 +87,12 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
 
-  // 设置页面标题
-  if (to.meta.title) {
+  // 设置页面标题（使用国际化）
+  if (to.meta.titleKey) {
+    const title = i18n.global.t(to.meta.titleKey)
+    document.title = `${title} - LingProxy`
+  } else if (to.meta.title) {
+    // 兼容旧代码
     document.title = `${to.meta.title} - LingProxy`
   }
 

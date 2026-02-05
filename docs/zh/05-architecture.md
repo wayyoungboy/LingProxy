@@ -33,6 +33,67 @@ LingProxy 采用现代微服务架构，关注点分离清晰：
 └─────────────┘
 ```
 
+## 前端架构
+
+### 技术栈
+- **框架**: Vue 3 (Composition API)
+- **UI 组件库**: Element Plus
+- **构建工具**: Vite
+- **国际化**: vue-i18n
+- **路由**: Vue Router
+- **HTTP 客户端**: Axios
+
+### 目录结构
+```
+frontend/
+├── src/
+│   ├── api/              # API 客户端
+│   ├── assets/           # 静态资源
+│   ├── components/       # Vue 组件
+│   │   ├── Layout.vue    # 布局组件（包含语言切换）
+│   │   └── Sidebar.vue   # 侧边栏组件
+│   ├── config/           # 配置文件
+│   │   └── menu.js       # 菜单配置
+│   ├── locales/          # 国际化语言包
+│   │   ├── zh/           # 中文语言包
+│   │   ├── en/           # 英文语言包
+│   │   └── index.js      # i18n 配置
+│   ├── router/           # 路由配置
+│   ├── views/            # 页面视图
+│   │   ├── Login.vue
+│   │   ├── Dashboard.vue
+│   │   ├── Tokens.vue
+│   │   ├── LLMResources.vue
+│   │   ├── LLMResourceUsage.vue
+│   │   ├── Requests.vue
+│   │   ├── Policies.vue
+│   │   ├── Settings.vue
+│   │   ├── Logs.vue
+│   │   ├── Models.vue
+│   │   ├── Users.vue
+│   │   └── Endpoints.vue
+│   ├── App.vue           # 根组件
+│   └── main.js           # 入口文件
+├── package.json
+└── vite.config.js
+```
+
+### 国际化支持
+- **语言包**: 完整的中文和英文语言包
+- **语言切换**: 支持在运行时切换语言，设置保存在 localStorage
+- **Element Plus 集成**: Element Plus 组件语言自动跟随系统语言设置
+- **覆盖范围**: 所有用户界面文本、错误消息、表单验证消息均已国际化
+
+### 核心功能模块
+- **认证**: 登录页面，JWT Token 管理
+- **仪表盘**: 系统概览和统计信息
+- **资源管理**: LLM 资源、模型、端点管理
+- **策略管理**: 路由策略配置和管理
+- **请求管理**: 请求日志查看和导出
+- **用量统计**: 按资源分组的详细统计信息
+- **系统设置**: 动态配置管理
+- **日志管理**: 系统日志查看和管理
+
 ## 后端架构
 
 ### 目录结构
@@ -43,8 +104,6 @@ backend/
 │   └── main.go              # 应用入口
 ├── configs/
 │   └── config.yaml.example  # 配置模板
-├── examples/
-│   └── llm_demo.go          # 示例代码
 ├── internal/
 │   ├── cache/               # 缓存实现
 │   ├── client/              # AI 服务客户端

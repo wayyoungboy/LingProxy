@@ -17,6 +17,7 @@ Welcome to the LingProxy documentation! This documentation provides comprehensiv
 ### Configuration & Usage
 - [Configuration Guide](03-configuration.md) - Detailed configuration options
 - [API Reference](04-api-reference.md) - Complete API documentation
+- [Streaming Support](../STREAMING.md) - Streaming response usage guide
 
 ### Architecture & Development
 - [Architecture Guide](05-architecture.md) - System architecture and design

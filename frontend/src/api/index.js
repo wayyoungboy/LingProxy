@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { STORAGE_KEYS, API_BASE_URL, API_TIMEOUT, MESSAGE_DURATION } from '../utils/constants'
+import i18n from '../locales'
 
 // 创建axios实例
 const apiClient = axios.create({
@@ -41,22 +42,22 @@ apiClient.interceptors.response.use(
     // 处理网络错误
     if (!error.response) {
       ElMessage.error({
-        message: '网络连接失败，请检查网络设置',
+        message: i18n.global.t('api.networkError'),
         duration: MESSAGE_DURATION.ERROR
       })
       return Promise.reject(error)
     }
 
     const { status, data } = error.response
-    let errorMessage = '请求失败，请稍后重试'
+    let errorMessage = i18n.global.t('api.requestFailed')
 
     // 根据状态码处理不同错误
     switch (status) {
       case 400:
-        errorMessage = data?.error || data?.message || '请求参数错误'
+        errorMessage = data?.error || data?.message || i18n.global.t('api.badRequest')
         break
       case 401:
-        errorMessage = '未授权，请重新登录'
+        errorMessage = i18n.global.t('api.unauthorized')
         // 清除token并跳转到登录页
         localStorage.removeItem(STORAGE_KEYS.TOKEN)
         localStorage.removeItem(STORAGE_KEYS.USER_INFO)
@@ -66,25 +67,25 @@ apiClient.interceptors.response.use(
         }
         break
       case 403:
-        errorMessage = data?.error || data?.message || '没有权限访问该资源'
+        errorMessage = data?.error || data?.message || i18n.global.t('api.forbidden')
         break
       case 404:
-        errorMessage = data?.error || data?.message || '请求的资源不存在'
+        errorMessage = data?.error || data?.message || i18n.global.t('api.notFound')
         break
       case 500:
-        errorMessage = data?.error || data?.message || '服务器内部错误'
+        errorMessage = data?.error || data?.message || i18n.global.t('api.serverError')
         break
       case 502:
-        errorMessage = '网关错误'
+        errorMessage = i18n.global.t('api.badGateway')
         break
       case 503:
-        errorMessage = '服务不可用'
+        errorMessage = i18n.global.t('api.serviceUnavailable')
         break
       case 504:
-        errorMessage = '网关超时'
+        errorMessage = i18n.global.t('api.gatewayTimeout')
         break
       default:
-        errorMessage = data?.error || data?.message || `请求失败 (${status})`
+        errorMessage = data?.error || data?.message || `${i18n.global.t('api.requestFailed')} (${status})`
     }
 
     // 显示错误消息（401错误不显示，因为会跳转登录页）

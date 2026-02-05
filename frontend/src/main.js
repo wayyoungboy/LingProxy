@@ -4,15 +4,21 @@ import router from './router'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import en from 'element-plus/es/locale/lang/en'
+import i18n from './locales'
 import './style.css'
 
 const app = createApp(App)
 
-// 配置Element Plus
+// 配置Element Plus，根据当前语言设置locale
+const savedLocale = localStorage.getItem('lingproxy_locale') || 'zh'
 app.use(ElementPlus, {
-  locale: zhCn,
+  locale: savedLocale === 'en' ? en : zhCn,
   size: 'default'
 })
+
+// 使用i18n
+app.use(i18n)
 
 // 使用路由
 app.use(router)

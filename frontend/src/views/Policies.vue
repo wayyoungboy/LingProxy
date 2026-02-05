@@ -3,10 +3,10 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="page-title">策略管理</span>
+          <span class="page-title">{{ $t('policies.title') }}</span>
           <el-button type="primary" @click="handleAddPolicy">
             <el-icon><Plus /></el-icon>
-            创建策略
+            {{ $t('policies.addPolicy') }}
           </el-button>
         </div>
       </template>
@@ -19,32 +19,32 @@
         border
         stripe
       >
-        <el-table-column prop="name" label="策略名称" width="200">
+        <el-table-column prop="name" :label="$t('policies.name')" width="200">
           <template #default="scope">
             <span>{{ scope.row.name }}</span>
-            <el-tag v-if="scope.row.builtin" type="info" size="small" style="margin-left: 8px">内置</el-tag>
+            <el-tag v-if="scope.row.builtin" type="info" size="small" style="margin-left: 8px">{{ $t('policies.builtin') }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="type" label="策略类型" width="150">
+        <el-table-column prop="type" :label="$t('policies.type')" width="150">
           <template #default="scope">
             <el-tag>{{ getTypeLabel(scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="enabled" label="状态" width="100">
+        <el-table-column prop="enabled" :label="$t('common.status')" width="100">
           <template #default="scope">
             <el-tag
               :type="scope.row.enabled ? 'success' : 'danger'"
             >
-              {{ scope.row.enabled ? '启用' : '禁用' }}
+              {{ scope.row.enabled ? $t('policies.enabled') : $t('policies.disabled') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
+        <el-table-column prop="created_at" :label="$t('common.createdAt')" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <el-table-column :label="$t('common.actions')" width="200">
           <template #default="scope">
             <el-button
               type="primary"
@@ -52,7 +52,7 @@
               @click="handleEditPolicy(scope.row)"
               style="margin-right: 5px"
             >
-              编辑
+              {{ $t('common.edit') }}
             </el-button>
             <el-button
               type="danger"
@@ -60,7 +60,7 @@
               @click="handleDeletePolicy(scope.row.id)"
               :disabled="scope.row.builtin"
             >
-              删除
+              {{ $t('common.delete') }}
             </el-button>
           </template>
         </el-table-column>
@@ -79,13 +79,13 @@
         :rules="policyRules"
         label-width="120px"
       >
-        <el-form-item label="策略名称" prop="name">
-          <el-input v-model="policyForm.name" placeholder="请输入策略名称"></el-input>
+        <el-form-item :label="$t('policies.name')" prop="name">
+          <el-input v-model="policyForm.name" :placeholder="$t('policies.nameRequired')"></el-input>
         </el-form-item>
-        <el-form-item label="策略模板" prop="template_id">
+        <el-form-item :label="$t('policies.template')" prop="template_id">
           <el-select
             v-model="policyForm.template_id"
-            placeholder="请选择策略模板"
+            :placeholder="$t('policies.selectTemplate')"
             style="width: 100%"
             @change="handleTemplateChange"
             :disabled="!isAddMode"
@@ -103,37 +103,88 @@
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="selectedTemplate" label="策略类型">
+        <el-form-item v-if="selectedTemplate" :label="$t('policies.type')">
           <el-tag>{{ getTypeLabel(selectedTemplate.type) }}</el-tag>
         </el-form-item>
-        <el-form-item v-if="selectedTemplate" label="参数配置">
+        <el-form-item v-if="selectedTemplate" :label="$t('policies.parameters')">
           <div v-if="selectedTemplate.type === 'random'" class="policy-params">
-            <el-form-item label="资源列表（可选）">
-              <el-select
-                v-model="policyForm.parameters.resources"
-                multiple
-                placeholder="选择资源（留空则使用所有可用资源）"
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="resource in llmResources"
-                  :key="resource.id"
-                  :label="resource.name"
-                  :value="resource.id"
-                />
-              </el-select>
+            <el-form-item :label="$t('policies.resourcePool')">
+              <div class="resource-pool-info">
+                <el-alert
+                  v-if="!policyForm.parameters.resources || !Array.isArray(policyForm.parameters.resources) || policyForm.parameters.resources.length === 0"
+                  type="info"
+                  :closable="false"
+                  show-icon
+                >
+                  <template #title>
+                    <span>{{ $t('policies.resourcePoolNotConfigured') }}</span>
+                  </template>
+                </el-alert>
+                <div v-else class="resource-pool-list">
+                  <div
+                    v-for="(resourceId, index) in policyForm.parameters.resources"
+                    :key="`${resourceId}-${index}`"
+                    class="resource-pool-item"
+                  >
+                    <el-tag
+                      :type="getResourceStatusType(resourceId)"
+                      closable
+                      @close="removeRandomResource(index)"
+                    >
+                      {{ getResourceName(resourceId) }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top: 10px">
+                <el-select
+                  v-model="newRandomResourceId"
+                  :placeholder="$t('policies.selectResourceToAdd')"
+                  filterable
+                  clearable
+                  style="width: 300px; margin-right: 10px"
+                  @change="addRandomResource"
+                >
+                  <el-option
+                    v-for="resource in availableRandomResources"
+                    :key="resource.id"
+                    :label="resource.name"
+                    :value="resource.id"
+                  >
+                    <span>{{ resource.name }}</span>
+                    <el-tag
+                      :type="resource.status === 'active' ? 'success' : 'danger'"
+                      size="small"
+                      style="margin-left: 8px"
+                    >
+                      {{ resource.status === 'active' ? $t('llmResources.active') : $t('llmResources.inactive') }}
+                    </el-tag>
+                  </el-option>
+                </el-select>
+                <el-button
+                  v-if="policyForm.parameters.resources && policyForm.parameters.resources.length > 0"
+                  type="danger"
+                  size="small"
+                  @click="clearRandomResources"
+                >
+                  {{ $t('policies.clearResourcePool') }}
+                </el-button>
+              </div>
             </el-form-item>
-            <el-form-item label="只选择活跃资源">
+            <el-form-item :label="$t('policies.filterActiveOnly')">
               <el-switch v-model="policyForm.parameters.filter_by_status" />
+              <span style="margin-left: 10px; color: #909399; font-size: 12px">
+                {{ $t('policies.filterActiveOnlyDesc') }}
+              </span>
             </el-form-item>
           </div>
           
           <div v-else-if="selectedTemplate.type === 'round_robin'" class="policy-params">
-            <el-form-item label="资源列表" required>
+            <el-form-item :label="$t('policies.resourceList')" required>
               <el-select
                 v-model="policyForm.parameters.resources"
                 multiple
-                placeholder="选择资源（按顺序）"
+                :placeholder="$t('policies.selectResourcesOrder')"
                 style="width: 100%"
               >
                 <el-option
@@ -144,13 +195,13 @@
                 />
               </el-select>
             </el-form-item>
-            <el-form-item label="只选择活跃资源">
+            <el-form-item :label="$t('policies.filterActiveOnly')">
               <el-switch v-model="policyForm.parameters.filter_by_status" />
             </el-form-item>
           </div>
           
           <div v-else-if="selectedTemplate.type === 'weighted'" class="policy-params">
-            <el-form-item label="资源权重配置" required>
+            <el-form-item :label="$t('policies.weightedConfig')" required>
               <div
                 v-for="(item, index) in policyForm.parameters.resources"
                 :key="index"
@@ -158,7 +209,7 @@
               >
                 <el-select
                   v-model="item.id"
-                  placeholder="选择资源"
+                  :placeholder="$t('policies.selectResource')"
                   style="width: 200px; margin-right: 10px"
                 >
                   <el-option
@@ -172,7 +223,7 @@
                   v-model="item.weight"
                   :min="1"
                   :max="100"
-                  placeholder="权重"
+                  :placeholder="$t('policies.weight')"
                   style="width: 120px"
                 />
                 <el-button
@@ -181,17 +232,17 @@
                   @click="removeWeightedResource(index)"
                   style="margin-left: 10px"
                 >
-                  删除
+                  {{ $t('common.delete') }}
                 </el-button>
               </div>
               <el-button type="primary" size="small" @click="addWeightedResource">
-                添加资源
+                {{ $t('policies.addResource') }}
               </el-button>
             </el-form-item>
           </div>
           
           <div v-else-if="selectedTemplate.type === 'model_match'" class="policy-params">
-            <el-form-item label="模型匹配规则" required>
+            <el-form-item :label="$t('policies.modelMatchRules')" required>
               <div
                 v-for="(mapping, index) in policyForm.parameters.mappings"
                 :key="index"
@@ -199,12 +250,12 @@
               >
                 <el-input
                   v-model="mapping.model_pattern"
-                  placeholder="模型名模式（如 gpt-*）"
+                  :placeholder="$t('policies.modelPatternPlaceholder')"
                   style="width: 200px; margin-right: 10px"
                 />
                 <el-select
                   v-model="mapping.resource_id"
-                  placeholder="选择资源"
+                  :placeholder="$t('policies.selectResource')"
                   style="width: 200px; margin-right: 10px"
                 >
                   <el-option
@@ -219,17 +270,17 @@
                   size="small"
                   @click="removeModelMapping(index)"
                 >
-                  删除
+                  {{ $t('common.delete') }}
                 </el-button>
               </div>
               <el-button type="primary" size="small" @click="addModelMapping">
-                添加规则
+                {{ $t('policies.addRule') }}
               </el-button>
             </el-form-item>
-            <el-form-item label="默认资源">
+            <el-form-item :label="$t('policies.defaultResource')">
               <el-select
                 v-model="policyForm.parameters.default_resource_id"
-                placeholder="选择默认资源（可选）"
+                :placeholder="$t('policies.selectDefaultResource')"
                 style="width: 100%"
               >
                 <el-option
@@ -243,7 +294,7 @@
           </div>
           
           <div v-else-if="selectedTemplate.type === 'regex_match'" class="policy-params">
-            <el-form-item label="正则匹配规则" required>
+            <el-form-item :label="$t('policies.regexMatchRules')" required>
               <div
                 v-for="(rule, index) in policyForm.parameters.rules"
                 :key="index"
@@ -251,12 +302,12 @@
               >
                 <el-input
                   v-model="rule.pattern"
-                  placeholder="正则表达式（如 ^gpt-）"
+                  :placeholder="$t('policies.regexPatternPlaceholder')"
                   style="width: 200px; margin-right: 10px"
                 />
                 <el-select
                   v-model="rule.resource_id"
-                  placeholder="选择资源"
+                  :placeholder="$t('policies.selectResource')"
                   style="width: 200px; margin-right: 10px"
                 >
                   <el-option
@@ -271,17 +322,17 @@
                   size="small"
                   @click="removeRegexRule(index)"
                 >
-                  删除
+                  {{ $t('common.delete') }}
                 </el-button>
               </div>
               <el-button type="primary" size="small" @click="addRegexRule">
-                添加规则
+                {{ $t('policies.addRule') }}
               </el-button>
             </el-form-item>
-            <el-form-item label="默认资源">
+            <el-form-item :label="$t('policies.defaultResource')">
               <el-select
                 v-model="policyForm.parameters.default_resource_id"
-                placeholder="选择默认资源（可选）"
+                :placeholder="$t('policies.selectDefaultResource')"
                 style="width: 100%"
               >
                 <el-option
@@ -295,7 +346,7 @@
           </div>
           
           <div v-else-if="selectedTemplate.type === 'priority'" class="policy-params">
-            <el-form-item label="资源优先级配置" required>
+            <el-form-item :label="$t('policies.priorityConfig')" required>
               <div
                 v-for="(item, index) in policyForm.parameters.resources"
                 :key="index"
@@ -303,7 +354,7 @@
               >
                 <el-select
                   v-model="item.id"
-                  placeholder="选择资源"
+                  :placeholder="$t('policies.selectResource')"
                   style="width: 200px; margin-right: 10px"
                 >
                   <el-option
@@ -316,7 +367,7 @@
                 <el-input-number
                   v-model="item.priority"
                   :min="1"
-                  placeholder="优先级（数字越小优先级越高）"
+                  :placeholder="$t('policies.priorityPlaceholder')"
                   style="width: 200px"
                 />
                 <el-button
@@ -325,23 +376,23 @@
                   @click="removePriorityResource(index)"
                   style="margin-left: 10px"
                 >
-                  删除
+                  {{ $t('common.delete') }}
                 </el-button>
               </div>
               <el-button type="primary" size="small" @click="addPriorityResource">
-                添加资源
+                {{ $t('policies.addResource') }}
               </el-button>
             </el-form-item>
-            <el-form-item label="启用降级">
+            <el-form-item :label="$t('policies.enableFallback')">
               <el-switch v-model="policyForm.parameters.fallback_enabled" />
             </el-form-item>
           </div>
           
           <div v-else-if="selectedTemplate.type === 'failover'" class="policy-params">
-            <el-form-item label="主资源" required>
+            <el-form-item :label="$t('policies.primaryResource')" required>
               <el-select
                 v-model="policyForm.parameters.primary_resource_id"
-                placeholder="选择主资源"
+                :placeholder="$t('policies.selectPrimaryResource')"
                 style="width: 100%"
               >
                 <el-option
@@ -352,11 +403,11 @@
                 />
               </el-select>
             </el-form-item>
-            <el-form-item label="备用资源" required>
+            <el-form-item :label="$t('policies.fallbackResources')" required>
               <el-select
                 v-model="policyForm.parameters.fallback_resources"
                 multiple
-                placeholder="选择备用资源（按顺序）"
+                :placeholder="$t('policies.selectFallbackResources')"
                 style="width: 100%"
               >
                 <el-option
@@ -367,10 +418,10 @@
                 />
               </el-select>
             </el-form-item>
-            <el-form-item label="启用健康检查">
+            <el-form-item :label="$t('policies.enableHealthCheck')">
               <el-switch v-model="policyForm.parameters.health_check_enabled" />
             </el-form-item>
-            <el-form-item label="健康检查间隔（秒）">
+            <el-form-item :label="$t('policies.healthCheckInterval')">
               <el-input-number
                 v-model="policyForm.parameters.health_check_interval"
                 :min="10"
@@ -379,14 +430,14 @@
             </el-form-item>
           </div>
         </el-form-item>
-        <el-form-item v-if="!isAddMode" label="状态" prop="enabled">
+        <el-form-item v-if="!isAddMode" :label="$t('common.status')" prop="enabled">
           <el-switch v-model="policyForm.enabled" />
         </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSavePolicy">确定</el-button>
+          <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+          <el-button type="primary" @click="handleSavePolicy">{{ $t('common.confirm') }}</el-button>
         </span>
       </template>
     </el-dialog>
@@ -395,9 +446,12 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import api from '../api'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const policies = ref([])
@@ -408,6 +462,7 @@ const dialogTitle = ref('')
 const isAddMode = ref(false)
 const policyFormRef = ref(null)
 const selectedTemplate = ref(null)
+const newRandomResourceId = ref('')
 
 const policyForm = reactive({
   id: '',
@@ -417,28 +472,102 @@ const policyForm = reactive({
   enabled: true
 })
 
-const policyRules = {
+const policyRules = computed(() => ({
   name: [
-    { required: true, message: '请输入策略名称', trigger: 'blur' }
+    { required: true, message: t('policies.nameRequired'), trigger: 'blur' }
   ],
   template_id: [
-    { required: true, message: '请选择策略模板', trigger: 'change' }
+    { required: true, message: t('policies.templateRequired'), trigger: 'change' }
   ]
-}
+}))
 
-// 策略类型标签
-const typeLabels = {
-  random: '随机选择',
-  round_robin: '轮询负载均衡',
-  weighted: '加权负载均衡',
-  model_match: '模型名匹配',
-  regex_match: '正则匹配',
-  priority: '优先级策略',
-  failover: '故障转移'
-}
-
+// 获取策略类型标签
 const getTypeLabel = (type) => {
-  return typeLabels[type] || type
+  const labels = {
+    random: t('policies.randomSelect'),
+    round_robin: t('policies.roundRobinLB'),
+    weighted: t('policies.weightedLB'),
+    model_match: t('policies.modelMatch'),
+    regex_match: t('policies.regexMatch'),
+    priority: t('policies.priorityPolicy'),
+    failover: t('policies.failover')
+  }
+  return labels[type] || type
+}
+
+// 随机策略资源池管理
+const availableRandomResources = computed(() => {
+  console.log('Computing availableRandomResources:', {
+    llmResourcesCount: llmResources.value.length,
+    resourcesPool: policyForm.parameters.resources,
+    isArray: Array.isArray(policyForm.parameters.resources)
+  })
+  
+  if (!llmResources.value || llmResources.value.length === 0) {
+    console.warn('No LLM resources available')
+    return []
+  }
+  
+  if (!policyForm.parameters.resources || !Array.isArray(policyForm.parameters.resources)) {
+    return llmResources.value
+  }
+  
+  const resourcePoolIds = new Set(policyForm.parameters.resources)
+  const available = llmResources.value.filter(resource => !resourcePoolIds.has(resource.id))
+  console.log('Available resources after filtering:', available.length, available)
+  return available
+})
+
+const addRandomResource = () => {
+  if (!newRandomResourceId.value) {
+    return
+  }
+  // 确保 resources 是数组
+  if (!policyForm.parameters.resources || !Array.isArray(policyForm.parameters.resources)) {
+    policyForm.parameters.resources = []
+  }
+  // 检查资源是否已在资源池中
+  if (policyForm.parameters.resources.includes(newRandomResourceId.value)) {
+    ElMessage.warning(t('policies.resourceAlreadyInPool'))
+    newRandomResourceId.value = ''
+    return
+  }
+  // 使用扩展运算符创建新数组以确保响应式更新
+  policyForm.parameters.resources = [...policyForm.parameters.resources, newRandomResourceId.value]
+  newRandomResourceId.value = ''
+  console.log('Resource added to pool:', policyForm.parameters.resources)
+}
+
+const removeRandomResource = (index) => {
+  if (policyForm.parameters.resources && Array.isArray(policyForm.parameters.resources) && policyForm.parameters.resources.length > index) {
+    // 使用扩展运算符创建新数组以确保响应式更新
+    policyForm.parameters.resources = policyForm.parameters.resources.filter((_, i) => i !== index)
+    console.log('Resource removed from pool:', policyForm.parameters.resources)
+  }
+}
+
+const clearRandomResources = () => {
+  ElMessageBox.confirm(t('policies.clearResourcePoolConfirm'), t('common.info'), {
+    confirmButtonText: t('common.confirm'),
+    cancelButtonText: t('common.cancel'),
+    type: 'warning'
+  }).then(() => {
+    policyForm.parameters.resources = []
+    ElMessage.success(t('policies.resourcePoolCleared'))
+  }).catch(() => {})
+}
+
+const getResourceName = (resourceId) => {
+  const resource = llmResources.value.find(r => r.id === resourceId)
+  return resource ? resource.name : resourceId
+}
+
+const getResourceStatusType = (resourceId) => {
+  const resource = llmResources.value.find(r => r.id === resourceId)
+  if (!resource) {
+    return 'info'
+  }
+  return resource.status === 'active' ? 'success' : 'danger'
 }
 
 // 获取策略列表
@@ -451,7 +580,7 @@ const getPolicyList = async () => {
     }
   } catch (error) {
     console.error('获取策略列表失败:', error)
-    ElMessage.error('获取策略列表失败')
+    ElMessage.error(t('policies.getListFailed'))
   } finally {
     loading.value = false
   }
@@ -473,11 +602,31 @@ const getTemplateList = async () => {
 const getLLMResourceList = async () => {
   try {
     const response = await api.getLLMResources({ page: 1, page_size: 100 })
+    console.log('LLM Resources API response:', response)
+    
+    // API响应拦截器已经返回了 response.data，后端返回的是 {data: resources}
+    // 所以这里 response 就是 {data: resources}，其中 resources 是数组
     if (response && response.data) {
-      llmResources.value = response.data.items || []
+      // 后端返回的data可能是数组，也可能是分页对象
+      if (Array.isArray(response.data)) {
+        // 直接是数组格式
+        llmResources.value = response.data
+      } else if (response.data.items && Array.isArray(response.data.items)) {
+        // 分页格式 {data: {items: [...]}}
+        llmResources.value = response.data.items
+      } else {
+        llmResources.value = []
+        console.warn('Unexpected response format:', response)
+      }
+      console.log('LLM Resources loaded:', llmResources.value.length, 'resources:', llmResources.value.map(r => ({id: r.id, name: r.name})))
+    } else {
+      llmResources.value = []
+      console.warn('No response from LLM Resources API or no data field')
     }
   } catch (error) {
     console.error('获取LLM资源列表失败:', error)
+    ElMessage.error(t('llmResources.getListFailed') + ': ' + (error.response?.data?.error || error.message))
+    llmResources.value = []
   }
 }
 
@@ -498,9 +647,11 @@ const initParameters = (template) => {
   switch (template.type) {
     case 'random':
       policyForm.parameters = {
-        resources: defaultParams.resources || [],
+        resources: Array.isArray(defaultParams.resources) ? [...defaultParams.resources] : [],
         filter_by_status: defaultParams.filter_by_status !== false
       }
+      newRandomResourceId.value = ''
+      console.log('Random policy parameters initialized:', policyForm.parameters)
       break
     case 'round_robin':
       policyForm.parameters = {
@@ -546,9 +697,9 @@ const initParameters = (template) => {
 }
 
 // 处理添加策略
-const handleAddPolicy = () => {
+const handleAddPolicy = async () => {
   isAddMode.value = true
-  dialogTitle.value = '创建策略'
+  dialogTitle.value = t('policies.createPolicy')
   Object.assign(policyForm, {
     id: '',
     name: '',
@@ -557,23 +708,38 @@ const handleAddPolicy = () => {
     enabled: true
   })
   selectedTemplate.value = null
+  newRandomResourceId.value = ''
+  
+  // 确保资源列表已加载
+  if (!llmResources.value || llmResources.value.length === 0) {
+    await getLLMResourceList()
+  }
+  
   dialogVisible.value = true
 }
 
 // 处理编辑策略
 const handleEditPolicy = async (policy) => {
   isAddMode.value = false
-  dialogTitle.value = '编辑策略'
+  dialogTitle.value = t('policies.editPolicy')
+  
+  // 确保资源列表已加载
+  if (!llmResources.value || llmResources.value.length === 0) {
+    await getLLMResourceList()
+  }
   
   // 获取策略详情
   try {
     const response = await api.getPolicy(policy.id)
     if (response && response.data) {
+      // 深度复制 parameters 以确保响应式
+      const parameters = response.data.parameters ? JSON.parse(JSON.stringify(response.data.parameters)) : {}
+      
       Object.assign(policyForm, {
         id: response.data.id,
         name: response.data.name,
         template_id: response.data.template_id,
-        parameters: response.data.parameters || {},
+        parameters: parameters,
         enabled: response.data.enabled
       })
       
@@ -581,13 +747,25 @@ const handleEditPolicy = async (policy) => {
       const template = templates.value.find(t => t.id === response.data.template_id)
       if (template) {
         selectedTemplate.value = template
+        // 如果是随机策略，确保 resources 是数组格式
+        if (template.type === 'random') {
+          // 确保 resources 字段存在且是数组
+          if (!policyForm.parameters.resources || !Array.isArray(policyForm.parameters.resources)) {
+            policyForm.parameters.resources = []
+          } else {
+            // 创建新数组以确保响应式
+            policyForm.parameters.resources = [...policyForm.parameters.resources]
+          }
+          console.log('Random policy resources initialized:', policyForm.parameters.resources)
+        }
+        newRandomResourceId.value = ''
       }
       
       dialogVisible.value = true
     }
   } catch (error) {
     console.error('获取策略详情失败:', error)
-    ElMessage.error('获取策略详情失败')
+    ElMessage.error(t('policies.getDetailFailed'))
   }
 }
 
@@ -603,7 +781,7 @@ const handleSavePolicy = async () => {
         template_id: policyForm.template_id,
         parameters: policyForm.parameters
       })
-      ElMessage.success('策略创建成功')
+      ElMessage.success(t('policies.createSuccess'))
     } else {
       // 更新策略
       await api.updatePolicy(policyForm.id, {
@@ -611,14 +789,14 @@ const handleSavePolicy = async () => {
         parameters: policyForm.parameters,
         enabled: policyForm.enabled
       })
-      ElMessage.success('策略更新成功')
+      ElMessage.success(t('policies.updateSuccess'))
     }
     
     dialogVisible.value = false
     getPolicyList()
   } catch (error) {
     console.error('保存策略失败:', error)
-    ElMessage.error('保存策略失败')
+    ElMessage.error(t('policies.saveFailed'))
   }
 }
 
@@ -628,27 +806,27 @@ const handleDeletePolicy = async (id) => {
     // 检查是否为内置策略
     const policy = policies.value.find(p => p.id === id)
     if (policy && policy.builtin) {
-      ElMessage.warning('内置策略不允许删除')
+      ElMessage.warning(t('policies.builtinCannotDelete'))
       return
     }
 
     await ElMessageBox.confirm(
-      '确定要删除这个策略吗？删除后使用该策略的Token将使用默认策略。',
-      '删除确认',
+      t('policies.deleteConfirmMessage'),
+      t('policies.deleteConfirm'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'danger'
       }
     )
     
     await api.deletePolicy(id)
-    ElMessage.success('策略删除成功')
+    ElMessage.success(t('policies.deleteSuccess'))
     getPolicyList()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除策略失败:', error)
-      const errorMsg = error.response?.data?.error || '删除策略失败'
+      const errorMsg = error.response?.data?.error || t('policies.deleteFailed')
       ElMessage.error(errorMsg)
     }
   }
@@ -745,5 +923,23 @@ onMounted(() => {
   border-radius: 4px;
   padding: 15px;
   background-color: #f5f7fa;
+}
+
+.resource-pool-info {
+  margin-bottom: 10px;
+}
+
+.resource-pool-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 4px;
+  min-height: 40px;
+}
+
+.resource-pool-item {
+  display: inline-block;
 }
 </style>

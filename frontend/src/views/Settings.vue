@@ -3,164 +3,164 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="page-title">系统设置</span>
+          <span class="page-title">{{ $t('settings.title') }}</span>
           <el-button type="primary" @click="saveSettings">
             <el-icon><Check /></el-icon>
-            保存设置
+            {{ $t('settings.saveSettings') }}
           </el-button>
         </div>
       </template>
       
       <el-tabs v-model="activeTab" class="mt-4">
         <!-- 基本设置 -->
-        <el-tab-pane label="基本设置" name="basic">
+        <el-tab-pane :label="$t('settings.basicSettings')" name="basic">
           <el-form :model="settingsForm.basic" label-width="150px">
-            <el-form-item label="系统名称">
-              <el-input v-model="settingsForm.basic.system_name" placeholder="请输入系统名称" />
+            <el-form-item :label="$t('settings.systemName')">
+              <el-input v-model="settingsForm.basic.system_name" :placeholder="$t('settings.systemNamePlaceholder')" />
             </el-form-item>
-            <el-form-item label="系统版本">
+            <el-form-item :label="$t('settings.systemVersion')">
               <el-input v-model="settingsForm.basic.system_version" disabled />
             </el-form-item>
-            <el-form-item label="运行环境">
+            <el-form-item :label="$t('settings.environment')">
               <el-input v-model="settingsForm.basic.environment" disabled />
             </el-form-item>
-            <el-form-item label="API地址">
-              <el-input v-model="settingsForm.basic.api_url" placeholder="请输入API地址" />
+            <el-form-item :label="$t('settings.apiUrl')">
+              <el-input v-model="settingsForm.basic.api_url" :placeholder="$t('settings.apiUrlPlaceholder')" />
             </el-form-item>
-            <el-form-item label="服务端口">
+            <el-form-item :label="$t('settings.port')">
               <el-input-number v-model="settingsForm.basic.port" :min="1" :max="65535" />
               <el-alert type="warning" :closable="false" style="margin-top: 10px">
-                修改端口需要重启服务才能生效
+                {{ $t('settings.portChangeWarning') }}
               </el-alert>
             </el-form-item>
-            <el-form-item label="监听地址">
-              <el-input v-model="settingsForm.basic.host" placeholder="请输入监听地址" />
+            <el-form-item :label="$t('settings.host')">
+              <el-input v-model="settingsForm.basic.host" :placeholder="$t('settings.hostPlaceholder')" />
               <el-alert type="warning" :closable="false" style="margin-top: 10px">
-                修改监听地址需要重启服务才能生效
+                {{ $t('settings.hostChangeWarning') }}
               </el-alert>
             </el-form-item>
-            <el-form-item label="调试模式">
+            <el-form-item :label="$t('settings.debugMode')">
               <el-switch v-model="settingsForm.basic.debug_mode" />
             </el-form-item>
           </el-form>
         </el-tab-pane>
         
         <!-- 缓存设置 -->
-        <el-tab-pane label="缓存设置" name="cache">
+        <el-tab-pane :label="$t('settings.cacheSettings')" name="cache">
           <el-form :model="settingsForm.cache" label-width="150px">
-            <el-form-item label="启用缓存">
+            <el-form-item :label="$t('settings.enableCache')">
               <el-switch v-model="settingsForm.cache.enabled" />
             </el-form-item>
-            <el-form-item label="缓存类型">
-              <el-select v-model="settingsForm.cache.type" placeholder="请选择缓存类型" disabled>
-                <el-option label="内存缓存" value="memory" />
+            <el-form-item :label="$t('settings.cacheType')">
+              <el-select v-model="settingsForm.cache.type" :placeholder="$t('settings.selectCacheType')" disabled>
+                <el-option :label="$t('settings.memoryCache')" value="memory" />
               </el-select>
             </el-form-item>
-            <el-form-item label="缓存过期时间(秒)">
+            <el-form-item :label="$t('settings.cacheTTL')">
               <el-input-number v-model="settingsForm.cache.ttl" :min="1" :max="86400" />
             </el-form-item>
-            <el-form-item label="缓存大小限制(MB)">
+            <el-form-item :label="$t('settings.cacheSizeLimit')">
               <el-input-number v-model="settingsForm.cache.size_limit" :min="1" :max="1024" />
             </el-form-item>
           </el-form>
         </el-tab-pane>
         
         <!-- 限流设置 -->
-        <el-tab-pane label="限流设置" name="rateLimit">
+        <el-tab-pane :label="$t('settings.rateLimitSettings')" name="rateLimit">
           <el-form :model="settingsForm.rate_limit" label-width="150px">
-            <el-form-item label="启用限流">
+            <el-form-item :label="$t('settings.enableRateLimit')">
               <el-switch v-model="settingsForm.rate_limit.enabled" />
             </el-form-item>
-            <el-form-item label="每分钟请求数限制">
+            <el-form-item :label="$t('settings.requestsPerMinute')">
               <el-input-number v-model="settingsForm.rate_limit.requests_per_minute" :min="1" :max="10000" />
             </el-form-item>
-            <el-form-item label="并发请求限制">
+            <el-form-item :label="$t('settings.concurrencyLimit')">
               <el-input-number v-model="settingsForm.rate_limit.concurrency" :min="1" :max="1000" />
             </el-form-item>
           </el-form>
         </el-tab-pane>
         
         <!-- 安全设置 -->
-        <el-tab-pane label="安全设置" name="security">
+        <el-tab-pane :label="$t('settings.securitySettings')" name="security">
           <el-form :model="settingsForm.security" label-width="150px">
-            <el-form-item label="启用认证">
+            <el-form-item :label="$t('settings.enableAuth')">
               <el-switch v-model="settingsForm.security.auth_enabled" />
               <el-alert type="warning" :closable="false" style="margin-top: 10px">
-                关闭认证后，所有API（除登录外）都不需要认证即可访问。修改此设置需要重启服务。
+                {{ $t('settings.authDisabledWarning') }}
               </el-alert>
             </el-form-item>
             <el-divider />
-            <el-form-item label="JWT密钥">
+            <el-form-item :label="$t('settings.jwtSecret')">
               <el-input 
                 v-model="settingsForm.security.jwt_secret" 
                 type="password" 
-                placeholder="留空则不修改（显示为******）"
+                :placeholder="$t('settings.jwtSecretPlaceholder')"
                 show-password
               />
               <el-alert type="warning" :closable="false" style="margin-top: 10px">
-                修改JWT密钥需要重启服务，且会导致所有现有Token失效
+                {{ $t('settings.jwtSecretChangeWarning') }}
               </el-alert>
             </el-form-item>
-            <el-form-item label="Token过期时间(小时)">
+            <el-form-item :label="$t('settings.tokenExpiration')">
               <el-input-number v-model="settingsForm.security.token_expiration" :min="1" :max="720" />
             </el-form-item>
-            <el-form-item label="启用HTTPS">
+            <el-form-item :label="$t('settings.enableHTTPS')">
               <el-switch v-model="settingsForm.security.https_enabled" disabled />
-              <span style="color: #909399; margin-left: 10px">暂未实现</span>
+              <span style="color: #909399; margin-left: 10px">{{ $t('settings.notImplemented') }}</span>
             </el-form-item>
-            <el-divider>管理员密码</el-divider>
-            <el-form-item label="当前密码">
+            <el-divider>{{ $t('settings.adminPassword') }}</el-divider>
+            <el-form-item :label="$t('settings.currentPassword')">
               <el-input
                 v-model="passwordForm.oldPassword"
                 type="password"
-                placeholder="请输入当前密码"
+                :placeholder="$t('settings.currentPasswordPlaceholder')"
                 show-password
                 style="width: 300px"
               />
             </el-form-item>
-            <el-form-item label="新密码">
+            <el-form-item :label="$t('settings.newPassword')">
               <el-input
                 v-model="passwordForm.newPassword"
                 type="password"
-                placeholder="请输入新密码（至少6位）"
+                :placeholder="$t('settings.newPasswordPlaceholder')"
                 show-password
                 style="width: 300px"
               />
             </el-form-item>
-            <el-form-item label="确认新密码">
+            <el-form-item :label="$t('settings.confirmPassword')">
               <el-input
                 v-model="passwordForm.confirmPassword"
                 type="password"
-                placeholder="请再次输入新密码"
+                :placeholder="$t('settings.confirmPasswordPlaceholder')"
                 show-password
                 style="width: 300px"
               />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="updateAdminPassword" :loading="passwordUpdating">
-                更新密码
+                {{ $t('settings.updatePassword') }}
               </el-button>
-              <el-button @click="resetPasswordForm">重置</el-button>
+              <el-button @click="resetPasswordForm">{{ $t('settings.reset') }}</el-button>
             </el-form-item>
-            <el-divider>CORS设置</el-divider>
-            <el-form-item label="启用CORS">
+            <el-divider>{{ $t('settings.corsSettings') }}</el-divider>
+            <el-form-item :label="$t('settings.enableCORS')">
               <el-switch v-model="settingsForm.security.cors.enabled" />
             </el-form-item>
-            <el-form-item label="允许的来源">
+            <el-form-item :label="$t('settings.allowedOrigins')">
               <el-select 
                 v-model="settingsForm.security.cors.allow_origins" 
                 multiple 
-                placeholder="选择允许的来源"
+                :placeholder="$t('settings.selectAllowedOrigins')"
                 style="width: 100%"
               >
-                <el-option label="全部 (*)" value="*" />
+                <el-option :label="$t('settings.allOrigins')" value="*" />
               </el-select>
             </el-form-item>
-            <el-form-item label="允许的方法">
+            <el-form-item :label="$t('settings.allowedMethods')">
               <el-select 
                 v-model="settingsForm.security.cors.allow_methods" 
                 multiple 
-                placeholder="选择允许的HTTP方法"
+                :placeholder="$t('settings.selectAllowedMethods')"
                 style="width: 100%"
               >
                 <el-option label="GET" value="GET" />
@@ -170,125 +170,125 @@
                 <el-option label="OPTIONS" value="OPTIONS" />
               </el-select>
             </el-form-item>
-            <el-form-item label="允许的请求头">
+            <el-form-item :label="$t('settings.allowedHeaders')">
               <el-select 
                 v-model="settingsForm.security.cors.allow_headers" 
                 multiple 
-                placeholder="选择允许的请求头"
+                :placeholder="$t('settings.selectAllowedHeaders')"
                 style="width: 100%"
               >
-                <el-option label="全部 (*)" value="*" />
+                <el-option :label="$t('settings.allOrigins')" value="*" />
               </el-select>
             </el-form-item>
           </el-form>
         </el-tab-pane>
         
         <!-- 日志设置 -->
-        <el-tab-pane label="日志设置" name="log">
+        <el-tab-pane :label="$t('settings.logSettings')" name="log">
           <el-form :model="settingsForm.log" label-width="150px">
-            <el-form-item label="日志级别">
-              <el-select v-model="settingsForm.log.level" placeholder="请选择日志级别">
+            <el-form-item :label="$t('settings.logLevel')">
+              <el-select v-model="settingsForm.log.level" :placeholder="$t('settings.selectLogLevel')">
                 <el-option label="DEBUG" value="debug" />
                 <el-option label="INFO" value="info" />
                 <el-option label="WARN" value="warn" />
                 <el-option label="ERROR" value="error" />
               </el-select>
             </el-form-item>
-            <el-form-item label="日志格式">
-              <el-select v-model="settingsForm.log.format" placeholder="请选择日志格式">
-                <el-option label="JSON" value="json" />
-                <el-option label="文本" value="text" />
+            <el-form-item :label="$t('settings.logFormat')">
+              <el-select v-model="settingsForm.log.format" :placeholder="$t('settings.selectLogFormat')">
+                <el-option :label="$t('settings.json')" value="json" />
+                <el-option :label="$t('settings.text')" value="text" />
               </el-select>
             </el-form-item>
-            <el-form-item label="输出方式">
-              <el-select v-model="settingsForm.log.output" placeholder="请选择输出方式">
-                <el-option label="标准输出" value="stdout" />
-                <el-option label="文件" value="file" />
-                <el-option label="同时输出（推荐）" value="both" />
+            <el-form-item :label="$t('settings.logOutput')">
+              <el-select v-model="settingsForm.log.output" :placeholder="$t('settings.selectLogOutput')">
+                <el-option :label="$t('settings.stdout')" value="stdout" />
+                <el-option :label="$t('settings.file')" value="file" />
+                <el-option :label="$t('settings.both')" value="both" />
               </el-select>
             </el-form-item>
-            <el-form-item label="日志文件路径" v-if="settingsForm.log.output === 'file' || settingsForm.log.output === 'both'">
-              <el-input v-model="settingsForm.log.file_path" placeholder="请输入日志文件路径" />
+            <el-form-item :label="$t('settings.logFilePath')" v-if="settingsForm.log.output === 'file' || settingsForm.log.output === 'both'">
+              <el-input v-model="settingsForm.log.file_path" :placeholder="$t('settings.logFilePathPlaceholder')" />
             </el-form-item>
-            <el-form-item label="单个文件最大大小(MB)">
+            <el-form-item :label="$t('settings.maxFileSize')">
               <el-input-number v-model="settingsForm.log.max_size" :min="1" :max="1024" />
             </el-form-item>
-            <el-form-item label="保留备份数量">
+            <el-form-item :label="$t('settings.maxBackups')">
               <el-input-number v-model="settingsForm.log.max_backups" :min="1" :max="100" />
             </el-form-item>
-            <el-form-item label="保留天数">
+            <el-form-item :label="$t('settings.maxAge')">
               <el-input-number v-model="settingsForm.log.max_age" :min="1" :max="365" />
             </el-form-item>
-            <el-form-item label="压缩旧日志">
+            <el-form-item :label="$t('settings.compressOldLogs')">
               <el-switch v-model="settingsForm.log.compress" />
             </el-form-item>
           </el-form>
         </el-tab-pane>
         
         <!-- 负载均衡设置 -->
-        <el-tab-pane label="负载均衡" name="loadBalancer">
+        <el-tab-pane :label="$t('settings.loadBalancerSettings')" name="loadBalancer">
           <el-form :model="settingsForm.load_balancer" label-width="150px">
-            <el-form-item label="默认策略">
-              <el-select v-model="settingsForm.load_balancer.default_strategy" placeholder="请选择默认策略">
-                <el-option label="轮询" value="round_robin" />
-                <el-option label="最少连接" value="least_connections" />
-                <el-option label="加权" value="weighted" />
+            <el-form-item :label="$t('settings.defaultStrategy')">
+              <el-select v-model="settingsForm.load_balancer.default_strategy" :placeholder="$t('settings.selectDefaultStrategy')">
+                <el-option :label="$t('settings.roundRobin')" value="round_robin" />
+                <el-option :label="$t('settings.leastConnections')" value="least_connections" />
+                <el-option :label="$t('settings.weighted')" value="weighted" />
               </el-select>
             </el-form-item>
-            <el-divider>健康检查</el-divider>
-            <el-form-item label="启用健康检查">
+            <el-divider>{{ $t('settings.healthCheck') }}</el-divider>
+            <el-form-item :label="$t('settings.enableHealthCheck')">
               <el-switch v-model="settingsForm.load_balancer.health_check.enabled" />
             </el-form-item>
-            <el-form-item label="检查间隔(秒)">
+            <el-form-item :label="$t('settings.checkInterval')">
               <el-input-number v-model="settingsForm.load_balancer.health_check.interval" :min="5" :max="300" />
             </el-form-item>
-            <el-form-item label="超时时间(秒)">
+            <el-form-item :label="$t('settings.timeout')">
               <el-input-number v-model="settingsForm.load_balancer.health_check.timeout" :min="1" :max="60" />
             </el-form-item>
-            <el-form-item label="最大失败次数">
+            <el-form-item :label="$t('settings.maxFailures')">
               <el-input-number v-model="settingsForm.load_balancer.health_check.max_failures" :min="1" :max="10" />
             </el-form-item>
           </el-form>
         </el-tab-pane>
         
         <!-- 系统信息 -->
-        <el-tab-pane label="系统信息" name="info">
+        <el-tab-pane :label="$t('settings.systemInfo')" name="info">
           <el-descriptions :column="2" border class="mt-4">
-            <el-descriptions-item label="系统名称">{{ systemInfo.system_name }}</el-descriptions-item>
-            <el-descriptions-item label="系统版本">{{ systemInfo.system_version }}</el-descriptions-item>
-            <el-descriptions-item label="运行环境">{{ systemInfo.environment }}</el-descriptions-item>
-            <el-descriptions-item label="Go版本">{{ systemInfo.go_version }}</el-descriptions-item>
-            <el-descriptions-item label="操作系统">{{ systemInfo.os }}</el-descriptions-item>
-            <el-descriptions-item label="系统架构">{{ systemInfo.arch }}</el-descriptions-item>
-            <el-descriptions-item label="启动时间">{{ formatTime(systemInfo.start_time) }}</el-descriptions-item>
-            <el-descriptions-item label="当前时间">{{ formatTime(systemInfo.current_time) }}</el-descriptions-item>
-            <el-descriptions-item label="运行时长">{{ systemInfo.uptime }}</el-descriptions-item>
-            <el-descriptions-item label="CPU核心数">{{ systemInfo.cpu_cores }}</el-descriptions-item>
-            <el-descriptions-item label="内存使用">
+            <el-descriptions-item :label="$t('settings.systemInfoName')">{{ systemInfo.system_name }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.systemInfoVersion')">{{ systemInfo.system_version }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.systemInfoEnvironment')">{{ systemInfo.environment }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.goVersion')">{{ systemInfo.go_version }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.os')">{{ systemInfo.os }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.arch')">{{ systemInfo.arch }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.startTime')">{{ formatTime(systemInfo.start_time) }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.currentTime')">{{ formatTime(systemInfo.current_time) }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.uptime')">{{ systemInfo.uptime }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.cpuCores')">{{ systemInfo.cpu_cores }}</el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.memoryUsage')">
               {{ formatBytes(systemInfo.memory_used) }} / {{ formatBytes(systemInfo.memory_total) }} 
               ({{ formatPercentage(systemInfo.memory_usage) }})
             </el-descriptions-item>
-            <el-descriptions-item label="磁盘使用" v-if="systemInfo.disk_total > 0">
+            <el-descriptions-item :label="$t('settings.diskUsage')" v-if="systemInfo.disk_total > 0">
               {{ formatBytes(systemInfo.disk_used) }} / {{ formatBytes(systemInfo.disk_total) }} 
               ({{ formatPercentage(systemInfo.disk_usage) }})
             </el-descriptions-item>
           </el-descriptions>
-          <el-button type="primary" class="mt-4" @click="refreshSystemInfo">刷新系统信息</el-button>
+          <el-button type="primary" class="mt-4" @click="refreshSystemInfo">{{ $t('settings.refreshSystemInfo') }}</el-button>
         </el-tab-pane>
       </el-tabs>
       
       <!-- 重启提示对话框 -->
       <el-dialog
         v-model="restartDialogVisible"
-        title="需要重启服务"
+        :title="$t('settings.restartRequired')"
         width="500px"
       >
-        <p>以下配置项已修改，需要重启服务才能生效：</p>
+        <p>{{ $t('settings.restartRequiredMessage') }}</p>
         <ul>
           <li v-for="field in restartRequiredFields" :key="field">{{ field }}</li>
         </ul>
         <template #footer>
-          <el-button @click="restartDialogVisible = false">知道了</el-button>
+          <el-button @click="restartDialogVisible = false">{{ $t('settings.gotIt') }}</el-button>
         </template>
       </el-dialog>
     </el-card>
@@ -299,7 +299,10 @@
 import { Check } from '@element-plus/icons-vue'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import api from '../api'
+
+const { t } = useI18n()
 
 const activeTab = ref('basic')
 const restartDialogVisible = ref(false)
@@ -429,7 +432,7 @@ const loadSettings = async () => {
     }
   } catch (error) {
     console.error('获取设置失败:', error)
-    ElMessage.error('获取设置失败，使用默认设置')
+    ElMessage.error(t('settings.getSettingsFailed'))
   }
 }
 
@@ -491,10 +494,10 @@ const saveSettings = async () => {
       restartDialogVisible.value = true
     }
     
-    ElMessage.success('保存设置成功')
+    ElMessage.success(t('settings.saveSettingsSuccess'))
   } catch (error) {
     console.error('保存设置失败:', error)
-    ElMessage.error('保存设置失败')
+    ElMessage.error(t('settings.saveSettingsFailed'))
   }
 }
 
@@ -505,10 +508,10 @@ const refreshSystemInfo = async () => {
     if (response && response.data) {
       Object.assign(systemInfo, response.data)
     }
-    ElMessage.success('刷新系统信息成功')
+    ElMessage.success(t('settings.refreshSystemInfoSuccess'))
   } catch (error) {
     console.error('刷新系统信息失败:', error)
-    ElMessage.error('刷新系统信息失败')
+    ElMessage.error(t('settings.refreshSystemInfoFailed'))
   }
 }
 
@@ -549,27 +552,27 @@ const resetPasswordForm = () => {
 const updateAdminPassword = async () => {
   // 验证表单
   if (!passwordForm.oldPassword) {
-    ElMessage.warning('请输入当前密码')
+    ElMessage.warning(t('settings.currentPasswordRequired'))
     return
   }
   
   if (!passwordForm.newPassword) {
-    ElMessage.warning('请输入新密码')
+    ElMessage.warning(t('settings.newPasswordRequired'))
     return
   }
   
   if (passwordForm.newPassword.length < 6) {
-    ElMessage.warning('新密码长度至少为6位')
+    ElMessage.warning(t('settings.newPasswordMinLength'))
     return
   }
   
   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    ElMessage.warning('两次输入的新密码不一致')
+    ElMessage.warning(t('settings.passwordMismatch'))
     return
   }
   
   if (passwordForm.oldPassword === passwordForm.newPassword) {
-    ElMessage.warning('新密码不能与当前密码相同')
+    ElMessage.warning(t('settings.passwordSameAsOld'))
     return
   }
   
@@ -581,11 +584,11 @@ const updateAdminPassword = async () => {
       new_password: passwordForm.newPassword
     })
     
-    ElMessage.success('密码更新成功')
+    ElMessage.success(t('settings.passwordUpdateSuccess'))
     resetPasswordForm()
   } catch (error) {
     console.error('更新密码失败:', error)
-    const errorMsg = error.response?.data?.error || '更新密码失败'
+    const errorMsg = error.response?.data?.error || t('settings.passwordUpdateFailed')
     ElMessage.error(errorMsg)
   } finally {
     passwordUpdating.value = false

@@ -4,13 +4,13 @@
       <div class="login-logo">
         <img src="@/assets/lingproxy-logo.svg" alt="LingProxy Logo" class="logo-img">
         <h1 class="logo-text">LingProxy</h1>
-        <p class="logo-desc">智能LLM代理管理系统</p>
+        <p class="logo-desc">{{ $t('login.subtitle') }}</p>
       </div>
       
       <el-card class="login-form-card">
         <template #header>
           <div class="login-form-header">
-            <h2>用户登录</h2>
+            <h2>{{ $t('login.title') }}</h2>
           </div>
         </template>
         
@@ -21,10 +21,10 @@
           label-width="80px"
           class="login-form"
         >
-          <el-form-item label="用户名" prop="username">
+          <el-form-item :label="$t('login.username')" prop="username">
             <el-input
               v-model="loginForm.username"
-              placeholder="请输入用户名"
+              :placeholder="$t('login.usernamePlaceholder')"
               :prefix-icon="User"
               size="large"
               @keyup.enter="handleLogin"
@@ -32,11 +32,11 @@
             ></el-input>
           </el-form-item>
           
-          <el-form-item label="密码" prop="password">
+          <el-form-item :label="$t('login.password')" prop="password">
             <el-input
               v-model="loginForm.password"
               type="password"
-              placeholder="请输入密码"
+              :placeholder="$t('login.passwordPlaceholder')"
               :prefix-icon="Lock"
               show-password
               size="large"
@@ -53,7 +53,7 @@
               @click="handleLogin"
               size="large"
             >
-              {{ loading ? '登录中...' : '登录' }}
+              {{ loading ? $t('login.loggingIn') : $t('login.loginButton') }}
             </el-button>
           </el-form-item>
         </el-form>
@@ -67,14 +67,16 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import api from '../api'
 import { STORAGE_KEYS } from '../utils/constants'
 
 const router = useRouter()
+const { t } = useI18n()
 const loginFormRef = ref(null)
 const loading = ref(false)
 
@@ -83,16 +85,16 @@ const loginForm = reactive({
   password: ''
 })
 
-const loginRules = {
+const loginRules = computed(() => ({
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 2, message: '用户名长度至少为2位', trigger: 'blur' }
+    { required: true, message: t('login.usernameRequired'), trigger: 'blur' },
+    { min: 2, message: t('login.usernameMinLength'), trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少为6位', trigger: 'blur' }
+    { required: true, message: t('login.passwordRequired'), trigger: 'blur' },
+    { min: 6, message: t('login.passwordMinLength'), trigger: 'blur' }
   ]
-}
+}))
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return
@@ -120,17 +122,17 @@ const handleLogin = async () => {
         localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo))
       }
       
-      ElMessage.success('登录成功')
+      ElMessage.success(t('login.loginSuccess'))
       // 跳转到首页
       router.push('/')
     } else {
-      ElMessage.error('登录失败：未获取到token')
+      ElMessage.error(t('login.loginFailed') + ': ' + t('login.noToken'))
     }
   } catch (error) {
     console.error('登录失败:', error)
     // 错误信息已在API拦截器中处理，这里不需要再次显示
     if (!error.response) {
-      ElMessage.error('网络错误，请检查网络连接')
+      ElMessage.error(t('api.networkError'))
     }
   } finally {
     loading.value = false

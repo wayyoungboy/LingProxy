@@ -3,7 +3,7 @@
     <el-card class="dashboard-card">
       <template #header>
         <div class="card-header">
-          <span class="page-title">系统仪表盘</span>
+          <span class="page-title">{{ $t('dashboard.systemDashboard') }}</span>
           <el-button
             type="primary"
             size="small"
@@ -11,7 +11,7 @@
             :loading="refreshing"
           >
             <el-icon><Refresh /></el-icon>
-            刷新数据
+            {{ $t('dashboard.refreshData') }}
           </el-button>
         </div>
       </template>
@@ -25,7 +25,7 @@
             </div>
             <div class="stat-card-info">
               <div class="stat-card-value">{{ formatNumber(stats.total_users) }}</div>
-              <div class="stat-card-label">总用户数</div>
+              <div class="stat-card-label">{{ $t('dashboard.totalUsers') }}</div>
             </div>
           </div>
         </el-card>
@@ -37,7 +37,7 @@
             </div>
             <div class="stat-card-info">
               <div class="stat-card-value">{{ formatNumber(stats.total_llm_resources) }}</div>
-              <div class="stat-card-label">LLM资源数</div>
+              <div class="stat-card-label">{{ $t('dashboard.totalLLMResources') }}</div>
             </div>
           </div>
         </el-card>
@@ -49,7 +49,7 @@
             </div>
             <div class="stat-card-info">
               <div class="stat-card-value">{{ formatNumber(stats.total_requests) }}</div>
-              <div class="stat-card-label">总请求数</div>
+              <div class="stat-card-label">{{ $t('dashboard.totalRequests') }}</div>
             </div>
           </div>
         </el-card>
@@ -61,7 +61,7 @@
             </div>
             <div class="stat-card-info">
               <div class="stat-card-value">{{ stats.success_rate }}%</div>
-              <div class="stat-card-label">成功率</div>
+              <div class="stat-card-label">{{ $t('dashboard.successRate') }}</div>
             </div>
           </div>
         </el-card>
@@ -72,25 +72,25 @@
         <el-card class="chart-card" shadow="hover">
           <template #header>
             <div class="card-header">
-              <span class="page-title">系统性能</span>
+              <span class="page-title">{{ $t('dashboard.systemPerformance') }}</span>
             </div>
           </template>
           <div class="chart-content">
             <div class="performance-metrics">
               <div class="metric-item">
-                <div class="metric-label">平均响应时间</div>
+                <div class="metric-label">{{ $t('dashboard.avgResponseTime') }}</div>
                 <div class="metric-value">{{ stats.avg_response_time }}ms</div>
               </div>
               <div class="metric-item">
-                <div class="metric-label">今日请求数</div>
+                <div class="metric-label">{{ $t('dashboard.todayRequests') }}</div>
                 <div class="metric-value">{{ formatNumber(todayRequests) }}</div>
               </div>
               <div class="metric-item">
-                <div class="metric-label">系统状态</div>
-                <div class="metric-value status-online">正常运行</div>
+                <div class="metric-label">{{ $t('dashboard.systemStatus') }}</div>
+                <div class="metric-value status-online">{{ $t('dashboard.running') }}</div>
               </div>
               <div class="metric-item">
-                <div class="metric-label">运行时间</div>
+                <div class="metric-label">{{ $t('dashboard.runningTime') }}</div>
                 <div class="metric-value">{{ uptime || '--' }}</div>
               </div>
             </div>
@@ -103,13 +103,13 @@
         <el-card class="requests-card" shadow="hover">
           <template #header>
             <div class="card-header">
-              <span class="page-title">最近请求</span>
+              <span class="page-title">{{ $t('dashboard.recentRequests') }}</span>
               <el-button
                 type="primary"
                 size="small"
                 @click="navigateToRequests"
               >
-                查看全部
+                {{ $t('dashboard.viewAll') }}
               </el-button>
             </div>
           </template>
@@ -121,24 +121,24 @@
             stripe
             size="small"
           >
-            <el-table-column prop="id" label="请求ID" width="180" />
-            <el-table-column prop="user_id" label="用户ID" width="180" />
-            <el-table-column prop="endpoint" label="端点" />
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="id" :label="$t('requests.requestId')" width="180" />
+            <el-table-column prop="user_id" :label="$t('dashboard.userId')" width="180" />
+            <el-table-column prop="endpoint" :label="$t('llmResources.endpoint')" />
+            <el-table-column prop="status" :label="$t('common.status')" width="100">
               <template #default="scope">
                 <el-tag
                   :type="scope.row.status === 'success' ? 'success' : 'danger'"
                 >
-                  {{ scope.row.status === 'success' ? '成功' : '失败' }}
+                  {{ scope.row.status === 'success' ? $t('requests.success') : $t('requests.failed') }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="duration" label="响应时间" width="120">
+            <el-table-column prop="duration" :label="$t('requests.duration')" width="120">
               <template #default="scope">
                 {{ scope.row.duration }}ms
               </template>
             </el-table-column>
-            <el-table-column prop="created_at" label="创建时间" width="180">
+            <el-table-column prop="created_at" :label="$t('common.createdAt')" width="180">
               <template #default="scope">
                 {{ formatDate(scope.row.created_at) }}
               </template>
@@ -146,7 +146,7 @@
           </el-table>
           
           <div v-if="recentRequests.length === 0" class="no-data">
-            <el-empty description="暂无请求记录" />
+            <el-empty :description="$t('dashboard.noRequests')" />
           </div>
         </el-card>
       </div>
@@ -157,6 +157,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import {
   Refresh,
@@ -169,6 +170,7 @@ import api from '../api'
 import { formatDate, formatNumber } from '../utils/index'
 
 const router = useRouter()
+const { t } = useI18n()
 const refreshing = ref(false)
 const stats = reactive({
   total_users: 0,

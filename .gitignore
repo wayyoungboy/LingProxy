@@ -49,6 +49,8 @@ lingproxy
 .env.local
 .env.*.local
 
+.cursor/
+
 # Configuration files with sensitive data
 backend/configs/config.yaml
 !backend/configs/config.yaml.example
@@ -64,3 +66,4 @@ test_report/
 
 设计方案*main
 main
+dev_doc/

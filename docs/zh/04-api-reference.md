@@ -17,11 +17,18 @@ Authorization: Bearer YOUR_API_KEY_OR_TOKEN
 
 ### 聊天补全
 
-创建聊天补全。
+创建聊天补全。支持流式响应（Server-Sent Events）。
 
 **端点：** `POST /llm/v1/chat/completions`
 
-**请求：**
+**请求参数：**
+- `model` (string, 必需): 模型名称
+- `messages` (array, 必需): 消息数组
+- `temperature` (number, 可选): 采样温度，0-2之间
+- `max_tokens` (integer, 可选): 最大生成token数
+- `stream` (boolean, 可选): 是否启用流式响应，默认为 `false`
+
+**非流式请求示例：**
 ```json
 {
   "model": "gpt-3.5-turbo",
@@ -34,7 +41,7 @@ Authorization: Bearer YOUR_API_KEY_OR_TOKEN
 }
 ```
 
-**响应：**
+**非流式响应：**
 ```json
 {
   "id": "chatcmpl-123",
@@ -56,6 +63,37 @@ Authorization: Bearer YOUR_API_KEY_OR_TOKEN
   }
 }
 ```
+
+**流式请求示例：**
+```json
+{
+  "model": "gpt-3.5-turbo",
+  "messages": [
+    {"role": "user", "content": "你好！"}
+  ],
+  "stream": true
+}
+```
+
+**流式响应（SSE格式）：**
+```
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"你好"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"！"},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+**流式响应说明：**
+- 响应头设置为 `Content-Type: text/event-stream`
+- 每个数据块以 `data: ` 开头，后跟 JSON 对象
+- 流式响应结束时发送 `data: [DONE]`
+- 每个 chunk 包含 `delta` 字段，包含增量内容
+- 详细使用说明请参考 [流式响应文档](../STREAMING.md)
 
 ### 列出模型
 

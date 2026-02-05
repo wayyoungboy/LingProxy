@@ -17,11 +17,18 @@ Authorization: Bearer YOUR_API_KEY_OR_TOKEN
 
 ### Chat Completions
 
-Create a chat completion.
+Create a chat completion. Supports streaming responses (Server-Sent Events).
 
 **Endpoint:** `POST /llm/v1/chat/completions`
 
-**Request:**
+**Request Parameters:**
+- `model` (string, required): Model name
+- `messages` (array, required): Array of messages
+- `temperature` (number, optional): Sampling temperature, between 0 and 2
+- `max_tokens` (integer, optional): Maximum tokens to generate
+- `stream` (boolean, optional): Enable streaming response, defaults to `false`
+
+**Non-streaming Request Example:**
 ```json
 {
   "model": "gpt-3.5-turbo",
@@ -34,7 +41,7 @@ Create a chat completion.
 }
 ```
 
-**Response:**
+**Non-streaming Response:**
 ```json
 {
   "id": "chatcmpl-123",
@@ -56,6 +63,37 @@ Create a chat completion.
   }
 }
 ```
+
+**Streaming Request Example:**
+```json
+{
+  "model": "gpt-3.5-turbo",
+  "messages": [
+    {"role": "user", "content": "Hello!"}
+  ],
+  "stream": true
+}
+```
+
+**Streaming Response (SSE Format):**
+```
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"!"},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+**Streaming Response Notes:**
+- Response headers are set to `Content-Type: text/event-stream`
+- Each data chunk starts with `data: ` followed by a JSON object
+- Streaming response ends with `data: [DONE]`
+- Each chunk contains a `delta` field with incremental content
+- For detailed usage instructions, see [Streaming Documentation](../STREAMING.md)
 
 ### List Models
 

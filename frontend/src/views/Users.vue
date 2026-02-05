@@ -3,10 +3,10 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>用户管理</span>
+          <span>{{ $t('users.title') }}</span>
           <el-button type="primary" @click="handleAddUser">
             <el-icon><Plus /></el-icon>
-            添加用户
+            {{ $t('users.addUser') }}
           </el-button>
         </div>
       </template>
@@ -15,18 +15,18 @@
       <div class="search-filter">
         <el-input
           v-model="searchQuery"
-          placeholder="搜索用户名"
+          :placeholder="$t('users.searchUsername')"
           prefix-icon="Search"
           style="width: 240px; margin-right: 10px"
         ></el-input>
         <el-select
           v-model="statusFilter"
-          placeholder="筛选状态"
+          :placeholder="$t('users.filterStatus')"
           style="width: 120px"
         >
-          <el-option label="全部" value=""></el-option>
-          <el-option label="活跃" value="active"></el-option>
-          <el-option label="禁用" value="inactive"></el-option>
+          <el-option :label="$t('users.all')" value=""></el-option>
+          <el-option :label="$t('users.active')" value="active"></el-option>
+          <el-option :label="$t('users.inactive')" value="inactive"></el-option>
         </el-select>
       </div>
       
@@ -37,39 +37,39 @@
         style="width: 100%; margin-top: 20px"
         border
       >
-        <el-table-column prop="id" label="ID" width="180" />
-        <el-table-column prop="username" label="用户名" />
-        <el-table-column prop="role" label="角色" width="100">
+        <el-table-column prop="id" :label="$t('users.id')" width="180" />
+        <el-table-column prop="username" :label="$t('users.username')" />
+        <el-table-column prop="role" :label="$t('users.role')" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'primary'">
-              {{ scope.row.role === 'admin' ? '管理员' : '用户' }}
+              {{ scope.row.role === 'admin' ? $t('users.admin') : $t('users.user') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="api_key" label="API Key" width="300">
+        <el-table-column prop="api_key" :label="$t('users.apiKey')" width="300">
           <template #default="scope">
-            <el-tooltip content="点击复制" placement="top">
+            <el-tooltip :content="$t('users.clickToCopy')" placement="top">
               <span @click="copyApiKey(scope.row.api_key)" style="cursor: pointer;">
-                {{ scope.row.api_key || '未生成' }}
+                {{ scope.row.api_key || $t('users.notGenerated') }}
               </span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" :label="$t('users.status')" width="100">
           <template #default="scope">
             <el-tag
               :type="scope.row.status === 'active' ? 'success' : scope.row.status === 'suspended' ? 'warning' : 'danger'"
             >
-              {{ scope.row.status === 'active' ? '活跃' : scope.row.status === 'suspended' ? '暂停' : '禁用' }}
+              {{ scope.row.status === 'active' ? $t('users.active') : scope.row.status === 'suspended' ? $t('users.suspended') : $t('users.inactive') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
+        <el-table-column prop="created_at" :label="$t('users.createdAt')" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280">
+        <el-table-column :label="$t('users.actions')" width="280">
           <template #default="scope">
             <el-button
               type="primary"
@@ -77,7 +77,7 @@
               @click="handleEditUser(scope.row)"
               style="margin-right: 5px"
             >
-              编辑
+              {{ $t('users.edit') }}
             </el-button>
             <el-button
               type="warning"
@@ -85,14 +85,14 @@
               @click="handleResetAPIKey(scope.row.id)"
               style="margin-right: 5px"
             >
-              重置Key
+              {{ $t('users.resetKey') }}
             </el-button>
             <el-button
               type="danger"
               size="small"
               @click="handleDeleteUser(scope.row.id)"
             >
-              删除
+              {{ $t('users.delete') }}
             </el-button>
           </template>
         </el-table-column>
@@ -124,48 +124,48 @@
         :rules="userRules"
         label-width="80px"
       >
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
+        <el-form-item :label="$t('users.username')" prop="username">
+          <el-input v-model="userForm.username" :placeholder="$t('users.usernamePlaceholder')"></el-input>
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="isAddMode">
+        <el-form-item :label="$t('users.password')" prop="password" v-if="isAddMode">
           <el-input
             v-model="userForm.password"
             type="password"
-            placeholder="请输入密码（至少6位）"
+            :placeholder="$t('users.passwordPlaceholder')"
             show-password
           ></el-input>
         </el-form-item>
-        <el-form-item label="角色" prop="role">
-          <el-select v-model="userForm.role" placeholder="请选择角色">
-            <el-option label="管理员" value="admin"></el-option>
-            <el-option label="普通用户" value="user"></el-option>
+        <el-form-item :label="$t('users.role')" prop="role">
+          <el-select v-model="userForm.role" :placeholder="$t('users.selectRole')">
+            <el-option :label="$t('users.admin')" value="admin"></el-option>
+            <el-option :label="$t('users.user')" value="user"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="API Key" prop="api_key">
+        <el-form-item :label="$t('users.apiKey')" prop="api_key">
           <el-input
             v-model="userForm.api_key"
-            placeholder="API Key（创建时自动生成）"
+            :placeholder="$t('users.apiKeyPlaceholder')"
             :disabled="true"
           >
             <template #append>
               <el-button @click="handleResetAPIKey(userForm.id)" type="text" :disabled="isAddMode">
-                重置
+                {{ $t('users.reset') }}
               </el-button>
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-select v-model="userForm.status" placeholder="请选择状态">
-            <el-option label="活跃" value="active"></el-option>
-            <el-option label="禁用" value="inactive"></el-option>
-            <el-option label="暂停" value="suspended"></el-option>
+        <el-form-item :label="$t('users.status')" prop="status">
+          <el-select v-model="userForm.status" :placeholder="$t('users.selectStatus')">
+            <el-option :label="$t('users.active')" value="active"></el-option>
+            <el-option :label="$t('users.inactive')" value="inactive"></el-option>
+            <el-option :label="$t('users.suspended')" value="suspended"></el-option>
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSaveUser">确定</el-button>
+          <el-button @click="dialogVisible = false">{{ $t('users.cancel') }}</el-button>
+          <el-button type="primary" @click="handleSaveUser">{{ $t('users.confirm') }}</el-button>
         </span>
       </template>
     </el-dialog>
@@ -176,7 +176,10 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, CopyDocument } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import api from '../api'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const users = ref([])
@@ -201,21 +204,21 @@ const userForm = reactive({
 })
 
 // 表单验证规则
-const userRules = {
+const userRules = computed(() => ({
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 50, message: '用户名长度在3到50个字符', trigger: 'blur' }
+    { required: true, message: t('users.usernameRequired'), trigger: 'blur' },
+    { min: 3, max: 50, message: t('users.usernameLength'), trigger: 'blur' }
   ],
   password: [
-    { min: 6, message: '密码长度至少为6位', trigger: 'blur' }
+    { min: 6, message: t('users.passwordMinLength'), trigger: 'blur' }
   ],
   role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
+    { required: true, message: t('users.roleRequired'), trigger: 'change' }
   ],
   status: [
-    { required: true, message: '请选择状态', trigger: 'change' }
+    { required: true, message: t('users.statusRequired'), trigger: 'change' }
   ]
-}
+}))
 
 // 获取用户列表
 const getUserList = async () => {
@@ -229,7 +232,7 @@ const getUserList = async () => {
     }
   } catch (error) {
     console.error('获取用户列表失败:', error)
-    ElMessage.error('获取用户列表失败')
+    ElMessage.error(t('users.getListFailed'))
   } finally {
     loading.value = false
   }
@@ -261,7 +264,7 @@ const filteredUsers = computed(() => {
 // 处理添加用户
 const handleAddUser = () => {
   isAddMode.value = true
-  dialogTitle.value = '添加用户'
+  dialogTitle.value = t('users.addUser')
   // 重置表单
   Object.assign(userForm, {
     id: '',
@@ -277,7 +280,7 @@ const handleAddUser = () => {
 // 处理编辑用户
 const handleEditUser = (user) => {
   isAddMode.value = false
-  dialogTitle.value = '编辑用户'
+  dialogTitle.value = t('users.editUser')
   // 填充表单
   Object.assign(userForm, user)
   dialogVisible.value = true
@@ -292,11 +295,11 @@ const handleSaveUser = async () => {
     if (isAddMode.value) {
       // 创建用户
       await api.createUser(userForm)
-      ElMessage.success('用户创建成功')
+      ElMessage.success(t('users.createSuccess'))
     } else {
       // 更新用户
       await api.updateUser(userForm.id, userForm)
-      ElMessage.success('用户更新成功')
+      ElMessage.success(t('users.updateSuccess'))
     }
     
     // 关闭对话框
@@ -305,7 +308,7 @@ const handleSaveUser = async () => {
     getUserList()
   } catch (error) {
     console.error('保存用户失败:', error)
-    ElMessage.error('保存用户失败')
+    ElMessage.error(t('users.saveFailed'))
   }
 }
 
@@ -313,23 +316,23 @@ const handleSaveUser = async () => {
 const handleDeleteUser = async (id) => {
   try {
     await ElMessageBox.confirm(
-      '确定要删除这个用户吗？',
-      '删除确认',
+      t('users.deleteConfirmMessage'),
+      t('users.deleteConfirm'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'danger'
       }
     )
     
     await api.deleteUser(id)
-    ElMessage.success('用户删除成功')
+    ElMessage.success(t('users.deleteSuccess'))
     // 重新获取用户列表
     getUserList()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除用户失败:', error)
-      ElMessage.error('删除用户失败')
+      ElMessage.error(t('users.deleteFailed'))
     }
   }
 }
@@ -337,17 +340,17 @@ const handleDeleteUser = async (id) => {
 // 重置API Key
 const handleResetAPIKey = async (userId) => {
   if (!userId) {
-    ElMessage.warning('请先保存用户')
+    ElMessage.warning(t('users.saveUserFirst'))
     return
   }
   
   try {
     await ElMessageBox.confirm(
-      '确定要重置这个用户的API Key吗？重置后旧的API Key将失效。',
-      '重置确认',
+      t('users.resetKeyConfirmMessage'),
+      t('users.resetKeyConfirm'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning'
       }
     )
@@ -355,14 +358,14 @@ const handleResetAPIKey = async (userId) => {
     const response = await api.resetAPIKey(userId)
     if (response && response.data) {
       userForm.api_key = response.data.api_key
-      ElMessage.success('API Key重置成功')
+      ElMessage.success(t('users.resetKeySuccess'))
       // 重新获取用户列表
       getUserList()
     }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('重置API Key失败:', error)
-      ElMessage.error('重置API Key失败')
+      ElMessage.error(t('users.resetKeyFailed'))
     }
   }
 }
@@ -370,9 +373,9 @@ const handleResetAPIKey = async (userId) => {
 // 复制API Key
 const copyApiKey = (apiKey) => {
   navigator.clipboard.writeText(apiKey).then(() => {
-    ElMessage.success('API Key 已复制到剪贴板')
+    ElMessage.success(t('users.apiKeyCopied'))
   }).catch(() => {
-    ElMessage.error('复制失败')
+    ElMessage.error(t('users.copyFailed'))
   })
 }
 

@@ -3,11 +3,11 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="page-title">LLM资源管理</span>
+          <span class="page-title">{{ $t('llmResources.title') }}</span>
           <div class="header-actions">
             <el-button type="success" @click="handleDownloadTemplate">
               <el-icon><Download /></el-icon>
-              下载导入模板
+              {{ $t('llmResources.downloadTemplate') }}
             </el-button>
             <el-upload
               ref="uploadRef"
@@ -21,16 +21,16 @@
             >
               <el-button type="warning">
                 <el-icon><Upload /></el-icon>
-                Excel批量导入
+                {{ $t('llmResources.excelImport') }}
               </el-button>
             </el-upload>
             <el-button type="warning" plain @click="jsonImportDialogVisible = true">
               <el-icon><Upload /></el-icon>
-              JSON批量导入
+              {{ $t('llmResources.jsonImport') }}
             </el-button>
             <el-button type="primary" @click="handleAddResource">
               <el-icon><Plus /></el-icon>
-              添加LLM资源
+              {{ $t('llmResources.addResource') }}
             </el-button>
           </div>
         </div>
@@ -40,31 +40,31 @@
       <div class="search-filter">
         <el-input
           v-model="searchQuery"
-          placeholder="搜索资源名称或基础URL"
+          :placeholder="$t('llmResources.searchPlaceholder')"
           :prefix-icon="Search"
           style="width: 300px; margin-right: 10px"
         ></el-input>
         <el-select
           v-model="typeFilter"
-          placeholder="筛选模型类别"
+          :placeholder="$t('llmResources.filterType')"
           style="width: 140px; margin-right: 10px"
         >
-          <el-option label="全部" value=""></el-option>
-          <el-option label="对话" value="chat"></el-option>
-          <el-option label="生图" value="image"></el-option>
-          <el-option label="嵌入" value="embedding"></el-option>
-          <el-option label="重排序" value="rerank"></el-option>
-          <el-option label="语音" value="audio"></el-option>
-          <el-option label="视频" value="video"></el-option>
+          <el-option :label="$t('common.all')" value=""></el-option>
+          <el-option :label="$t('llmResources.typeChat')" value="chat"></el-option>
+          <el-option :label="$t('llmResources.typeImage')" value="image"></el-option>
+          <el-option :label="$t('llmResources.typeEmbedding')" value="embedding"></el-option>
+          <el-option :label="$t('llmResources.typeRerank')" value="rerank"></el-option>
+          <el-option :label="$t('llmResources.typeAudio')" value="audio"></el-option>
+          <el-option :label="$t('llmResources.typeVideo')" value="video"></el-option>
         </el-select>
         <el-select
           v-model="statusFilter"
-          placeholder="筛选状态"
+          :placeholder="$t('llmResources.filterStatus')"
           style="width: 120px"
         >
-          <el-option label="全部" value=""></el-option>
-          <el-option label="活跃" value="active"></el-option>
-          <el-option label="禁用" value="inactive"></el-option>
+          <el-option :label="$t('common.all')" value=""></el-option>
+          <el-option :label="$t('llmResources.active')" value="active"></el-option>
+          <el-option :label="$t('llmResources.inactive')" value="inactive"></el-option>
         </el-select>
       </div>
       
@@ -77,48 +77,48 @@
         stripe
       >
         <el-table-column prop="id" label="ID" width="180" />
-        <el-table-column prop="name" label="资源名称" />
-        <el-table-column prop="type" label="模型类别" width="120">
+        <el-table-column prop="name" :label="$t('llmResources.name')" />
+        <el-table-column prop="type" :label="$t('llmResources.modelType')" width="120">
           <template #default="scope">
             <el-tag>{{ getTypeLabel(scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="driver" label="驱动" width="100">
+        <el-table-column prop="driver" :label="$t('llmResources.driver')" width="100">
           <template #default="scope">
             <el-tag type="info">{{ getDriverLabel(scope.row.driver) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="model" label="模型标识" width="150">
+        <el-table-column prop="model" :label="$t('llmResources.modelId')" width="150">
           <template #default="scope">
             <el-tag type="warning" v-if="scope.row.model">{{ scope.row.model }}</el-tag>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="base_url" label="基础URL" />
-        <el-table-column prop="status" label="状态">
+        <el-table-column prop="base_url" :label="$t('llmResources.baseUrl')" />
+        <el-table-column prop="status" :label="$t('common.status')">
           <template #default="scope">
             <el-tag
               :type="scope.row.status === 'active' ? 'success' : 'danger'"
             >
-              {{ scope.row.status === 'active' ? '活跃' : '禁用' }}
+              {{ scope.row.status === 'active' ? $t('llmResources.active') : $t('llmResources.inactive') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="test_status" label="测试状态" width="120">
+        <el-table-column prop="test_status" :label="$t('llmResources.testStatus')" width="120">
           <template #default="scope">
             <el-tag
               :type="scope.row.test_status === 'passed' ? 'success' : scope.row.test_status === 'failed' ? 'danger' : 'info'"
             >
-              {{ scope.row.test_status === 'passed' ? '通过' : scope.row.test_status === 'failed' ? '失败' : '未测试' }}
+              {{ scope.row.test_status === 'passed' ? $t('llmResources.testPassed') : scope.row.test_status === 'failed' ? $t('llmResources.testFailed') : $t('llmResources.testNotTested') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
+        <el-table-column prop="created_at" :label="$t('common.createdAt')" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="300">
+        <el-table-column :label="$t('common.actions')" width="300">
           <template #default="scope">
             <el-button
               type="success"
@@ -127,7 +127,7 @@
               :loading="testingResources[scope.row.id]"
               style="margin-right: 5px"
             >
-              测试
+              {{ $t('llmResources.test') }}
             </el-button>
             <el-button
               type="primary"
@@ -135,14 +135,14 @@
               @click="handleEditResource(scope.row)"
               style="margin-right: 5px"
             >
-              编辑
+              {{ $t('common.edit') }}
             </el-button>
             <el-button
               type="danger"
               size="small"
               @click="handleDeleteResource(scope.row.id)"
             >
-              删除
+              {{ $t('common.delete') }}
             </el-button>
           </template>
         </el-table-column>
@@ -174,67 +174,67 @@
         :rules="resourceRules"
         label-width="100px"
       >
-        <el-form-item label="资源名称" prop="name">
-          <el-input v-model="resourceForm.name" placeholder="请输入资源名称"></el-input>
+        <el-form-item :label="$t('llmResources.name')" prop="name">
+          <el-input v-model="resourceForm.name" :placeholder="$t('llmResources.nameRequired')"></el-input>
         </el-form-item>
-        <el-form-item label="模型类别" prop="type">
+        <el-form-item :label="$t('llmResources.modelType')" prop="type">
           <el-select 
             v-model="resourceForm.type" 
-            placeholder="请选择模型类别"
+            :placeholder="$t('llmResources.selectType')"
           >
-            <el-option label="对话" value="chat"></el-option>
-            <el-option label="生图" value="image"></el-option>
-            <el-option label="嵌入" value="embedding"></el-option>
-            <el-option label="重排序" value="rerank"></el-option>
-            <el-option label="语音" value="audio"></el-option>
-            <el-option label="视频" value="video"></el-option>
+            <el-option :label="$t('llmResources.typeChat')" value="chat"></el-option>
+            <el-option :label="$t('llmResources.typeImage')" value="image"></el-option>
+            <el-option :label="$t('llmResources.typeEmbedding')" value="embedding"></el-option>
+            <el-option :label="$t('llmResources.typeRerank')" value="rerank"></el-option>
+            <el-option :label="$t('llmResources.typeAudio')" value="audio"></el-option>
+            <el-option :label="$t('llmResources.typeVideo')" value="video"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="驱动" prop="driver">
+        <el-form-item :label="$t('llmResources.driver')" prop="driver">
           <el-select 
             v-model="resourceForm.driver" 
-            placeholder="请选择驱动"
+            :placeholder="$t('llmResources.selectDriver')"
             @change="handleDriverChange"
           >
             <el-option label="OpenAI" value="openai"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="模型标识" prop="model">
+        <el-form-item :label="$t('llmResources.modelId')" prop="model">
           <el-input 
             v-model="resourceForm.model" 
-            placeholder="请输入模型标识，如：gpt-4, gpt-3.5-turbo（此资源对应的模型标识）"
+            :placeholder="$t('llmResources.modelIdPlaceholder')"
           ></el-input>
         </el-form-item>
-        <el-form-item label="基础URL" prop="base_url">
+        <el-form-item :label="$t('llmResources.baseUrl')" prop="base_url">
           <el-input 
             v-model="resourceForm.base_url" 
-            placeholder="选择驱动后将自动填充"
+            :placeholder="$t('llmResources.baseUrlPlaceholder')"
           ></el-input>
         </el-form-item>
-        <el-form-item label="API密钥" prop="api_key">
+        <el-form-item :label="$t('llmResources.apiKey')" prop="api_key">
           <el-input
             v-model="resourceForm.api_key"
-            placeholder="请输入API密钥"
+            :placeholder="$t('llmResources.apiKeyRequired')"
             :type="apiKeyVisible ? 'text' : 'password'"
           >
             <template #append>
               <el-button @click="apiKeyVisible = !apiKeyVisible" type="text">
-                {{ apiKeyVisible ? '隐藏' : '显示' }}
+                {{ apiKeyVisible ? $t('common.hide') : $t('common.show') }}
               </el-button>
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-select v-model="resourceForm.status" placeholder="请选择状态">
-            <el-option label="活跃" value="active"></el-option>
-            <el-option label="禁用" value="inactive"></el-option>
+        <el-form-item :label="$t('common.status')" prop="status">
+          <el-select v-model="resourceForm.status" :placeholder="$t('llmResources.selectStatus')">
+            <el-option :label="$t('llmResources.active')" value="active"></el-option>
+            <el-option :label="$t('llmResources.inactive')" value="inactive"></el-option>
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSaveResource">确定</el-button>
+          <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+          <el-button type="primary" @click="handleSaveResource">{{ $t('common.confirm') }}</el-button>
         </span>
       </template>
     </el-dialog>
@@ -242,42 +242,42 @@
     <!-- JSON 批量导入对话框 -->
     <el-dialog
       v-model="jsonImportDialogVisible"
-      title="JSON 批量导入 LLM 资源"
+      :title="$t('llmResources.jsonImportTitle')"
       width="720px"
     >
       <el-alert
         type="info"
         :closable="false"
         show-icon
-        title="请按示例格式提供 JSON 数组，每一项为一个 LLM 资源对象。必填字段：name、type、model、base_url、api_key。"
+        :title="$t('llmResources.jsonImportNotice')"
       />
 
       <div class="json-import-example">
         <div class="json-import-example-header">
-          <span>JSON 格式示例</span>
+          <span>{{ $t('llmResources.jsonExample') }}</span>
           <el-button type="primary" text size="small" @click="fillJsonExample">
-            一键填充到编辑区
+            {{ $t('llmResources.fillExample') }}
           </el-button>
         </div>
         <pre class="json-example-block">{{ jsonImportExample }}</pre>
       </div>
 
       <el-form label-position="top">
-        <el-form-item label="要导入的 JSON 数据">
+        <el-form-item :label="$t('llmResources.jsonDataLabel')">
           <el-input
             v-model="jsonImportText"
             type="textarea"
             :rows="12"
-            placeholder="在此粘贴或编辑要导入的 JSON 数组，例如上方示例"
+            :placeholder="$t('llmResources.jsonDataPlaceholder')"
           />
         </el-form-item>
       </el-form>
 
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="jsonImportDialogVisible = false">取消</el-button>
+          <el-button @click="jsonImportDialogVisible = false">{{ $t('common.cancel') }}</el-button>
           <el-button type="primary" :loading="jsonImportLoading" @click="handleJsonImport">
-            开始导入
+            {{ $t('llmResources.startImport') }}
           </el-button>
         </span>
       </template>
@@ -288,11 +288,13 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, View, Hide, Upload, Download } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()
+const { t } = useI18n()
 const loading = ref(false)
 const resources = ref([])
 const searchQuery = ref('')
@@ -356,29 +358,29 @@ const resourceForm = reactive({
 })
 
 // 表单验证规则
-const resourceRules = {
+const resourceRules = computed(() => ({
   name: [
-    { required: true, message: '请输入资源名称', trigger: 'blur' }
+    { required: true, message: t('llmResources.nameRequired'), trigger: 'blur' }
   ],
   type: [
-    { required: true, message: '请选择模型类别', trigger: 'change' }
+    { required: true, message: t('llmResources.typeRequired'), trigger: 'change' }
   ],
   driver: [
-    { required: true, message: '请选择驱动', trigger: 'change' }
+    { required: true, message: t('llmResources.driverRequired'), trigger: 'change' }
   ],
   model: [
-    { required: true, message: '请输入模型标识', trigger: 'blur' }
+    { required: true, message: t('llmResources.modelRequired'), trigger: 'blur' }
   ],
   base_url: [
-    { required: true, message: '请输入基础URL', trigger: 'blur' }
+    { required: true, message: t('llmResources.endpointRequired'), trigger: 'blur' }
   ],
   api_key: [
-    { required: true, message: '请输入API密钥', trigger: 'blur' }
+    { required: true, message: t('llmResources.apiKeyRequired'), trigger: 'blur' }
   ],
   status: [
-    { required: true, message: '请选择状态', trigger: 'change' }
+    { required: true, message: t('llmResources.statusRequired'), trigger: 'change' }
   ]
-}
+}))
 
 // 获取LLM资源列表
 const getResourceList = async () => {
@@ -403,7 +405,7 @@ const getResourceList = async () => {
     }
   } catch (error) {
     console.error('获取LLM资源列表失败:', error)
-    ElMessage.error('获取LLM资源列表失败')
+    ElMessage.error(t('llmResources.getListFailed'))
   } finally {
     loading.value = false
   }
@@ -444,19 +446,17 @@ const filteredResources = computed(() => {
   return result.slice(startIndex, endIndex)
 })
 
-// 模型类别标签映射
-const typeLabels = {
-  chat: '对话',
-  image: '生图',
-  embedding: '嵌入',
-  rerank: '重排序',
-  audio: '语音',
-  video: '视频'
-}
-
 // 获取模型类别标签
 const getTypeLabel = (type) => {
-  return typeLabels[type] || type
+  const labels = {
+    chat: t('llmResources.typeChat'),
+    image: t('llmResources.typeImage'),
+    embedding: t('llmResources.typeEmbedding'),
+    rerank: t('llmResources.typeRerank'),
+    audio: t('llmResources.typeAudio'),
+    video: t('llmResources.typeVideo')
+  }
+  return labels[type] || type
 }
 
 // 驱动标签映射
@@ -491,7 +491,7 @@ const handleDriverChange = (driver) => {
 // 处理添加资源
 const handleAddResource = () => {
   isAddMode.value = true
-  dialogTitle.value = '添加LLM资源'
+  dialogTitle.value = t('llmResources.addResource')
   // 重置表单
   Object.assign(resourceForm, {
     id: '',
@@ -510,7 +510,7 @@ const handleAddResource = () => {
 // 处理编辑资源
 const handleEditResource = (resource) => {
   isAddMode.value = false
-  dialogTitle.value = '编辑LLM资源'
+  dialogTitle.value = t('llmResources.editResource')
   // 填充表单
   Object.assign(resourceForm, resource)
   apiKeyVisible.value = false
@@ -526,11 +526,11 @@ const handleSaveResource = async () => {
     if (isAddMode.value) {
       // 创建资源
       await api.createLLMResource(resourceForm)
-      ElMessage.success('LLM资源创建成功')
+      ElMessage.success(t('llmResources.createSuccess'))
     } else {
       // 更新资源
       await api.updateLLMResource(resourceForm.id, resourceForm)
-      ElMessage.success('LLM资源更新成功')
+      ElMessage.success(t('llmResources.updateSuccess'))
     }
     
     // 关闭对话框
@@ -539,7 +539,7 @@ const handleSaveResource = async () => {
     getResourceList()
   } catch (error) {
     console.error('保存LLM资源失败:', error)
-    ElMessage.error('保存LLM资源失败')
+    ElMessage.error(t('llmResources.saveFailed'))
   }
 }
 
@@ -547,23 +547,23 @@ const handleSaveResource = async () => {
 const handleDeleteResource = async (id) => {
   try {
     await ElMessageBox.confirm(
-      '确定要删除这个LLM资源吗？',
-      '删除确认',
+      t('llmResources.deleteConfirmMessage'),
+      t('llmResources.deleteConfirm'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'danger'
       }
     )
     
     await api.deleteLLMResource(id)
-    ElMessage.success('LLM资源删除成功')
+    ElMessage.success(t('llmResources.deleteSuccess'))
     // 重新获取资源列表
     getResourceList()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除LLM资源失败:', error)
-      ElMessage.error('删除LLM资源失败')
+      ElMessage.error(t('llmResources.deleteFailed'))
     }
   }
 }
@@ -572,7 +572,7 @@ const handleDeleteResource = async (id) => {
 const handleTestResource = async (resource) => {
   // 检查资源状态
   if (resource.status !== 'active') {
-    ElMessage.warning('只能测试活跃状态的资源')
+    ElMessage.warning(t('llmResources.testOnlyActive'))
     return
   }
 
@@ -584,27 +584,27 @@ const handleTestResource = async (resource) => {
     
     if (result && result.success) {
       // 测试成功，显示详细信息
-      let message = `测试成功！\n`
-      message += `耗时: ${result.duration_ms}ms\n`
+      let message = t('llmResources.testSuccess') + '！\n'
+      message += t('llmResources.duration') + `: ${result.duration_ms}ms\n`
       
       if (result.model) {
-        message += `模型: ${result.model}\n`
+        message += t('llmResources.model') + `: ${result.model}\n`
       }
       
       if (result.response) {
-        message += `响应: ${result.response}\n`
+        message += t('llmResources.response') + `: ${result.response}\n`
       }
       
       if (result.embedding_dimension) {
-        message += `向量维度: ${result.embedding_dimension}\n`
+        message += t('llmResources.embeddingDimension') + `: ${result.embedding_dimension}\n`
       }
       
       if (result.usage) {
-        message += `Token使用: ${JSON.stringify(result.usage, null, 2)}`
+        message += t('llmResources.tokenUsage') + `: ${JSON.stringify(result.usage, null, 2)}`
       }
       
-      ElMessageBox.alert(message, '测试成功', {
-        confirmButtonText: '确定',
+      ElMessageBox.alert(message, t('llmResources.testSuccess'), {
+        confirmButtonText: t('common.confirm'),
         type: 'success',
         dangerouslyUseHTMLString: false
       })
@@ -653,7 +653,7 @@ const handleDownloadTemplate = async () => {
     // 响应拦截器对于blob响应返回的是整个response对象
     // response.data应该是Blob类型
     if (!response || !response.data) {
-      ElMessage.error('下载失败：响应格式不正确')
+      ElMessage.error(t('llmResources.downloadFailedFormat'))
       return
     }
     
@@ -661,7 +661,7 @@ const handleDownloadTemplate = async () => {
     
     // 验证blob是否有效
     if (!blob || blob.size === 0) {
-      ElMessage.error('下载的文件为空，请重试')
+      ElMessage.error(t('llmResources.downloadEmpty'))
       return
     }
     
@@ -678,9 +678,9 @@ const handleDownloadTemplate = async () => {
       const text = await blob.text()
       try {
         const errorData = JSON.parse(text)
-        ElMessage.error(errorData.error || '下载模板失败')
+        ElMessage.error(errorData.error || t('llmResources.downloadFailed'))
       } catch (e) {
-        ElMessage.error('下载的文件格式不正确，请重试')
+        ElMessage.error(t('llmResources.downloadInvalidFormat'))
       }
       return
     }
@@ -703,7 +703,7 @@ const handleDownloadTemplate = async () => {
     ElMessage.success('模板下载成功')
   } catch (error) {
     console.error('下载模板失败:', error)
-    ElMessage.error(error.response?.data?.error || error.message || '下载模板失败')
+    ElMessage.error(error.response?.data?.error || error.message || t('llmResources.downloadFailed'))
   }
 }
 
@@ -714,12 +714,12 @@ const beforeUpload = (file) => {
                   file.name.endsWith('.xlsx') ||
                   file.name.endsWith('.xls')
   if (!isExcel) {
-    ElMessage.error('只能上传Excel文件（.xlsx或.xls格式）')
+    ElMessage.error(t('llmResources.uploadOnlyExcel'))
     return false
   }
   const isLt10M = file.size / 1024 / 1024 < 10
   if (!isLt10M) {
-    ElMessage.error('文件大小不能超过10MB')
+    ElMessage.error(t('llmResources.fileSizeLimit'))
     return false
   }
   return true
@@ -728,13 +728,13 @@ const beforeUpload = (file) => {
 // 导入成功
 const handleImportSuccess = (response) => {
   if (response && response.success !== undefined) {
-    const message = `导入完成！成功: ${response.success}条，失败: ${response.fail}条`
+    const message = t('llmResources.importComplete', { success: response.success, fail: response.fail })
     if (response.fail > 0 && response.errors && response.errors.length > 0) {
       ElMessageBox.alert(
-        `${message}\n\n错误详情：\n${response.errors.slice(0, 10).join('\n')}${response.errors.length > 10 ? '\n...' : ''}`,
-        '导入结果',
+        `${message}\n\n${t('llmResources.errorDetails')}：\n${response.errors.slice(0, 10).join('\n')}${response.errors.length > 10 ? '\n...' : ''}`,
+        t('llmResources.importResult'),
         {
-          confirmButtonText: '确定',
+          confirmButtonText: t('common.confirm'),
           type: response.success > 0 ? 'warning' : 'error'
         }
       )
@@ -744,7 +744,7 @@ const handleImportSuccess = (response) => {
     // 刷新列表
     getResourceList()
   } else {
-    ElMessage.success('导入成功')
+    ElMessage.success(t('llmResources.importSuccess'))
     getResourceList()
   }
 }
@@ -752,7 +752,7 @@ const handleImportSuccess = (response) => {
 // 导入失败
 const handleImportError = (error) => {
   console.error('导入失败:', error)
-  const errorMsg = error.response?.data?.error || '导入失败，请检查文件格式'
+  const errorMsg = error.response?.data?.error || t('llmResources.importFailed')
   ElMessage.error(errorMsg)
 }
 
@@ -764,7 +764,7 @@ const fillJsonExample = () => {
 // 处理 JSON 批量导入
 const handleJsonImport = async () => {
   if (!jsonImportText.value.trim()) {
-    ElMessage.error('请先粘贴要导入的 JSON 数据')
+    ElMessage.error(t('llmResources.jsonDataRequired'))
     return
   }
 
@@ -773,12 +773,12 @@ const handleJsonImport = async () => {
     data = JSON.parse(jsonImportText.value)
   } catch (e) {
     console.error('JSON 解析错误:', e)
-    ElMessage.error('JSON 格式错误，请检查后重试')
+    ElMessage.error(t('llmResources.jsonFormatError'))
     return
   }
 
   if (!Array.isArray(data) || data.length === 0) {
-    ElMessage.error('JSON 数据必须是非空数组')
+    ElMessage.error(t('llmResources.jsonMustBeArray'))
     return
   }
 

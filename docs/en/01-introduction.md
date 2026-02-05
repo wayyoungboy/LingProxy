@@ -14,6 +14,7 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 
 ### 🚀 Core Capabilities
 - **OpenAI-Compatible API**: Seamless integration with OpenAI SDK and compatible clients
+- **Streaming Support**: Full support for Server-Sent Events (SSE) streaming responses for chat completions
 - **Intelligent Load Balancing**: Multiple routing strategies (round-robin, random, weighted, etc.)
 - **Request Routing**: Policy-based request routing with model matching and failover
 - **Request Logging**: Complete request chain tracing and logging
@@ -26,14 +27,16 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **CORS Support**: Configurable cross-origin resource sharing
 
 ### 📊 Management Features
-- **Admin Dashboard**: Web-based management interface built with Vue 3
+- **Admin Dashboard**: Modern web-based management interface built with Vue 3 + Element Plus
+- **Internationalization (i18n)**: Full support for Chinese and English language switching in the frontend interface
 - **LLM Resource Management**: Driver-based architecture (currently supports OpenAI driver)
 - **Model Management**: Flexible model configuration with pricing and usage limits
-- **Policy Management**: Built-in routing policy templates and custom policy instances
+- **Policy Management**: Built-in routing policy templates and custom policy instances, random selection policy supports LLM resource pool configuration
 - **Request Management**: Complete request logging and tracking functionality
 - **Usage Statistics**: Detailed usage statistics grouped by LLM resources, including token usage, request count, success rate, and more
 - **System Settings**: Dynamic configuration management
 - **System Monitoring**: Real-time system information and statistics
+- **Log Management**: View and manage system logs with filtering and search capabilities
 
 ## Use Cases
 

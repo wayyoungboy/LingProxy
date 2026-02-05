@@ -3,10 +3,10 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="page-title">Token管理</span>
+          <span class="page-title">{{ $t('tokens.title') }}</span>
           <el-button type="primary" @click="handleAddToken">
             <el-icon><Plus /></el-icon>
-            创建Token
+            {{ $t('tokens.createToken') }}
           </el-button>
         </div>
       </template>
@@ -19,8 +19,8 @@
         border
         stripe
       >
-        <el-table-column prop="name" label="Token名称" />
-        <el-table-column prop="token" label="Token值" width="280">
+        <el-table-column prop="name" :label="$t('tokens.name')" />
+        <el-table-column prop="token" :label="$t('tokens.tokenValue')" width="280">
           <template #default="scope">
             <div style="display: flex; align-items: center; gap: 8px;">
               <el-tag>{{ scope.row.prefix || scope.row.token || 'ling-...' }}</el-tag>
@@ -29,46 +29,46 @@
                 size="small"
                 text
                 @click="handleCopyToken(scope.row)"
-                title="复制完整Token"
+                :title="$t('tokens.copyFullToken')"
               >
                 <el-icon><DocumentCopy /></el-icon>
               </el-button>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" :label="$t('common.status')" width="100">
           <template #default="scope">
             <el-tag
               :type="scope.row.status === 'active' ? 'success' : 'danger'"
             >
-              {{ scope.row.status === 'active' ? '活跃' : '禁用' }}
+              {{ scope.row.status === 'active' ? $t('tokens.active') : $t('tokens.inactive') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="policy_id" label="策略" width="150">
+        <el-table-column prop="policy_id" :label="$t('tokens.policy')" width="150">
           <template #default="scope">
             <el-tag v-if="scope.row.policy_id" type="info">
               {{ getPolicyName(scope.row.policy_id) }}
             </el-tag>
-            <span v-else style="color: #909399">未配置</span>
+            <span v-else style="color: #909399">{{ $t('dashboard.notConfigured') }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="last_used_at" label="最后使用时间" width="180">
+        <el-table-column prop="last_used_at" :label="$t('tokens.lastUsedAt')" width="180">
           <template #default="scope">
-            {{ scope.row.last_used_at ? formatDate(scope.row.last_used_at) : '从未使用' }}
+            {{ scope.row.last_used_at ? formatDate(scope.row.last_used_at) : $t('dashboard.neverUsed') }}
           </template>
         </el-table-column>
-        <el-table-column prop="expires_at" label="过期时间" width="180">
+        <el-table-column prop="expires_at" :label="$t('tokens.expiresAt')" width="180">
           <template #default="scope">
-            {{ scope.row.expires_at ? formatDate(scope.row.expires_at) : '永不过期' }}
+            {{ scope.row.expires_at ? formatDate(scope.row.expires_at) : $t('dashboard.neverExpires') }}
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
+        <el-table-column prop="created_at" :label="$t('common.createdAt')" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <el-table-column :label="$t('common.actions')" width="200">
           <template #default="scope">
             <el-button
               type="primary"
@@ -76,7 +76,7 @@
               @click="handleEditToken(scope.row)"
               style="margin-right: 5px"
             >
-              编辑
+              {{ $t('common.edit') }}
             </el-button>
             <el-button
               type="warning"
@@ -84,7 +84,7 @@
               @click="handleResetToken(scope.row.id)"
               style="margin-right: 5px"
             >
-              重置
+              {{ $t('tokens.reset') }}
             </el-button>
             <el-button
               type="info"
@@ -92,14 +92,14 @@
               @click="handleSetPolicy(scope.row)"
               style="margin-right: 5px"
             >
-              策略
+              {{ $t('tokens.policy') }}
             </el-button>
             <el-button
               type="danger"
               size="small"
               @click="handleDeleteToken(scope.row.id)"
             >
-              删除
+              {{ $t('common.delete') }}
             </el-button>
           </template>
         </el-table-column>
@@ -118,13 +118,13 @@
         :rules="tokenRules"
         label-width="100px"
       >
-        <el-form-item label="Token名称" prop="name">
-          <el-input v-model="tokenForm.name" placeholder="请输入Token名称"></el-input>
+        <el-form-item :label="$t('tokens.name')" prop="name">
+          <el-input v-model="tokenForm.name" :placeholder="$t('tokens.nameRequired')"></el-input>
         </el-form-item>
-        <el-form-item v-if="isAddMode" label="策略" prop="policy_id">
+        <el-form-item v-if="isAddMode" :label="$t('tokens.policy')" prop="policy_id">
           <el-select
             v-model="tokenForm.policy_id"
-            placeholder="请选择策略（必选）"
+            :placeholder="$t('tokens.policyRequired')"
             style="width: 100%"
             filterable
           >
@@ -139,27 +139,27 @@
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="过期时间" prop="expires_at">
+        <el-form-item :label="$t('tokens.expiresAt')" prop="expires_at">
           <el-date-picker
             v-model="tokenForm.expires_at"
             type="datetime"
-            placeholder="选择过期时间（可选）"
+            :placeholder="$t('tokens.expiresAtPlaceholder')"
             format="YYYY-MM-DD HH:mm:ss"
             value-format="YYYY-MM-DDTHH:mm:ssZ"
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item v-if="!isAddMode" label="状态" prop="status">
-          <el-select v-model="tokenForm.status" placeholder="请选择状态">
-            <el-option label="活跃" value="active"></el-option>
-            <el-option label="禁用" value="inactive"></el-option>
+        <el-form-item v-if="!isAddMode" :label="$t('common.status')" prop="status">
+          <el-select v-model="tokenForm.status" :placeholder="$t('tokens.selectStatus')">
+            <el-option :label="$t('tokens.active')" value="active"></el-option>
+            <el-option :label="$t('tokens.inactive')" value="inactive"></el-option>
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSaveToken">确定</el-button>
+          <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+          <el-button type="primary" @click="handleSaveToken">{{ $t('common.confirm') }}</el-button>
         </span>
       </template>
     </el-dialog>
@@ -167,7 +167,7 @@
     <!-- Token显示对话框（创建/重置后显示完整Token） -->
     <el-dialog
       v-model="tokenDisplayVisible"
-      title="Token已创建"
+      :title="$t('tokens.tokenCreated')"
       width="600px"
     >
       <el-alert
@@ -176,44 +176,44 @@
         style="margin-bottom: 20px"
       >
         <template #title>
-          <strong>重要提示：</strong>Token值只显示一次，请妥善保存！
+          <strong>{{ $t('tokens.importantNotice') }}：</strong>{{ $t('tokens.tokenDisplayOnce') }}
         </template>
       </el-alert>
       <el-form label-width="100px">
-        <el-form-item label="Token名称">
+        <el-form-item :label="$t('tokens.name')">
           <el-input :value="newToken.name" readonly></el-input>
         </el-form-item>
-        <el-form-item label="Token值">
+        <el-form-item :label="$t('tokens.token')">
           <el-input
             :value="newToken.token"
             readonly
             ref="tokenInputRef"
           >
             <template #append>
-              <el-button @click="copyToken">复制</el-button>
+              <el-button @click="copyToken">{{ $t('tokens.copyToken') }}</el-button>
             </template>
           </el-input>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button type="primary" @click="tokenDisplayVisible = false">我已保存</el-button>
+        <el-button type="primary" @click="tokenDisplayVisible = false">{{ $t('tokens.iHaveSaved') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- 设置策略对话框 -->
     <el-dialog
       v-model="policyDialogVisible"
-      title="设置Token策略"
+      :title="$t('tokens.setTokenPolicy')"
       width="500px"
     >
       <el-form label-width="100px">
-        <el-form-item label="Token名称">
+        <el-form-item :label="$t('tokens.name')">
           <el-input :value="selectedToken?.name" readonly></el-input>
         </el-form-item>
-        <el-form-item label="选择策略">
+        <el-form-item :label="$t('tokens.selectPolicy')">
           <el-select
             v-model="selectedPolicyId"
-            placeholder="请选择策略"
+            :placeholder="$t('tokens.selectPolicyPlaceholder')"
             style="width: 100%"
             filterable
           >
@@ -230,21 +230,24 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="policyDialogVisible = false">取消</el-button>
+        <el-button @click="policyDialogVisible = false">{{ $t('common.cancel') }}</el-button>
         <el-button type="danger" @click="handleRemovePolicy" v-if="selectedToken?.policy_id">
-          移除策略
+          {{ $t('tokens.removePolicy') }}
         </el-button>
-        <el-button type="primary" @click="handleSavePolicy">确定</el-button>
+        <el-button type="primary" @click="handleSavePolicy">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, DocumentCopy } from '@element-plus/icons-vue'
 import api from '../api'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const tokens = ref([])
@@ -268,14 +271,14 @@ const tokenForm = reactive({
   status: 'active'
 })
 
-const tokenRules = {
+const tokenRules = computed(() => ({
   name: [
-    { required: true, message: '请输入Token名称', trigger: 'blur' }
+    { required: true, message: t('tokens.nameRequired'), trigger: 'blur' }
   ],
   policy_id: [
-    { required: true, message: '请选择策略', trigger: 'change' }
+    { required: true, message: t('tokens.policyRequiredSelect'), trigger: 'change' }
   ]
-}
+}))
 
 // 获取Token列表
 const getTokenList = async () => {
@@ -287,7 +290,7 @@ const getTokenList = async () => {
     }
   } catch (error) {
     console.error('获取Token列表失败:', error)
-    ElMessage.error('获取Token列表失败')
+    ElMessage.error(t('tokens.getListFailed'))
   } finally {
     loading.value = false
   }
@@ -296,7 +299,7 @@ const getTokenList = async () => {
 // 处理添加Token
 const handleAddToken = () => {
   isAddMode.value = true
-  dialogTitle.value = '创建Token'
+  dialogTitle.value = t('tokens.createToken')
   Object.assign(tokenForm, {
     id: '',
     name: '',
@@ -314,7 +317,7 @@ const handleAddToken = () => {
 // 处理编辑Token
 const handleEditToken = (token) => {
   isAddMode.value = false
-  dialogTitle.value = '编辑Token'
+  dialogTitle.value = t('tokens.editToken')
   Object.assign(tokenForm, {
     id: token.id,
     name: token.name,
@@ -345,12 +348,12 @@ const handleSaveToken = async () => {
             })
           } catch (error) {
             console.error('设置策略失败:', error)
-            ElMessage.warning('Token创建成功，但设置策略失败，请稍后手动设置')
+            ElMessage.warning(t('tokens.createSuccessButPolicyFailed'))
           }
         }
         dialogVisible.value = false
         tokenDisplayVisible.value = true
-        ElMessage.success('Token创建成功')
+        ElMessage.success(t('tokens.createSuccess'))
         getTokenList()
       }
     } else {
@@ -359,13 +362,13 @@ const handleSaveToken = async () => {
         name: tokenForm.name,
         status: tokenForm.status
       })
-      ElMessage.success('Token更新成功')
+      ElMessage.success(t('tokens.updateSuccess'))
       dialogVisible.value = false
       getTokenList()
     }
   } catch (error) {
     console.error('保存Token失败:', error)
-    ElMessage.error('保存Token失败')
+    ElMessage.error(t('tokens.saveFailed'))
   }
 }
 
@@ -373,22 +376,22 @@ const handleSaveToken = async () => {
 const handleDeleteToken = async (id) => {
   try {
     await ElMessageBox.confirm(
-      '确定要删除这个Token吗？删除后该Token将无法使用。',
-      '删除确认',
+      t('tokens.deleteConfirmMessage'),
+      t('tokens.deleteConfirm'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'danger'
       }
     )
     
     await api.deleteToken(id)
-    ElMessage.success('Token删除成功')
+    ElMessage.success(t('tokens.deleteSuccess'))
     getTokenList()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除Token失败:', error)
-      ElMessage.error('删除Token失败')
+      ElMessage.error(t('tokens.deleteFailed'))
     }
   }
 }
@@ -397,11 +400,11 @@ const handleDeleteToken = async (id) => {
 const handleResetToken = async (id) => {
   try {
     await ElMessageBox.confirm(
-      '确定要重置这个Token吗？重置后原Token将立即失效。',
-      '重置确认',
+      t('tokens.resetConfirmMessage'),
+      t('tokens.resetConfirm'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning'
       }
     )
@@ -410,13 +413,13 @@ const handleResetToken = async (id) => {
     if (response && response.data) {
       newToken.value = response.data
       tokenDisplayVisible.value = true
-      ElMessage.success('Token重置成功')
+      ElMessage.success(t('tokens.resetSuccess'))
       getTokenList()
     }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('重置Token失败:', error)
-      ElMessage.error('重置Token失败')
+      ElMessage.error(t('tokens.resetFailed'))
     }
   }
 }
@@ -428,7 +431,7 @@ const copyToken = () => {
     if (input) {
       input.select()
       document.execCommand('copy')
-      ElMessage.success('Token已复制到剪贴板')
+      ElMessage.success(t('tokens.tokenCopied'))
     }
   }
 }
@@ -443,7 +446,7 @@ const handleCopyToken = async (token) => {
       if (response && response.data) {
         tokenValue = response.data.token
       } else {
-        ElMessage.error('获取Token失败')
+        ElMessage.error(t('tokens.getTokenFailed'))
         return
       }
     }
@@ -451,7 +454,7 @@ const handleCopyToken = async (token) => {
     // 复制到剪贴板
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(tokenValue)
-      ElMessage.success('Token已复制到剪贴板')
+      ElMessage.success(t('tokens.tokenCopied'))
     } else {
       // 降级方案
       const textArea = document.createElement('textarea')
@@ -462,11 +465,11 @@ const handleCopyToken = async (token) => {
       textArea.select()
       document.execCommand('copy')
       document.body.removeChild(textArea)
-      ElMessage.success('Token已复制到剪贴板')
+      ElMessage.success(t('tokens.tokenCopied'))
     }
   } catch (error) {
     console.error('复制Token失败:', error)
-    ElMessage.error('复制Token失败')
+    ElMessage.error(t('tokens.copyFailed'))
   }
 }
 
@@ -499,16 +502,16 @@ const handleSavePolicy = async () => {
       await api.setTokenPolicy(selectedToken.value.id, {
         policy_id: selectedPolicyId.value
       })
-      ElMessage.success('策略设置成功')
+      ElMessage.success(t('tokens.policySetSuccess'))
     } else {
       await api.removeTokenPolicy(selectedToken.value.id)
-      ElMessage.success('策略已移除')
+      ElMessage.success(t('tokens.policyRemoved'))
     }
     policyDialogVisible.value = false
     getTokenList()
   } catch (error) {
     console.error('设置策略失败:', error)
-    ElMessage.error('设置策略失败')
+    ElMessage.error(t('tokens.policySetFailed'))
   }
 }
 
@@ -518,12 +521,12 @@ const handleRemovePolicy = async () => {
   
   try {
     await api.removeTokenPolicy(selectedToken.value.id)
-    ElMessage.success('策略已移除')
+    ElMessage.success(t('tokens.policyRemoved'))
     policyDialogVisible.value = false
     getTokenList()
   } catch (error) {
     console.error('移除策略失败:', error)
-    ElMessage.error('移除策略失败')
+    ElMessage.error(t('tokens.policyRemoveFailed'))
   }
 }
 

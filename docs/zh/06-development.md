@@ -53,6 +53,10 @@ cp backend/configs/config.yaml.example backend/configs/config.yaml
 - `src/components/`: 可复用组件
 - `src/api/`: API 客户端
 - `src/router/`: 路由配置
+- `src/locales/`: 国际化语言包
+  - `zh/`: 中文语言包
+  - `en/`: 英文语言包
+  - `index.js`: i18n 配置
 
 ## 编码规范
 
@@ -272,6 +276,42 @@ docs: 更新 API 文档
 2. 更新存储实现
 3. 如需要，添加迁移
 4. 更新 API 处理器/服务
+
+### 前端国际化开发
+
+1. **添加新的翻译键**
+   - 在 `frontend/src/locales/zh/index.js` 中添加中文翻译
+   - 在 `frontend/src/locales/en/index.js` 中添加英文翻译
+
+2. **在组件中使用翻译**
+   ```vue
+   <script setup>
+   import { useI18n } from 'vue-i18n'
+   const { t } = useI18n()
+   </script>
+   
+   <template>
+     <div>{{ $t('common.home') }}</div>
+   </template>
+   ```
+
+3. **表单验证规则国际化**
+   ```javascript
+   const rules = computed(() => ({
+     name: [
+       { required: true, message: t('form.nameRequired'), trigger: 'blur' }
+     ]
+   }))
+   ```
+
+4. **Element Plus 消息国际化**
+   ```javascript
+   ElMessage.success(t('common.operationSuccess'))
+   ```
+
+5. **语言切换**
+   - 语言设置保存在 `localStorage` 中，键为 `lingproxy_locale`
+   - 切换语言会自动更新 Element Plus 组件语言
 
 ## 故障排除
 

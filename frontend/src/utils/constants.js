@@ -131,4 +131,4 @@ export const MESSAGE_DURATION = {
 }
 
 // 菜单相关工具函数（从menu.js导入）
-export { getMenuTitle } from '../config/menu'
+// 注意：getMenuTitle 现在需要传入 i18n 的 t 函数，请从 menu.js 直接导入使用

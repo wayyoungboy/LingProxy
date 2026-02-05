@@ -3,19 +3,19 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span>日志管理</span>
+          <span>{{ $t('logs.title') }}</span>
           <div>
             <el-button type="success" @click="refreshLogs" :loading="loading">
               <el-icon><Refresh /></el-icon>
-              刷新
+              {{ $t('logs.refresh') }}
             </el-button>
             <el-button type="danger" @click="handleClearLogs" :disabled="!selectedFile">
               <el-icon><Delete /></el-icon>
-              清空日志
+              {{ $t('logs.clearLogs') }}
             </el-button>
             <el-button type="primary" @click="handleDownloadLog" :disabled="!selectedFile">
               <el-icon><Download /></el-icon>
-              下载日志
+              {{ $t('logs.downloadLog') }}
             </el-button>
           </div>
         </div>
@@ -26,7 +26,7 @@
         <el-col :span="6">
           <el-card shadow="hover">
             <template #header>
-              <span>日志文件</span>
+              <span>{{ $t('logs.logFiles') }}</span>
             </template>
             <el-scrollbar height="600px">
               <el-menu
@@ -48,7 +48,7 @@
                   </div>
                 </el-menu-item>
               </el-menu>
-              <el-empty v-if="logFiles.length === 0" description="暂无日志文件" />
+              <el-empty v-if="logFiles.length === 0" :description="$t('logs.noLogFiles')" />
             </el-scrollbar>
           </el-card>
         </el-col>
@@ -58,15 +58,15 @@
           <el-card shadow="hover">
             <template #header>
               <div class="log-header">
-                <span>日志内容</span>
+                <span>{{ $t('logs.logContent') }}</span>
                 <div class="log-controls">
                   <el-select
                     v-model="logLevel"
-                    placeholder="日志级别"
+                    :placeholder="$t('logs.logLevel')"
                     style="width: 120px; margin-right: 10px"
                     @change="handleFilterChange"
                   >
-                    <el-option label="全部" value="" />
+                    <el-option :label="$t('logs.all')" value="" />
                     <el-option label="DEBUG" value="DEBUG" />
                     <el-option label="INFO" value="INFO" />
                     <el-option label="WARN" value="WARN" />
@@ -75,7 +75,7 @@
                   </el-select>
                   <el-input
                     v-model="keyword"
-                    placeholder="搜索关键词"
+                    :placeholder="$t('logs.searchKeyword')"
                     style="width: 200px; margin-right: 10px"
                     clearable
                     @clear="handleFilterChange"
@@ -94,7 +94,7 @@
                     @change="handleFilterChange"
                   />
                   <el-checkbox v-model="tail" @change="handleFilterChange">
-                    从尾部读取
+                    {{ $t('logs.readFromTail') }}
                   </el-checkbox>
                 </div>
               </div>
@@ -115,7 +115,7 @@
                 </span>
                 <span class="log-message">{{ entry.message || entry.raw }}</span>
               </div>
-              <el-empty v-if="logEntries.length === 0" description="暂无日志内容" />
+              <el-empty v-if="logEntries.length === 0" :description="$t('logs.noLogContent')" />
             </div>
           </el-card>
         </el-col>
@@ -128,7 +128,10 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Delete, Download, Search } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import api from '../api'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const logFiles = ref([])
@@ -155,7 +158,7 @@ const getLogFiles = async () => {
     }
   } catch (error) {
     console.error('获取日志文件列表失败:', error)
-    ElMessage.error('获取日志文件列表失败')
+    ElMessage.error(t('logs.getFilesFailed'))
   } finally {
     loading.value = false
   }
@@ -192,7 +195,7 @@ const getLogs = async () => {
     }
   } catch (error) {
     console.error('获取日志内容失败:', error)
-    ElMessage.error('获取日志内容失败')
+    ElMessage.error(t('logs.getContentFailed'))
   } finally {
     loading.value = false
   }
@@ -220,7 +223,7 @@ const refreshLogs = () => {
 // 下载日志文件
 const handleDownloadLog = async () => {
   if (!selectedFile.value) {
-    ElMessage.warning('请先选择要下载的日志文件')
+    ElMessage.warning(t('logs.selectFileToDownload'))
     return
   }
 
@@ -239,39 +242,39 @@ const handleDownloadLog = async () => {
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-    ElMessage.success('日志文件下载成功')
+    ElMessage.success(t('logs.downloadSuccess'))
   } catch (error) {
     console.error('下载日志文件失败:', error)
-    ElMessage.error('下载日志文件失败')
+    ElMessage.error(t('logs.downloadFailed'))
   }
 }
 
 // 清空日志
 const handleClearLogs = async () => {
   if (!selectedFile.value) {
-    ElMessage.warning('请先选择要清空的日志文件')
+    ElMessage.warning(t('logs.selectFileToClear'))
     return
   }
 
   try {
     await ElMessageBox.confirm(
-      `确定要清空日志文件 "${selectedFile.value}" 吗？此操作不可恢复。`,
-      '清空确认',
+      t('logs.clearConfirmMessage', { file: selectedFile.value }),
+      t('logs.clearConfirm'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning'
       }
     )
 
     await api.clearLogs(selectedFile.value)
-    ElMessage.success('日志文件已清空')
+    ElMessage.success(t('logs.clearSuccess'))
     // 刷新日志内容
     getLogs()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('清空日志文件失败:', error)
-      ElMessage.error('清空日志文件失败')
+      ElMessage.error(t('logs.clearFailed'))
     }
   }
 }

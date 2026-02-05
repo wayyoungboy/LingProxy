@@ -33,6 +33,67 @@ LingProxy follows a modern microservices architecture with clear separation of c
 └─────────────┘
 ```
 
+## Frontend Architecture
+
+### Technology Stack
+- **Framework**: Vue 3 (Composition API)
+- **UI Component Library**: Element Plus
+- **Build Tool**: Vite
+- **Internationalization**: vue-i18n
+- **Routing**: Vue Router
+- **HTTP Client**: Axios
+
+### Directory Structure
+```
+frontend/
+├── src/
+│   ├── api/              # API client
+│   ├── assets/           # Static assets
+│   ├── components/       # Vue components
+│   │   ├── Layout.vue    # Layout component (includes language switcher)
+│   │   └── Sidebar.vue   # Sidebar component
+│   ├── config/           # Configuration files
+│   │   └── menu.js       # Menu configuration
+│   ├── locales/          # Internationalization language packs
+│   │   ├── zh/           # Chinese language pack
+│   │   ├── en/           # English language pack
+│   │   └── index.js      # i18n configuration
+│   ├── router/           # Route configuration
+│   ├── views/            # Page views
+│   │   ├── Login.vue
+│   │   ├── Dashboard.vue
+│   │   ├── Tokens.vue
+│   │   ├── LLMResources.vue
+│   │   ├── LLMResourceUsage.vue
+│   │   ├── Requests.vue
+│   │   ├── Policies.vue
+│   │   ├── Settings.vue
+│   │   ├── Logs.vue
+│   │   ├── Models.vue
+│   │   ├── Users.vue
+│   │   └── Endpoints.vue
+│   ├── App.vue           # Root component
+│   └── main.js           # Entry point
+├── package.json
+└── vite.config.js
+```
+
+### Internationalization Support
+- **Language Packs**: Complete Chinese and English language packs
+- **Language Switching**: Support for runtime language switching, settings saved in localStorage
+- **Element Plus Integration**: Element Plus component language automatically follows system language settings
+- **Coverage**: All user interface text, error messages, and form validation messages are internationalized
+
+### Core Feature Modules
+- **Authentication**: Login page, JWT Token management
+- **Dashboard**: System overview and statistics
+- **Resource Management**: LLM resources, models, endpoints management
+- **Policy Management**: Routing policy configuration and management
+- **Request Management**: Request log viewing and export
+- **Usage Statistics**: Detailed statistics grouped by resource
+- **System Settings**: Dynamic configuration management
+- **Log Management**: System log viewing and management
+
 ## Backend Architecture
 
 ### Directory Structure
@@ -43,8 +104,6 @@ backend/
 │   └── main.go              # Application entry point
 ├── configs/
 │   └── config.yaml.example  # Configuration template
-├── examples/
-│   └── llm_demo.go          # Example code
 ├── internal/
 │   ├── cache/               # Cache implementation
 │   ├── client/              # AI service clients

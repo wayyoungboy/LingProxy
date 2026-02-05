@@ -17,6 +17,7 @@
 ### 配置与使用
 - [配置指南](03-configuration.md) - 详细配置选项
 - [API 参考文档](04-api-reference.md) - 完整 API 文档
+- [流式响应支持](../STREAMING.md) - 流式响应使用指南
 
 ### 架构与开发
 - [架构指南](05-architecture.md) - 系统架构和设计

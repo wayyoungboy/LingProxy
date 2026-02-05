@@ -1,6 +1,16 @@
-name: Build Artifacts
+name: CI/CD Pipeline
 
 on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - develop
   workflow_dispatch:
     inputs:
       build_platforms:
@@ -24,6 +34,11 @@ on:
         required: false
         default: true
         type: boolean
+      run_tests:
+        description: 'Run tests'
+        required: false
+        default: true
+        type: boolean
 
 env:
   BINARY_NAME: lingproxy
@@ -31,9 +46,99 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+
+      - name: Configure Go proxy
+        run: |
+          go env -w GOPROXY=https://goproxy.cn,direct
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Get dependencies
+        working-directory: ./backend
+        run: |
+          go mod download
+          go mod tidy
+
+      - name: Run go fmt
+        working-directory: ./backend
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "Code is not formatted. Run 'go fmt ./...'"
+            gofmt -s -d .
+            exit 1
+          fi
+
+      - name: Run go vet
+        working-directory: ./backend
+        run: go vet ./...
+
+      - name: Run tests
+        working-directory: ./backend
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ./backend/coverage.out
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+
+      - name: Configure Go proxy
+        run: |
+          go env -w GOPROXY=https://goproxy.cn,direct
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: ./backend
+          args: --timeout=5m
+
   build:
     name: Build Binaries
     runs-on: ubuntu-latest
+    needs: [test, lint]
+    if: |
+      always() && 
+      (needs.test.result == 'success' || needs.test.result == 'skipped') && 
+      (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     permissions:
       contents: write
       packages: write
@@ -63,7 +168,17 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.24.0'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Configure Go proxy
         run: |
@@ -90,8 +205,8 @@ jobs:
 
       - name: Build binary
         if: |
-          github.event.inputs.build_platforms == 'all' || 
-          contains(github.event.inputs.build_platforms, matrix.platform)
+          (github.event_name == 'workflow_dispatch' && (github.event.inputs.build_platforms == 'all' || contains(github.event.inputs.build_platforms, matrix.platform))) ||
+          (github.event_name != 'workflow_dispatch')
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -105,8 +220,8 @@ jobs:
 
       - name: Create archive
         if: |
-          github.event.inputs.build_platforms == 'all' || 
-          contains(github.event.inputs.build_platforms, matrix.platform)
+          (github.event_name == 'workflow_dispatch' && (github.event.inputs.build_platforms == 'all' || contains(github.event.inputs.build_platforms, matrix.platform))) ||
+          (github.event_name != 'workflow_dispatch')
         run: |
           cd dist/${{ matrix.platform }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -117,19 +232,23 @@ jobs:
 
       - name: Upload artifact
         if: |
-          github.event.inputs.build_platforms == 'all' || 
-          contains(github.event.inputs.build_platforms, matrix.platform)
+          (github.event_name == 'workflow_dispatch' && (github.event.inputs.build_platforms == 'all' || contains(github.event.inputs.build_platforms, matrix.platform))) ||
+          (github.event_name != 'workflow_dispatch')
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.platform }}
           path: |
             dist/${{ env.BINARY_NAME }}-${{ env.VERSION }}-${{ matrix.platform }}.*
             dist/${{ matrix.platform }}/*
+          retention-days: 7
 
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
-    if: github.event.inputs.build_frontend == 'true'
+    if: |
+      github.event_name == 'push' || 
+      github.event_name == 'pull_request' || 
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.build_frontend == 'true' || github.event.inputs.build_frontend == ''))
     
     steps:
       - name: Checkout code
@@ -155,11 +274,14 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist
+          retention-days: 7
 
   build-docker:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    if: github.event.inputs.build_docker == 'true'
+    if: |
+      (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.build_docker == 'true')
     permissions:
       contents: read
       packages: write
@@ -214,8 +336,8 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build]
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, build-frontend]
+    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     
@@ -230,6 +352,7 @@ jobs:
         run: |
           VERSION=$(git describe --tags --always --dirty || echo "dev")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -241,5 +364,17 @@ jobs:
         with:
           files: artifacts/**/*
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
           generate_release_notes: true
+          body: |
+            ## Release ${{ env.VERSION }}
+            
+            ### Changes
+            - See commit history for details
+            
+            ### Downloads
+            - Binaries for multiple platforms are available in the assets below
+            - Frontend build artifacts are included
+            
+            ### Installation
+            Extract the archive for your platform and run the binary.
