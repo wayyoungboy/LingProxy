@@ -304,9 +304,58 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
 
 #### OpenAI 兼容 API
 - `GET /llm/v1/models` - 获取所有可用模型列表
+
+  **curl 示例：**
+  ```bash
+  # 如果认证已启用（默认情况）
+  curl -X GET http://localhost:8080/llm/v1/models \
+    -H "Authorization: Bearer YOUR_API_KEY_OR_TOKEN"
+  
+  # 如果认证已禁用（security.auth.enabled: false）
+  curl -X GET http://localhost:8080/llm/v1/models
+  ```
+
 - `GET /llm/v1/models/:model` - 获取模型信息
+
+  **curl 示例：**
+  ```bash
+  # 如果认证已启用
+  curl -X GET http://localhost:8080/llm/v1/models/gpt-3.5-turbo \
+    -H "Authorization: Bearer YOUR_API_KEY_OR_TOKEN"
+  
+  # 如果认证已禁用
+  curl -X GET http://localhost:8080/llm/v1/models/gpt-3.5-turbo
+  ```
+
 - `POST /llm/v1/chat/completions` - 创建聊天补全
+
+  **curl 示例：**
+  ```bash
+  # 如果认证已启用
+  curl -X POST http://localhost:8080/llm/v1/chat/completions \
+    -H "Authorization: Bearer YOUR_API_KEY_OR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "gpt-3.5-turbo",
+      "messages": [
+        {"role": "user", "content": "Hello!"}
+      ]
+    }'
+  ```
+
 - `POST /llm/v1/completions` - 创建文本补全
+
+  **curl 示例：**
+  ```bash
+  # 如果认证已启用
+  curl -X POST http://localhost:8080/llm/v1/completions \
+    -H "Authorization: Bearer YOUR_API_KEY_OR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "gpt-3.5-turbo",
+      "prompt": "Say hello"
+    }'
+  ```
 
 ## 配置说明
 

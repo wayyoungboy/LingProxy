@@ -119,8 +119,13 @@ func main() {
 	logger.Info("Routes setup completed")
 
 	// 创建HTTP服务器
+	// 使用配置中的host和port，如果host为空则监听所有接口
+	addr := fmt.Sprintf("%s:%d", cfg.App.Host, cfg.App.Port)
+	if cfg.App.Host == "" {
+		addr = fmt.Sprintf(":%d", cfg.App.Port)
+	}
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.App.Port),
+		Addr:    addr,
 		Handler: engine,
 	}
 

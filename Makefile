@@ -107,16 +107,18 @@ deps-update:
 # 启动服务（后台运行）
 start:
 	@echo "Starting services in background..."
-	@echo "Backend: http://localhost:8080"
-	@echo "Frontend: http://localhost:3000"
+	@echo "Backend: http://localhost:8080 (also accessible via LAN)"
+	@echo "Frontend: http://localhost:3000 (also accessible via LAN)"
 	@echo "Use 'make stop' to stop services"
 	@$(MAKE) start-frontend
 	@$(MAKE) start-backend
 	@echo "Services started. PIDs saved to $(RUN_DIR)/"
+	@echo "To access from LAN, use your machine's IP address instead of localhost"
 
 # 启动后端服务（后台运行）
 start-backend:
 	@echo "Starting backend service in background..."
+	@echo "Backend will listen on 0.0.0.0:8080 (accessible via LAN)"
 	@mkdir -p $(RUN_DIR)
 	@if [ -f $(RUN_DIR)/backend.pid ]; then \
 		OLD_PID=$$(cat $(RUN_DIR)/backend.pid); \
@@ -145,6 +147,7 @@ start-backend:
 # 启动前端服务（后台运行）
 start-frontend:
 	@echo "Starting frontend service in background..."
+	@echo "Frontend will listen on 0.0.0.0:3000 (accessible via LAN)"
 	@mkdir -p $(RUN_DIR)
 	@if [ -f $(RUN_DIR)/frontend.pid ]; then \
 		OLD_PID=$$(cat $(RUN_DIR)/frontend.pid); \
@@ -225,8 +228,9 @@ restart: stop
 # 运行应用（前后端同时启动，前台运行）
 run:
 	@echo "Starting both frontend and backend..."
-	@echo "Backend: http://localhost:8080"
-	@echo "Frontend: http://localhost:3000"
+	@echo "Backend: http://localhost:8080 (also accessible via LAN)"
+	@echo "Frontend: http://localhost:3000 (also accessible via LAN)"
+	@echo "To access from LAN, use your machine's IP address instead of localhost"
 	@echo "Press Ctrl+C to stop both services"
 	@trap 'kill 0' EXIT; \
 	(cd frontend && npm run dev &) && \
