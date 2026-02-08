@@ -114,7 +114,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// 返回用户信息和token（使用API Key作为token）
+	// 返回用户信息和token（使用API Key作为认证凭证）
 	c.JSON(http.StatusOK, gin.H{
 		"message": "login successful",
 		"data": gin.H{

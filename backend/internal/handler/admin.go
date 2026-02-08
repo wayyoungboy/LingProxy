@@ -421,7 +421,7 @@ func (h *AdminHandler) UpdateAdminInfo(c *gin.Context) {
 	})
 }
 
-// getPrefix 获取Token前缀
+// getPrefix 获取API Key前缀
 func getPrefix(tokenValue string) string {
 	if len(tokenValue) > 12 {
 		return tokenValue[:12] + "..."

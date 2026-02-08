@@ -44,7 +44,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			return
 		}
 
-		// 解析 Bearer token
+		// 解析 Bearer API Key
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
@@ -54,16 +54,16 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 
 		tokenValue := parts[1]
 
-		// 首先尝试通过Token验证
+		// 首先尝试通过API Key验证
 		token, err := m.tokenService.ValidateToken(tokenValue)
 		if err == nil {
-			// Token验证成功
+			// API Key验证成功
 			c.Set("token", token)
 			c.Next()
 			return
 		}
 
-		// 如果Token验证失败，尝试通过User的APIKey验证（向后兼容）
+		// 如果API Key验证失败，尝试通过User的APIKey验证（向后兼容）
 		user, err := m.storage.GetUserByAPIKey(tokenValue)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid API key or token"})

@@ -7,10 +7,10 @@
 
 ## 认证
 
-大多数 API 需要认证。在 Authorization 头中包含 API 密钥或 Token：
+大多数 API 需要认证。在 Authorization 头中包含 API Key：
 
 ```
-Authorization: Bearer YOUR_API_KEY_OR_TOKEN
+Authorization: Bearer YOUR_API_KEY
 ```
 
 ## OpenAI 兼容 API
@@ -93,7 +93,56 @@ data: [DONE]
 - 每个数据块以 `data: ` 开头，后跟 JSON 对象
 - 流式响应结束时发送 `data: [DONE]`
 - 每个 chunk 包含 `delta` 字段，包含增量内容
-- 详细使用说明请参考 [流式响应文档](../STREAMING.md)
+
+**客户端示例：**
+
+Python:
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="your-api-key",
+    base_url="http://localhost:8080/llm/v1"
+)
+
+stream = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "你好！"}],
+    stream=True
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+JavaScript:
+```javascript
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  apiKey: 'your-api-key',
+  baseURL: 'http://localhost:8080/llm/v1'
+});
+
+const stream = await client.chat.completions.create({
+  model: 'gpt-3.5-turbo',
+  messages: [{ role: 'user', content: '你好！' }],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  if (chunk.choices[0].delta.content) {
+    process.stdout.write(chunk.choices[0].delta.content);
+  }
+}
+```
+
+**注意事项：**
+- 流式响应可以减少首字延迟，提供更好的用户体验
+- 确保客户端和服务器之间的网络连接稳定
+- 长时间运行的流式响应需要适当配置超时时间
+- 流式响应中的错误会通过 SSE 事件发送
 
 ### 列出模型
 
@@ -337,35 +386,59 @@ data: [DONE]
 - 对于 chat 类型资源，MaxTokens 限制为 10 以节省成本
 - 返回详细信息包括模型、响应内容、Token 使用情况和耗时
 
-### Token
+### API Key
 
-#### 列出 Token
+#### 列出 API Key
 
-**端点：** `GET /api/v1/tokens`
+**端点：** `GET /api/v1/api-keys`
 
-#### 创建 Token
+**注意：** 旧端点 `GET /api/v1/tokens` 仍然可用以保持向后兼容，但已弃用。
 
-**端点：** `POST /api/v1/tokens`
+#### 创建 API Key
+
+**端点：** `POST /api/v1/api-keys`
+
+**注意：** 旧端点 `POST /api/v1/tokens` 仍然可用以保持向后兼容，但已弃用。
 
 **请求：**
 ```json
 {
-  "name": "我的 Token",
+  "name": "我的 API Key",
   "policy_id": "policy-id"
 }
 ```
 
-#### 更新 Token
+**响应：**
+```json
+{
+  "data": {
+    "id": "api-key-id",
+    "name": "我的 API Key",
+    "api_key": "ling-...",
+    "prefix": "ling-...",
+    "status": "active",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
 
-**端点：** `PUT /api/v1/tokens/:id`
+#### 更新 API Key
 
-#### 删除 Token
+**端点：** `PUT /api/v1/api-keys/:id`
 
-**端点：** `DELETE /api/v1/tokens/:id`
+**注意：** 旧端点 `PUT /api/v1/tokens/:id` 仍然可用以保持向后兼容，但已弃用。
 
-#### 重置 Token
+#### 删除 API Key
 
-**端点：** `POST /api/v1/tokens/:id/reset`
+**端点：** `DELETE /api/v1/api-keys/:id`
+
+**注意：** 旧端点 `DELETE /api/v1/tokens/:id` 仍然可用以保持向后兼容，但已弃用。
+
+#### 重置 API Key
+
+**端点：** `POST /api/v1/api-keys/:id/reset`
+
+**注意：** 旧端点 `POST /api/v1/tokens/:id/reset` 仍然可用以保持向后兼容，但已弃用。
 
 ### 策略
 
@@ -520,6 +593,29 @@ data: [DONE]
 - `401`: 未授权
 - `404`: 未找到
 - `500`: 内部服务器错误
+
+## 自动重试
+
+LingProxy 根据可配置的设置自动重试失败的请求：
+
+**重试行为：**
+- 对于网络错误、超时和5xx服务器错误，失败的请求会自动重试
+- 使用指数退避策略：每次重试的延迟时间递增
+- 最大重试次数和延迟可通过管理界面配置（设置 → Provider设置）
+- 默认：3次重试，基础延迟1秒
+
+**可重试的错误：**
+- 网络连接失败
+- 请求超时
+- 5xx 服务器错误（500、502、503、504）
+- 429 限流错误
+
+**不可重试的错误：**
+- 4xx 客户端错误（429 除外）
+- 认证失败（401、403）
+- 无效的请求参数
+
+**注意：** 重试配置修改后立即生效，无需重启服务。
 
 ## Swagger 文档
 

@@ -227,7 +227,32 @@ const api = {
     return apiClient.get(`/stats/users/${id}`)
   },
 
-  // Token管理
+  // API Key管理
+  getAPIKeys() {
+    return apiClient.get('/api-keys')
+  },
+  getAPIKey(id) {
+    return apiClient.get(`/api-keys/${id}`)
+  },
+  createAPIKey(apiKey) {
+    return apiClient.post('/api-keys', apiKey)
+  },
+  updateAPIKey(id, apiKey) {
+    return apiClient.put(`/api-keys/${id}`, apiKey)
+  },
+  deleteAPIKey(id) {
+    return apiClient.delete(`/api-keys/${id}`)
+  },
+  resetAPIKey(id) {
+    return apiClient.post(`/api-keys/${id}/reset`)
+  },
+  setAPIKeyPolicy(id, data) {
+    return apiClient.put(`/api-keys/${id}/policy`, data)
+  },
+  removeAPIKeyPolicy(id) {
+    return apiClient.delete(`/api-keys/${id}/policy`)
+  },
+  // 保持向后兼容的旧方法
   getTokens() {
     return apiClient.get('/tokens')
   },

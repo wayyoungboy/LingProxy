@@ -14,7 +14,7 @@ type MemoryStorage struct {
 
 	// 数据存储
 	users           map[string]*User
-	tokens          map[string]*Token
+	apiKeys         map[string]*APIKey
 	policyTemplates map[string]*PolicyTemplate
 	policies        map[string]*Policy
 	llmResources    map[string]*LLMResource
@@ -30,7 +30,7 @@ type MemoryStorage struct {
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
 		users:           make(map[string]*User),
-		tokens:          make(map[string]*Token),
+		apiKeys:         make(map[string]*APIKey),
 		policyTemplates: make(map[string]*PolicyTemplate),
 		policies:        make(map[string]*Policy),
 		llmResources:    make(map[string]*LLMResource),
@@ -483,74 +483,105 @@ func (m *MemoryStorage) UpdateStatistics(stats *Statistics) error {
 	return nil
 }
 
-// Token methods
-func (m *MemoryStorage) CreateToken(token *Token) error {
+// API Key methods
+func (m *MemoryStorage) CreateAPIKey(apiKey *APIKey) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	token.ID = generateID()
-	token.CreatedAt = time.Now()
-	token.UpdatedAt = time.Now()
-	m.tokens[token.ID] = token
+	apiKey.ID = generateID()
+	apiKey.CreatedAt = time.Now()
+	apiKey.UpdatedAt = time.Now()
+	m.apiKeys[apiKey.ID] = apiKey
 	return nil
 }
 
-func (m *MemoryStorage) GetToken(id string) (*Token, error) {
+func (m *MemoryStorage) GetAPIKey(id string) (*APIKey, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	if token, exists := m.tokens[id]; exists {
-		return token, nil
+	if apiKey, exists := m.apiKeys[id]; exists {
+		return apiKey, nil
 	}
 	return nil, ErrNotFound
 }
 
-func (m *MemoryStorage) GetTokenByValue(tokenValue string) (*Token, error) {
+func (m *MemoryStorage) GetAPIKeyByValue(apiKeyValue string) (*APIKey, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	for _, token := range m.tokens {
-		if token.Token == tokenValue {
-			return token, nil
+	for _, apiKey := range m.apiKeys {
+		if apiKey.APIKey == apiKeyValue {
+			return apiKey, nil
 		}
 	}
 	return nil, ErrNotFound
 }
 
-func (m *MemoryStorage) UpdateToken(token *Token) error {
+func (m *MemoryStorage) UpdateAPIKey(apiKey *APIKey) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, exists := m.tokens[token.ID]; !exists {
+	if _, exists := m.apiKeys[apiKey.ID]; !exists {
 		return ErrNotFound
 	}
 
-	token.UpdatedAt = time.Now()
-	m.tokens[token.ID] = token
+	apiKey.UpdatedAt = time.Now()
+	m.apiKeys[apiKey.ID] = apiKey
 	return nil
 }
 
-func (m *MemoryStorage) DeleteToken(id string) error {
+func (m *MemoryStorage) DeleteAPIKey(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, exists := m.tokens[id]; !exists {
+	if _, exists := m.apiKeys[id]; !exists {
 		return ErrNotFound
 	}
 
-	delete(m.tokens, id)
+	delete(m.apiKeys, id)
 	return nil
 }
 
-func (m *MemoryStorage) ListTokens() ([]*Token, error) {
+func (m *MemoryStorage) ListAPIKeys() ([]*APIKey, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	tokens := make([]*Token, 0, len(m.tokens))
-	for _, token := range m.tokens {
-		tokens = append(tokens, token)
+	apiKeys := make([]*APIKey, 0, len(m.apiKeys))
+	for _, apiKey := range m.apiKeys {
+		apiKeys = append(apiKeys, apiKey)
 	}
-	return tokens, nil
+	return apiKeys, nil
+}
+
+// 保持向后兼容的方法别名
+// Deprecated: 使用 CreateAPIKey 代替
+func (m *MemoryStorage) CreateToken(token *APIKey) error {
+	return m.CreateAPIKey(token)
+}
+
+// Deprecated: 使用 GetAPIKey 代替
+func (m *MemoryStorage) GetToken(id string) (*APIKey, error) {
+	return m.GetAPIKey(id)
+}
+
+// Deprecated: 使用 GetAPIKeyByValue 代替
+func (m *MemoryStorage) GetTokenByValue(tokenValue string) (*APIKey, error) {
+	return m.GetAPIKeyByValue(tokenValue)
+}
+
+// Deprecated: 使用 UpdateAPIKey 代替
+func (m *MemoryStorage) UpdateToken(token *APIKey) error {
+	return m.UpdateAPIKey(token)
+}
+
+// Deprecated: 使用 DeleteAPIKey 代替
+func (m *MemoryStorage) DeleteToken(id string) error {
+	return m.DeleteAPIKey(id)
+}
+
+// Deprecated: 使用 ListAPIKeys 代替
+func (m *MemoryStorage) ListTokens() ([]*APIKey, error) {
+	return m.ListAPIKeys()
 }
 
 // PolicyTemplate methods

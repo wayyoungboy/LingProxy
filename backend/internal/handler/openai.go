@@ -43,7 +43,7 @@ func NewOpenAIHandler(storage *storage.StorageFacade, policyService *service.Pol
 	}
 }
 
-// findLLMResourceByModel 根据模型名称和Token查找对应的LLM资源
+// findLLMResourceByModel 根据模型名称和API Key查找对应的LLM资源
 func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string, resourceType string) (*storage.LLMResource, error) {
 	// 获取所有LLM资源
 	resources, err := h.storage.ListLLMResources()
@@ -70,31 +70,31 @@ func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string,
 
 	logger.Debug("Filtered resources by type", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("resource_type", resourceType), logger.F("original_count", len(resources)), logger.F("filtered_count", len(typeFiltered)))
 
-	// 从上下文获取Token（由认证中间件设置）
+	// 从上下文获取API Key（由认证中间件设置）
 	tokenValue := h.getTokenFromContext(c)
 	if tokenValue == "" {
-		// 没有Token，使用默认策略
-		logger.Debug("No token found, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("model", modelName), logger.F("resource_type", resourceType))
+		// 没有API Key，使用默认策略
+		logger.Debug("No API key found, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("model", modelName), logger.F("resource_type", resourceType))
 		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
 
-	// 获取Token信息
+	// 获取API Key信息
 	token, err := h.tokenService.ValidateToken(tokenValue)
 	if err != nil {
-		// Token验证失败，使用默认策略
-		logger.Warn("Token validation failed, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("error", err.Error()), logger.F("model", modelName), logger.F("resource_type", resourceType))
+		// API Key验证失败，使用默认策略
+		logger.Warn("API key validation failed, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("error", err.Error()), logger.F("model", modelName), logger.F("resource_type", resourceType))
 		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
 
-	// 检查Token是否有策略
+	// 检查API Key是否有策略
 	if token.PolicyID == "" {
-		// Token没有配置策略，使用默认策略
-		logger.Debug("Token has no policy, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("model", modelName), logger.F("resource_type", resourceType))
+		// API Key没有配置策略，使用默认策略
+		logger.Debug("API key has no policy, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("model", modelName), logger.F("resource_type", resourceType))
 		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
 
-	// 使用Token的策略选择资源
-	logger.Debug("Executing policy for token", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("model", modelName), logger.F("resource_type", resourceType))
+	// 使用API Key的策略选择资源
+	logger.Debug("Executing policy for API key", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("model", modelName), logger.F("resource_type", resourceType))
 	resource, err := h.policyService.ExecutePolicy(token.PolicyID, modelName, typeFiltered)
 	if err != nil {
 		// 策略执行失败，降级到默认策略
@@ -150,12 +150,16 @@ func (h *OpenAIHandler) getRandomInt(max int) (int, error) {
 	return int(n) % max, nil
 }
 
-// getTokenFromContext 从上下文获取Token
+// getTokenFromContext 从上下文获取API Key
 func (h *OpenAIHandler) getTokenFromContext(c *gin.Context) string {
-	// 尝试从上下文获取Token（由认证中间件设置）
+	// 尝试从上下文获取API Key（由认证中间件设置）
 	if token, exists := c.Get("token"); exists {
+		if t, ok := token.(*storage.APIKey); ok {
+			return t.APIKey
+		}
 		if t, ok := token.(*storage.Token); ok {
-			return t.Token
+			// 向后兼容：如果存储的是Token类型别名，转换为APIKey
+			return t.APIKey
 		}
 	}
 
@@ -396,11 +400,14 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 	}
 	logger.Debug("Request parameters prepared", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse), logger.F("base_url", llmResource.BaseURL), logger.F("message_count", len(messages)))
 
-	// 获取用户ID（从token或user中）
+	// 获取用户ID（从API Key或user中）
 	userID := ""
 	if token, exists := c.Get("token"); exists {
-		if t, ok := token.(*storage.Token); ok {
-			userID = t.ID // 使用Token ID作为用户标识
+		if t, ok := token.(*storage.APIKey); ok {
+			userID = t.ID // 使用API Key ID作为用户标识
+		} else if t, ok := token.(*storage.Token); ok {
+			// 向后兼容：如果存储的是Token类型别名
+			userID = t.ID
 		}
 	} else if user, exists := c.Get("user"); exists {
 		if u, ok := user.(*storage.User); ok {
@@ -861,11 +868,14 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	}
 	logger.Debug("Request parameters prepared", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("model", modelToUse), logger.F("base_url", llmResource.BaseURL))
 
-	// 获取用户ID（从token或user中）
+	// 获取用户ID（从API Key或user中）
 	userID := ""
 	if token, exists := c.Get("token"); exists {
-		if t, ok := token.(*storage.Token); ok {
-			userID = t.ID // 使用Token ID作为用户标识
+		if t, ok := token.(*storage.APIKey); ok {
+			userID = t.ID // 使用API Key ID作为用户标识
+		} else if t, ok := token.(*storage.Token); ok {
+			// 向后兼容：如果存储的是Token类型别名
+			userID = t.ID
 		}
 	} else if user, exists := c.Get("user"); exists {
 		if u, ok := user.(*storage.User); ok {
@@ -1293,7 +1303,10 @@ func (h *OpenAIHandler) CreateEmbedding(c *gin.Context) {
 	// 获取用户ID
 	userID := ""
 	if token, exists := c.Get("token"); exists {
-		if t, ok := token.(*storage.Token); ok {
+		if t, ok := token.(*storage.APIKey); ok {
+			userID = t.ID
+		} else if t, ok := token.(*storage.Token); ok {
+			// 向后兼容：如果存储的是Token类型别名
 			userID = t.ID
 		}
 	} else if user, exists := c.Get("user"); exists {

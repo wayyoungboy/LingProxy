@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="../../assets/lingproxy-logo-full.svg" alt="LingProxy Logo" width="300">
+<img src="../../assets/lingproxy-logo-full.svg" alt="LingProxy Logo" width="300" />
 
 </div>
 
@@ -11,27 +11,34 @@ Welcome to the LingProxy documentation! This documentation provides comprehensiv
 ## Documentation Structure
 
 ### Getting Started
-- [Introduction](01-introduction.md) - Overview of LingProxy and its features
-- [Quick Start Guide](02-quick-start.md) - Get up and running quickly
+- [Introduction](./introduction) - Overview of LingProxy and its features
+- [Quick Start Guide](./quick-start) - Get up and running quickly
 
 ### Configuration & Usage
-- [Configuration Guide](03-configuration.md) - Detailed configuration options
-- [API Reference](04-api-reference.md) - Complete API documentation
-- [Streaming Support](../STREAMING.md) - Streaming response usage guide
+- [Configuration Guide](./configuration) - Detailed configuration options
+- [API Reference](./api-reference) - Complete API documentation (includes streaming support)
 
 ### Architecture & Development
-- [Architecture Guide](05-architecture.md) - System architecture and design
-- [Development Guide](06-development.md) - Contributing and development guidelines
+- [Architecture Guide](./architecture) - System architecture and design
+- [Development Guide](./development) - Contributing and development guidelines
 
 ## Quick Links
 
-- **GitHub Repository**: [Add your repository URL]
-- **Issue Tracker**: [Add your issues URL]
+- **Main README**: [../../README.md](../../README.md)
+- **Chinese README**: [../../README_zh.md](../../README_zh.md)
+- **Docker Guide**: See [Quick Start Guide](./quick-start#docker-deployment) for Docker deployment instructions
 - **Swagger API Docs**: `http://localhost:8080/swagger/index.html` (when running locally)
+
+## Getting Started
+
+1. **New Users**: Start with the [Quick Start Guide](./quick-start)
+2. **Configuration**: See the [Configuration Guide](./configuration)
+3. **API Usage**: Check the [API Reference](./api-reference)
+4. **Developers**: Read the [Development Guide](./development)
 
 ## Contributing
 
-We welcome contributions! Please see the [Development Guide](06-development.md) for details on how to contribute.
+We welcome contributions! Please see the [Development Guide](./development) for details on how to contribute.
 
 ## License
 

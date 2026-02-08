@@ -110,29 +110,60 @@ func (f *StorageFacade) ListModelsByLLMResource(llmResourceID string) ([]*Model,
 	return f.storage.ListModelsByLLMResource(llmResourceID)
 }
 
-// Token methods
-func (f *StorageFacade) CreateToken(token *Token) error {
-	return f.storage.CreateToken(token)
+// API Key methods
+func (f *StorageFacade) CreateAPIKey(apiKey *APIKey) error {
+	return f.storage.CreateAPIKey(apiKey)
 }
 
-func (f *StorageFacade) GetToken(id string) (*Token, error) {
-	return f.storage.GetToken(id)
+func (f *StorageFacade) GetAPIKey(id string) (*APIKey, error) {
+	return f.storage.GetAPIKey(id)
 }
 
-func (f *StorageFacade) GetTokenByValue(tokenValue string) (*Token, error) {
-	return f.storage.GetTokenByValue(tokenValue)
+func (f *StorageFacade) GetAPIKeyByValue(apiKeyValue string) (*APIKey, error) {
+	return f.storage.GetAPIKeyByValue(apiKeyValue)
 }
 
-func (f *StorageFacade) UpdateToken(token *Token) error {
-	return f.storage.UpdateToken(token)
+func (f *StorageFacade) UpdateAPIKey(apiKey *APIKey) error {
+	return f.storage.UpdateAPIKey(apiKey)
 }
 
+func (f *StorageFacade) DeleteAPIKey(id string) error {
+	return f.storage.DeleteAPIKey(id)
+}
+
+func (f *StorageFacade) ListAPIKeys() ([]*APIKey, error) {
+	return f.storage.ListAPIKeys()
+}
+
+// 保持向后兼容的方法别名
+// Deprecated: 使用 CreateAPIKey 代替
+func (f *StorageFacade) CreateToken(token *APIKey) error {
+	return f.CreateAPIKey(token)
+}
+
+// Deprecated: 使用 GetAPIKey 代替
+func (f *StorageFacade) GetToken(id string) (*APIKey, error) {
+	return f.GetAPIKey(id)
+}
+
+// Deprecated: 使用 GetAPIKeyByValue 代替
+func (f *StorageFacade) GetTokenByValue(tokenValue string) (*APIKey, error) {
+	return f.GetAPIKeyByValue(tokenValue)
+}
+
+// Deprecated: 使用 UpdateAPIKey 代替
+func (f *StorageFacade) UpdateToken(token *APIKey) error {
+	return f.UpdateAPIKey(token)
+}
+
+// Deprecated: 使用 DeleteAPIKey 代替
 func (f *StorageFacade) DeleteToken(id string) error {
-	return f.storage.DeleteToken(id)
+	return f.DeleteAPIKey(id)
 }
 
-func (f *StorageFacade) ListTokens() ([]*Token, error) {
-	return f.storage.ListTokens()
+// Deprecated: 使用 ListAPIKeys 代替
+func (f *StorageFacade) ListTokens() ([]*APIKey, error) {
+	return f.ListAPIKeys()
 }
 
 // PolicyTemplate methods

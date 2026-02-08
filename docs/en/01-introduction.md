@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="../../assets/lingproxy-logo-full.svg" alt="LingProxy Logo" width="300">
+<img src="../../assets/lingproxy-logo-full.svg" alt="LingProxy Logo" width="300" />
 
 </div>
 
@@ -16,13 +16,14 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **OpenAI-Compatible API**: Seamless integration with OpenAI SDK and compatible clients
 - **Streaming Support**: Full support for Server-Sent Events (SSE) streaming responses for chat completions
 - **Intelligent Load Balancing**: Multiple routing strategies (round-robin, random, weighted, etc.)
+- **Automatic Retry**: Configurable automatic retry mechanism with exponential backoff for failed requests
 - **Request Routing**: Policy-based request routing with model matching and failover
 - **Request Logging**: Complete request chain tracing and logging
 
 ### 🔐 Security & Authentication
 - **Flexible Authentication**: Global authentication toggle, configurable per endpoint
 - **Admin Management**: Username/password authentication with secure password hashing
-- **Token Management**: Request-side token management with policy association
+- **API Key Management**: Request-side API key management with policy association
 - **API Key Authentication**: Secure API key-based authentication
 - **CORS Support**: Configurable cross-origin resource sharing
 

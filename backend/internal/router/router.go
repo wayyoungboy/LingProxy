@@ -25,12 +25,14 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 
 	// 创建处理器
 	logger.Info("Initializing handlers")
-	tokenService := service.NewTokenService(storage)
+	apiKeyService := service.NewAPIKeyService(storage)
 	templateService := service.NewPolicyTemplateService(storage)
 	settingsService := service.NewSettingsService("configs/config.yaml")
 	// policyService 已通过参数传入
 	adminHandler := handler.NewAdminHandler(storage)
-	tokenHandler := handler.NewTokenHandler(tokenService)
+	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
+	tokenHandler := apiKeyHandler // 保持向后兼容
+	tokenService := apiKeyService // 保持向后兼容
 	policyHandler := handler.NewPolicyHandler(policyService, templateService)
 	settingsHandler := handler.NewSettingsHandler(settingsService)
 	systemHandler := handler.NewSystemHandler()
@@ -94,8 +96,17 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 			auth.PUT("/admin/password", adminHandler.UpdatePassword) // 更新管理员密码
 			auth.PUT("/admin/api-key", adminHandler.ResetAPIKey)     // 重置API Key
 
-			// Token管理路由
-			logger.Debug("Adding token management routes")
+			// API Key管理路由
+			logger.Debug("Adding API key management routes")
+			auth.GET("/api-keys", tokenHandler.ListAPIKeys)
+			auth.GET("/api-keys/:id", tokenHandler.GetAPIKey)
+			auth.POST("/api-keys", tokenHandler.CreateAPIKey)
+			auth.PUT("/api-keys/:id", tokenHandler.UpdateAPIKey)
+			auth.DELETE("/api-keys/:id", tokenHandler.DeleteAPIKey)
+			auth.POST("/api-keys/:id/reset", tokenHandler.ResetAPIKey)
+			auth.PUT("/api-keys/:id/policy", tokenHandler.SetAPIKeyPolicy)
+			auth.DELETE("/api-keys/:id/policy", tokenHandler.RemoveAPIKeyPolicy)
+			// 保持向后兼容的旧路径
 			auth.GET("/tokens", tokenHandler.ListTokens)
 			auth.GET("/tokens/:id", tokenHandler.GetToken)
 			auth.POST("/tokens", tokenHandler.CreateToken)

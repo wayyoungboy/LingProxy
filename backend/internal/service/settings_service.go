@@ -17,6 +17,7 @@ type UpdateSettingsRequest struct {
 	Security     *SecuritySettings     `json:"security,omitempty"`
 	Log          *LogSettings          `json:"log,omitempty"`
 	LoadBalancer *LoadBalancerSettings `json:"load_balancer,omitempty"`
+	Provider     *ProviderSettings     `json:"provider,omitempty"`
 }
 
 // BasicSettings 基本设置
@@ -82,6 +83,13 @@ type HealthCheckSettings struct {
 	Interval    *int  `json:"interval,omitempty"`
 	Timeout     *int  `json:"timeout,omitempty"`
 	MaxFailures *int  `json:"max_failures,omitempty"`
+}
+
+// ProviderSettings Provider设置
+type ProviderSettings struct {
+	Timeout    *int `json:"timeout,omitempty"`     // 超时时间（秒）
+	MaxRetries *int `json:"max_retries,omitempty"` // 最大重试次数
+	RetryDelay *int `json:"retry_delay,omitempty"` // 重试延迟（秒）
 }
 
 // SettingsService 设置服务
@@ -248,6 +256,22 @@ func (s *SettingsService) UpdateSettings(req *UpdateSettingsRequest, restartRequ
 				cfg.LoadBalancer.HealthCheck.MaxFailures = *req.LoadBalancer.HealthCheck.MaxFailures
 				viper.Set("load_balancer.health_check.max_failures", *req.LoadBalancer.HealthCheck.MaxFailures)
 			}
+		}
+	}
+
+	// 更新Provider设置
+	if req.Provider != nil {
+		if req.Provider.Timeout != nil {
+			cfg.Provider.Timeout = time.Duration(*req.Provider.Timeout) * time.Second
+			viper.Set("provider.timeout", fmt.Sprintf("%ds", *req.Provider.Timeout))
+		}
+		if req.Provider.MaxRetries != nil {
+			cfg.Provider.MaxRetries = *req.Provider.MaxRetries
+			viper.Set("provider.max_retries", *req.Provider.MaxRetries)
+		}
+		if req.Provider.RetryDelay != nil {
+			cfg.Provider.RetryDelay = time.Duration(*req.Provider.RetryDelay) * time.Second
+			viper.Set("provider.retry_delay", fmt.Sprintf("%ds", *req.Provider.RetryDelay))
 		}
 	}
 

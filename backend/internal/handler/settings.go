@@ -84,6 +84,11 @@ func (h *SettingsHandler) GetSettings(c *gin.Context) {
 				"max_failures": cfg.LoadBalancer.HealthCheck.MaxFailures,
 			},
 		},
+		"provider": gin.H{
+			"timeout":     int(cfg.Provider.Timeout.Seconds()),
+			"max_retries": cfg.Provider.MaxRetries,
+			"retry_delay": int(cfg.Provider.RetryDelay.Seconds()),
+		},
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": settings})

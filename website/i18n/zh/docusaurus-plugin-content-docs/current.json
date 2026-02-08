@@ -1,0 +1,26 @@
+{
+  "version.label": {
+    "message": "Current",
+    "description": "The label for version current"
+  },
+  "sidebar.docs.category.Getting Started": {
+    "message": "快速开始",
+    "description": "The label for category Getting Started in sidebar docs"
+  },
+  "sidebar.docs.category.API Reference": {
+    "message": "API 参考",
+    "description": "The label for category API Reference in sidebar docs"
+  },
+  "sidebar.docs.category.Architecture": {
+    "message": "架构",
+    "description": "The label for category Architecture in sidebar docs"
+  },
+  "sidebar.docs.category.Deployment": {
+    "message": "部署",
+    "description": "The label for category Deployment in sidebar docs"
+  },
+  "sidebar.docs.category.Technical Analysis": {
+    "message": "技术分析",
+    "description": "The label for category Technical Analysis in sidebar docs"
+  }
+}

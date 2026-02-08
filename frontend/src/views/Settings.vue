@@ -251,6 +251,29 @@
           </el-form>
         </el-tab-pane>
         
+        <!-- Provider设置 -->
+        <el-tab-pane :label="$t('settings.providerSettings')" name="provider">
+          <el-form :model="settingsForm.provider" label-width="150px">
+            <el-form-item :label="$t('settings.requestTimeout')">
+              <el-input-number v-model="settingsForm.provider.timeout" :min="1" :max="300" />
+              <span style="color: #909399; margin-left: 10px">{{ $t('settings.seconds') }}</span>
+            </el-form-item>
+            <el-form-item :label="$t('settings.maxRetries')">
+              <el-input-number v-model="settingsForm.provider.max_retries" :min="0" :max="10" />
+              <el-alert type="info" :closable="false" style="margin-top: 10px">
+                {{ $t('settings.maxRetriesDescription') }}
+              </el-alert>
+            </el-form-item>
+            <el-form-item :label="$t('settings.retryDelay')">
+              <el-input-number v-model="settingsForm.provider.retry_delay" :min="1" :max="60" />
+              <span style="color: #909399; margin-left: 10px">{{ $t('settings.seconds') }}</span>
+              <el-alert type="info" :closable="false" style="margin-top: 10px">
+                {{ $t('settings.retryDelayDescription') }}
+              </el-alert>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+        
         <!-- 系统信息 -->
         <el-tab-pane :label="$t('settings.systemInfo')" name="info">
           <el-descriptions :column="2" border class="mt-4">
@@ -367,6 +390,11 @@ const settingsForm = reactive({
       max_failures: 3
     }
   },
+  provider: {
+    timeout: 30,
+    max_retries: 3,
+    retry_delay: 1
+  },
 })
 
 const systemInfo = reactive({
@@ -429,6 +457,10 @@ const loadSettings = async () => {
           settingsForm.load_balancer.health_check = response.data.load_balancer.health_check
         }
       }
+      // 更新Provider设置
+      if (response.data.provider) {
+        Object.assign(settingsForm.provider, response.data.provider)
+      }
     }
   } catch (error) {
     console.error('获取设置失败:', error)
@@ -485,6 +517,14 @@ const saveSettings = async () => {
     
     if (settingsForm.load_balancer) {
       updateData.load_balancer = settingsForm.load_balancer
+    }
+    
+    if (settingsForm.provider) {
+      updateData.provider = {
+        timeout: settingsForm.provider.timeout,
+        max_retries: settingsForm.provider.max_retries,
+        retry_delay: settingsForm.provider.retry_delay
+      }
     }
     
     const response = await api.updateSettings(updateData)

@@ -85,7 +85,7 @@ frontend/
 - **Coverage**: All user interface text, error messages, and form validation messages are internationalized
 
 ### Core Feature Modules
-- **Authentication**: Login page, JWT Token management
+- **Authentication**: Login page, JWT API Key management
 - **Dashboard**: System overview and statistics
 - **Resource Management**: LLM resources, models, endpoints management
 - **Policy Management**: Routing policy configuration and management
@@ -251,9 +251,11 @@ type Policy struct {
    - Execute routing policy
    - Select LLM resource
    ↓
-6. Client Manager
+6. OpenAI Service (with Retry)
    - Create/Get client
    - Forward request to AI service
+   - Automatic retry on failure (configurable)
+   - Exponential backoff for retries
    ↓
 7. Response Processing
    - Format response
@@ -358,6 +360,33 @@ type Policy struct {
   "error": "Error message"
 }
 ```
+
+### Automatic Retry Mechanism
+
+LingProxy includes a configurable automatic retry mechanism for resource requests:
+
+**Retryable Errors:**
+- Network errors (connection failures, timeouts)
+- 5xx server errors (500, 502, 503, 504)
+- 429 rate limit errors
+- Temporary service unavailability
+
+**Non-Retryable Errors:**
+- 4xx client errors (except 429)
+- Authentication errors (401, 403)
+- Context cancellations
+- Invalid request parameters
+
+**Retry Configuration:**
+- **Max Retries**: Configurable via admin interface (default: 3, 0 = disabled)
+- **Retry Delay**: Base delay between retries (default: 1s)
+- **Exponential Backoff**: Actual delay = retry_delay × attempt_number
+- **Scope**: Applies to all request types (chat completions, text completions, embeddings, streaming)
+
+**Configuration:**
+- Managed via admin interface: Settings → Provider Settings
+- Changes take effect immediately without restart
+- Stored in `config.yaml` under `provider` section
 
 ## Logging
 

@@ -16,7 +16,7 @@ func NewGormStorage(db *gorm.DB) *GormStorage {
 	// 自动迁移数据库表结构
 	db.AutoMigrate(
 		&User{},
-		&Token{},
+		&APIKey{},
 		&PolicyTemplate{},
 		&Policy{},
 		&LLMResource{},
@@ -384,39 +384,39 @@ func (g *GormStorage) UpdateStatistics(stats *Statistics) error {
 	return nil
 }
 
-// Token methods
-func (g *GormStorage) CreateToken(token *Token) error {
-	token.ID = generateID()
-	token.CreatedAt = time.Now()
-	token.UpdatedAt = time.Now()
-	return g.db.Create(token).Error
+// API Key methods
+func (g *GormStorage) CreateAPIKey(apiKey *APIKey) error {
+	apiKey.ID = generateID()
+	apiKey.CreatedAt = time.Now()
+	apiKey.UpdatedAt = time.Now()
+	return g.db.Create(apiKey).Error
 }
 
-func (g *GormStorage) GetToken(id string) (*Token, error) {
-	var token Token
-	if err := g.db.Where("id = ?", id).First(&token).Error; err != nil {
+func (g *GormStorage) GetAPIKey(id string) (*APIKey, error) {
+	var apiKey APIKey
+	if err := g.db.Where("id = ?", id).First(&apiKey).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
-	return &token, nil
+	return &apiKey, nil
 }
 
-func (g *GormStorage) GetTokenByValue(tokenValue string) (*Token, error) {
-	var token Token
-	if err := g.db.Where("token = ?", tokenValue).First(&token).Error; err != nil {
+func (g *GormStorage) GetAPIKeyByValue(apiKeyValue string) (*APIKey, error) {
+	var apiKey APIKey
+	if err := g.db.Where("api_key = ?", apiKeyValue).First(&apiKey).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
-	return &token, nil
+	return &apiKey, nil
 }
 
-func (g *GormStorage) UpdateToken(token *Token) error {
-	token.UpdatedAt = time.Now()
-	if err := g.db.Save(token).Error; err != nil {
+func (g *GormStorage) UpdateAPIKey(apiKey *APIKey) error {
+	apiKey.UpdatedAt = time.Now()
+	if err := g.db.Save(apiKey).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return ErrNotFound
 		}
@@ -425,19 +425,50 @@ func (g *GormStorage) UpdateToken(token *Token) error {
 	return nil
 }
 
-func (g *GormStorage) DeleteToken(id string) error {
-	if err := g.db.Where("id = ?", id).Delete(&Token{}).Error; err != nil {
+func (g *GormStorage) DeleteAPIKey(id string) error {
+	if err := g.db.Where("id = ?", id).Delete(&APIKey{}).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (g *GormStorage) ListTokens() ([]*Token, error) {
-	var tokens []*Token
-	if err := g.db.Find(&tokens).Error; err != nil {
+func (g *GormStorage) ListAPIKeys() ([]*APIKey, error) {
+	var apiKeys []*APIKey
+	if err := g.db.Find(&apiKeys).Error; err != nil {
 		return nil, err
 	}
-	return tokens, nil
+	return apiKeys, nil
+}
+
+// 保持向后兼容的方法别名
+// Deprecated: 使用 CreateAPIKey 代替
+func (g *GormStorage) CreateToken(token *APIKey) error {
+	return g.CreateAPIKey(token)
+}
+
+// Deprecated: 使用 GetAPIKey 代替
+func (g *GormStorage) GetToken(id string) (*APIKey, error) {
+	return g.GetAPIKey(id)
+}
+
+// Deprecated: 使用 GetAPIKeyByValue 代替
+func (g *GormStorage) GetTokenByValue(tokenValue string) (*APIKey, error) {
+	return g.GetAPIKeyByValue(tokenValue)
+}
+
+// Deprecated: 使用 UpdateAPIKey 代替
+func (g *GormStorage) UpdateToken(token *APIKey) error {
+	return g.UpdateAPIKey(token)
+}
+
+// Deprecated: 使用 DeleteAPIKey 代替
+func (g *GormStorage) DeleteToken(id string) error {
+	return g.DeleteAPIKey(id)
+}
+
+// Deprecated: 使用 ListAPIKeys 代替
+func (g *GormStorage) ListTokens() ([]*APIKey, error) {
+	return g.ListAPIKeys()
 }
 
 // PolicyTemplate methods

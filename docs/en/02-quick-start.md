@@ -89,7 +89,7 @@ docker-compose -f docker/docker-compose.yml logs -f
 docker-compose -f docker/docker-compose.yml down
 ```
 
-See [Docker Deployment Guide](../docker/README.md) for more details.
+For more details about Docker deployment, see the Docker section above or check the project's `docker/README.md` file.
 
 ## First Steps
 
@@ -105,12 +105,12 @@ See [Docker Deployment Guide](../docker/README.md) for more details.
    - Base URL: API endpoint URL
    - API Key: Your API key
 
-### 2. Create a Token
+### 2. Create an API Key
 
-1. Navigate to **Tokens** in the dashboard
-2. Click **Create Token**
-3. Fill in the token information:
-   - Name: Token name/description
+1. Navigate to **API Key Management** in the dashboard
+2. Click **Create API Key**
+3. Fill in the API key information:
+   - Name: API key name/description
    - Policy: Select a routing policy (optional)
 
 ### 3. Test the API
@@ -118,7 +118,7 @@ See [Docker Deployment Guide](../docker/README.md) for more details.
 ```bash
 # Using curl
 curl -X POST http://localhost:8080/llm/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Authorization: Bearer YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-3.5-turbo",

@@ -5,7 +5,7 @@
 ## 前置要求
 
 1. 确保 LingProxy 服务正在运行（默认地址：`http://localhost:8080`）
-2. 获取你的 API Key（从 LingProxy 管理界面创建 Token）
+2. 获取你的 API Key（从 LingProxy 管理界面创建 API Key）
 
 ## Python 客户端
 
@@ -167,8 +167,8 @@ set LINGPROXY_API_KEY=ling-your-api-key-here
 
 1. 启动 LingProxy 服务
 2. 访问管理界面（通常是 `http://localhost:3000`）
-3. 登录后，在 Token 管理页面创建新的 Token
-4. 复制生成的 Token（格式：`ling-xxxxx`）
+3. 登录后，在 API Key 管理页面创建新的 API Key
+4. 复制生成的 API Key（格式：`ling-xxxxx`）
 
 ### 2. 连接失败怎么办？
 
@@ -179,7 +179,7 @@ set LINGPROXY_API_KEY=ling-your-api-key-here
 ### 3. 认证失败怎么办？
 
 - 确认 API Key 正确（以 `ling-` 开头）
-- 检查 Token 状态是否为 `active`
+- 检查 API Key 状态是否为 `active`
 - 确认认证功能已启用（检查配置文件中的 `security.auth.enabled`）
 
 ### 4. 模型不存在错误？

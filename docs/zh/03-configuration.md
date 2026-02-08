@@ -69,6 +69,25 @@ security:
 - 当 `enabled: true` 时：所有 API（除登录外）都需要认证
 - 当 `enabled: false` 时：所有 API（除登录外）都无需认证即可访问
 
+### Provider配置
+
+```yaml
+provider:
+  timeout: "30s"        # 请求超时时间
+  max_retries: 3        # 最大重试次数（0 = 禁用重试）
+  retry_delay: "1s"     # 基础重试延迟（实际延迟会指数增长）
+  max_idle_conns: 100   # 最大空闲连接数
+  max_conns_per_host: 100  # 每个主机最大连接数
+  idle_conn_timeout: "90s"  # 空闲连接超时时间
+```
+
+**重试配置说明：**
+- `max_retries`: 失败请求的最大重试次数。设置为 `0` 可禁用重试。
+- `retry_delay`: 重试之间的基础延迟时间。实际延迟会指数增长：`延迟 = retry_delay × 重试次数`。
+- 重试适用于网络错误、超时和5xx服务器错误。
+- 不会重试4xx客户端错误（429限流除外）、认证错误或上下文取消错误。
+- 可通过管理界面配置：设置 → Provider设置。
+
 ## 环境变量
 
 您可以使用 `LINGPROXY_` 前缀的环境变量覆盖配置值：
@@ -95,6 +114,9 @@ export LINGPROXY_STORAGE_GORM_DSN="mysql://user:pass@localhost/db"
 - `log.format`: "json"
 - `log.output`: "both"
 - `security.auth.enabled`: true
+- `provider.timeout`: "30s"
+- `provider.max_retries`: 3
+- `provider.retry_delay`: "1s"
 
 ## 管理员凭据
 
@@ -107,13 +129,25 @@ export LINGPROXY_STORAGE_GORM_DSN="mysql://user:pass@localhost/db"
 ## 通过管理界面配置
 
 许多设置可以通过管理后台配置：
-- 系统设置（基础、缓存、限流、安全、日志、负载均衡）
-- LLM 资源
-- 模型
-- 策略
-- Token
+- **系统设置**：基础设置、缓存、限流、安全、日志、负载均衡、Provider重试
+- **LLM 资源**：添加、编辑和管理 AI 服务资源
+- **模型**：配置模型详情、定价和使用限制
+- **策略**：创建和管理路由策略
+- **API Key**：创建和管理请求端 API Key，支持策略绑定
 
 通过管理界面所做的更改会保存到配置文件。
+
+### Provider重试设置
+
+您可以通过管理界面配置资源请求的重试行为：
+
+1. 导航到 **设置** → **Provider设置**
+2. 配置：
+   - **请求超时时间**：等待响应的最大时间（秒）
+   - **最大重试次数**：最大重试尝试次数（0-10，0 = 禁用）
+   - **重试延迟**：重试之间的基础延迟（秒，实际延迟会指数增长）
+
+这些设置会立即应用到所有新请求，无需重启服务。
 
 ## 生产环境配置
 

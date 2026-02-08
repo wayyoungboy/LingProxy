@@ -113,19 +113,28 @@ type Statistics struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
-// Token Token模型（用于API请求认证）
-type Token struct {
+// APIKey API Key模型（用于API请求认证）
+type APIKey struct {
 	ID         string     `json:"id"`
-	Name       string     `json:"name"`                // Token名称/描述
-	Token      string     `json:"token"`               // Token值（API Key）
-	Prefix     string     `json:"prefix"`              // Token前缀（用于显示）
-	Status     string     `json:"status"`              // active/inactive
+	Name       string     `json:"name"`                // API Key名称/描述
+	APIKey     string     `json:"api_key"`             // API Key值
+	Prefix     string     `json:"prefix"`             // API Key前缀（用于显示）
+	Status     string     `json:"status"`             // active/inactive
 	PolicyID   string     `json:"policy_id,omitempty"` // 关联的策略ID
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
 }
+
+// TableName 指定数据库表名
+func (APIKey) TableName() string {
+	return "api_keys"
+}
+
+// Token 保持向后兼容的类型别名
+// Deprecated: 使用 APIKey 代替
+type Token = APIKey
 
 // PolicyTemplate 策略模板模型
 type PolicyTemplate struct {

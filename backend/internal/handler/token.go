@@ -9,45 +9,55 @@ import (
 	"github.com/lingproxy/lingproxy/internal/service"
 )
 
-// TokenHandler Token处理器
-type TokenHandler struct {
-	tokenService *service.TokenService
+// APIKeyHandler API Key处理器
+type APIKeyHandler struct {
+	apiKeyService *service.APIKeyService
 }
 
-// NewTokenHandler 创建新的Token处理器
-func NewTokenHandler(tokenService *service.TokenService) *TokenHandler {
-	return &TokenHandler{
-		tokenService: tokenService,
+// NewAPIKeyHandler 创建新的API Key处理器
+func NewAPIKeyHandler(apiKeyService *service.APIKeyService) *APIKeyHandler {
+	return &APIKeyHandler{
+		apiKeyService: apiKeyService,
 	}
 }
 
-// CreateTokenRequest 创建Token请求
+// TokenHandler 保持向后兼容的类型别名
+// Deprecated: 使用 APIKeyHandler 代替
+type TokenHandler = APIKeyHandler
+
+// NewTokenHandler 保持向后兼容的函数别名
+// Deprecated: 使用 NewAPIKeyHandler 代替
+func NewTokenHandler(tokenService *service.APIKeyService) *APIKeyHandler {
+	return NewAPIKeyHandler(tokenService)
+}
+
+// CreateTokenRequest 创建API Key请求
 type CreateTokenRequest struct {
 	Name      string `json:"name" binding:"required"`
 	ExpiresAt string `json:"expires_at,omitempty"` // ISO 8601格式
 }
 
-// UpdateTokenRequest 更新Token请求
+// UpdateTokenRequest 更新API Key请求
 type UpdateTokenRequest struct {
 	Name   *string `json:"name,omitempty"`
 	Status *string `json:"status,omitempty"` // active/inactive
 }
 
-// CreateToken 创建Token
-// @Summary Create a new token
-// @Description Create a new API token for authentication
-// @Tags tokens
+// CreateAPIKey 创建API Key
+// @Summary Create a new API key
+// @Description Create a new API key for authentication
+// @Tags api-keys
 // @Accept json
 // @Produce json
-// @Param token body CreateTokenRequest true "Token information"
-// @Success 201 {object} map[string]interface{} "Created token"
+// @Param apiKey body CreateTokenRequest true "API key information"
+// @Success 201 {object} map[string]interface{} "Created API key"
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /api/v1/tokens [post]
-func (h *TokenHandler) CreateToken(c *gin.Context) {
+// @Router /api/v1/api-keys [post]
+func (h *APIKeyHandler) CreateAPIKey(c *gin.Context) {
 	var req CreateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("创建Token失败", logger.F("error", err.Error()))
+		logger.Error("创建API Key失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -63,294 +73,422 @@ func (h *TokenHandler) CreateToken(c *gin.Context) {
 		expiresAt = &parsed
 	}
 
-	token, err := h.tokenService.CreateToken(req.Name, expiresAt)
+	apiKey, err := h.apiKeyService.CreateAPIKey(req.Name, expiresAt)
 	if err != nil {
-		if err == service.ErrTokenNameExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "token name already exists"})
+		if err == service.ErrAPIKeyNameExists {
+			c.JSON(http.StatusConflict, gin.H{"error": "API key name already exists"})
 			return
 		}
-		logger.Error("创建Token失败", logger.F("error", err.Error()))
+		logger.Error("创建API Key失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("创建Token成功", logger.F("id", token.ID), logger.F("name", token.Name))
+	logger.Info("创建API Key成功", logger.F("id", apiKey.ID), logger.F("name", apiKey.Name))
 	c.JSON(http.StatusCreated, gin.H{
 		"data": gin.H{
-			"id":         token.ID,
-			"name":       token.Name,
-			"token":      token.Token, // 只在创建时返回完整Token
-			"prefix":     token.Prefix,
-			"status":     token.Status,
-			"expires_at": token.ExpiresAt,
-			"created_at": token.CreatedAt,
+			"id":         apiKey.ID,
+			"name":       apiKey.Name,
+			"api_key":    apiKey.APIKey, // 只在创建时返回完整API Key
+			"prefix":     apiKey.Prefix,
+			"status":     apiKey.Status,
+			"expires_at": apiKey.ExpiresAt,
+			"created_at": apiKey.CreatedAt,
 		},
 	})
 }
 
-// ListTokens 获取Token列表
-// @Summary List all tokens
-// @Description Get a list of all API tokens
-// @Tags tokens
+// CreateToken 保持向后兼容的函数别名
+// Deprecated: 使用 CreateAPIKey 代替
+func (h *APIKeyHandler) CreateToken(c *gin.Context) {
+	h.CreateAPIKey(c)
+}
+
+// ListAPIKeys 获取API Key列表
+// @Summary List all API keys
+// @Description Get a list of all API keys
+// @Tags api-keys
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]interface{} "List of tokens"
-// @Router /api/v1/tokens [get]
-func (h *TokenHandler) ListTokens(c *gin.Context) {
-	tokens, err := h.tokenService.ListTokens()
+// @Success 200 {object} map[string]interface{} "List of API keys"
+// @Router /api/v1/api-keys [get]
+func (h *APIKeyHandler) ListAPIKeys(c *gin.Context) {
+	apiKeys, err := h.apiKeyService.ListAPIKeys()
 	if err != nil {
-		logger.Error("获取Token列表失败", logger.F("error", err.Error()))
+		logger.Error("获取API Key列表失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 隐藏完整Token值，只显示前缀
-	tokenList := make([]gin.H, 0, len(tokens))
-	for _, token := range tokens {
-		tokenList = append(tokenList, gin.H{
-			"id":           token.ID,
-			"name":         token.Name,
-			"prefix":       token.Prefix, // 显示前缀
-			"status":       token.Status,
-			"policy_id":    token.PolicyID,
-			"last_used_at": token.LastUsedAt,
-			"expires_at":   token.ExpiresAt,
-			"created_at":   token.CreatedAt,
+	// 隐藏完整API Key值，只显示前缀
+	apiKeyList := make([]gin.H, 0, len(apiKeys))
+	for _, apiKey := range apiKeys {
+		apiKeyList = append(apiKeyList, gin.H{
+			"id":           apiKey.ID,
+			"name":         apiKey.Name,
+			"prefix":      apiKey.Prefix, // 显示前缀
+			"status":       apiKey.Status,
+			"policy_id":    apiKey.PolicyID,
+			"last_used_at": apiKey.LastUsedAt,
+			"expires_at":   apiKey.ExpiresAt,
+			"created_at":   apiKey.CreatedAt,
 		})
 	}
 
-	logger.Info("获取Token列表成功", logger.F("count", len(tokens)))
-	c.JSON(http.StatusOK, gin.H{"data": gin.H{"items": tokenList, "total": len(tokens)}})
+	logger.Info("获取API Key列表成功", logger.F("count", len(apiKeys)))
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"items": apiKeyList, "total": len(apiKeys)}})
 }
 
-// GetToken 获取单个Token
-// @Summary Get token by ID
-// @Description Get a specific token by ID
+// ListTokens 保持向后兼容的函数别名
+// Deprecated: 使用 ListAPIKeys 代替
+func (h *APIKeyHandler) ListTokens(c *gin.Context) {
+	apiKeys, err := h.apiKeyService.ListTokens()
+	if err != nil {
+		logger.Error("获取API Key列表失败", logger.F("error", err.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 隐藏完整API Key值，只显示前缀
+	tokenList := make([]gin.H, 0, len(apiKeys))
+	for _, apiKey := range apiKeys {
+		tokenList = append(tokenList, gin.H{
+			"id":           apiKey.ID,
+			"name":         apiKey.Name,
+			"prefix":      apiKey.Prefix, // 显示前缀
+			"status":       apiKey.Status,
+			"policy_id":    apiKey.PolicyID,
+			"last_used_at": apiKey.LastUsedAt,
+			"expires_at":   apiKey.ExpiresAt,
+			"created_at":   apiKey.CreatedAt,
+		})
+	}
+
+	logger.Info("获取API Key列表成功", logger.F("count", len(apiKeys)))
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"items": tokenList, "total": len(apiKeys)}})
+}
+
+// GetToken 获取单个API Key
+// @Summary Get API key by ID
+// @Description Get a specific API key by ID
 // @Tags tokens
 // @Accept json
 // @Produce json
-// @Param id path string true "Token ID"
-// @Success 200 {object} map[string]interface{} "Token details"
-// @Failure 404 {object} map[string]string "Token not found"
+// @Param id path string true "API Key ID"
+// @Success 200 {object} map[string]interface{} "API key details"
+// @Failure 404 {object} map[string]string "API key not found"
 // @Router /api/v1/tokens/{id} [get]
-func (h *TokenHandler) GetToken(c *gin.Context) {
+// GetAPIKey 获取单个API Key
+// @Summary Get API key by ID
+// @Description Get a specific API key by ID
+// @Tags api-keys
+// @Accept json
+// @Produce json
+// @Param id path string true "API Key ID"
+// @Success 200 {object} map[string]interface{} "API key details"
+// @Failure 404 {object} map[string]string "API key not found"
+// @Router /api/v1/api-keys/{id} [get]
+func (h *APIKeyHandler) GetAPIKey(c *gin.Context) {
 	id := c.Param("id")
-	token, err := h.tokenService.GetToken(id)
+	apiKey, err := h.apiKeyService.GetAPIKey(id)
 	if err != nil {
-		if err == service.ErrTokenNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
+		if err == service.ErrAPIKeyNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
 			return
 		}
-		logger.Error("获取Token失败", logger.F("error", err.Error()), logger.F("id", id))
+		logger.Error("获取API Key失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":           token.ID,
-			"name":         token.Name,
-			"token":        token.Token, // 返回完整Token（管理员权限）
-			"prefix":       token.Prefix, // 同时返回前缀用于显示
-			"status":       token.Status,
-			"policy_id":    token.PolicyID,
-			"last_used_at": token.LastUsedAt,
-			"expires_at":   token.ExpiresAt,
-			"created_at":   token.CreatedAt,
+			"id":           apiKey.ID,
+			"name":         apiKey.Name,
+			"api_key":      apiKey.APIKey, // 返回完整API Key（管理员权限）
+			"prefix":       apiKey.Prefix, // 同时返回前缀用于显示
+			"status":       apiKey.Status,
+			"policy_id":    apiKey.PolicyID,
+			"last_used_at": apiKey.LastUsedAt,
+			"expires_at":   apiKey.ExpiresAt,
+			"created_at":   apiKey.CreatedAt,
 		},
 	})
 }
 
-// UpdateToken 更新Token
-// @Summary Update token
-// @Description Update token information
-// @Tags tokens
+// GetToken 保持向后兼容的函数别名
+// Deprecated: 使用 GetAPIKey 代替
+func (h *APIKeyHandler) GetToken(c *gin.Context) {
+	id := c.Param("id")
+	apiKey, err := h.apiKeyService.GetToken(id)
+	if err != nil {
+		if err == service.ErrTokenNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
+			return
+		}
+		logger.Error("获取API Key失败", logger.F("error", err.Error()), logger.F("id", id))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"id":           apiKey.ID,
+			"name":         apiKey.Name,
+			"token":        apiKey.APIKey, // 返回完整API Key（管理员权限）
+			"prefix":       apiKey.Prefix, // 同时返回前缀用于显示
+			"status":       apiKey.Status,
+			"policy_id":    apiKey.PolicyID,
+			"last_used_at": apiKey.LastUsedAt,
+			"expires_at":   apiKey.ExpiresAt,
+			"created_at":   apiKey.CreatedAt,
+		},
+	})
+}
+
+// UpdateAPIKey 更新API Key
+// @Summary Update API key
+// @Description Update API key information
+// @Tags api-keys
 // @Accept json
 // @Produce json
-// @Param id path string true "Token ID"
-// @Param token body UpdateTokenRequest true "Token update information"
-// @Success 200 {object} map[string]interface{} "Updated token"
+// @Param id path string true "API Key ID"
+// @Param apiKey body UpdateTokenRequest true "API key update information"
+// @Success 200 {object} map[string]interface{} "Updated API key"
 // @Failure 400 {object} map[string]string "Bad request"
-// @Failure 404 {object} map[string]string "Token not found"
-// @Router /api/v1/tokens/{id} [put]
-func (h *TokenHandler) UpdateToken(c *gin.Context) {
+// @Failure 404 {object} map[string]string "API key not found"
+// @Router /api/v1/api-keys/{id} [put]
+func (h *APIKeyHandler) UpdateAPIKey(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("更新Token失败", logger.F("error", err.Error()), logger.F("id", id))
+		logger.Error("更新API Key失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	token, err := h.tokenService.UpdateToken(id, req.Name, req.Status)
+	apiKey, err := h.apiKeyService.UpdateAPIKey(id, req.Name, req.Status)
 	if err != nil {
-		if err == service.ErrTokenNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
+		if err == service.ErrAPIKeyNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
 			return
 		}
-		if err == service.ErrTokenNameExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "token name already exists"})
+		if err == service.ErrAPIKeyNameExists {
+			c.JSON(http.StatusConflict, gin.H{"error": "API key name already exists"})
 			return
 		}
-		logger.Error("更新Token失败", logger.F("error", err.Error()), logger.F("id", id))
+		logger.Error("更新API Key失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("更新Token成功", logger.F("id", id), logger.F("name", token.Name))
+	logger.Info("更新API Key成功", logger.F("id", id), logger.F("name", apiKey.Name))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":           token.ID,
-			"name":         token.Name,
-			"token":        token.Prefix,
-			"status":       token.Status,
-			"last_used_at": token.LastUsedAt,
-			"expires_at":   token.ExpiresAt,
-			"updated_at":   token.UpdatedAt,
+			"id":           apiKey.ID,
+			"name":         apiKey.Name,
+			"prefix":       apiKey.Prefix,
+			"status":       apiKey.Status,
+			"last_used_at": apiKey.LastUsedAt,
+			"expires_at":   apiKey.ExpiresAt,
+			"updated_at":   apiKey.UpdatedAt,
 		},
 	})
 }
 
-// DeleteToken 删除Token
-// @Summary Delete token
-// @Description Delete a token
-// @Tags tokens
+// UpdateToken 保持向后兼容的函数别名
+// Deprecated: 使用 UpdateAPIKey 代替
+func (h *APIKeyHandler) UpdateToken(c *gin.Context) {
+	h.UpdateAPIKey(c)
+}
+
+// DeleteAPIKey 删除API Key
+// @Summary Delete API key
+// @Description Delete an API key
+// @Tags api-keys
 // @Accept json
 // @Produce json
-// @Param id path string true "Token ID"
-// @Success 204 "Token deleted"
-// @Failure 404 {object} map[string]string "Token not found"
-// @Router /api/v1/tokens/{id} [delete]
-func (h *TokenHandler) DeleteToken(c *gin.Context) {
+// @Param id path string true "API Key ID"
+// @Success 204 "API key deleted"
+// @Failure 404 {object} map[string]string "API key not found"
+// @Router /api/v1/api-keys/{id} [delete]
+func (h *APIKeyHandler) DeleteAPIKey(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.tokenService.DeleteToken(id); err != nil {
-		if err == service.ErrTokenNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
+	if err := h.apiKeyService.DeleteAPIKey(id); err != nil {
+		if err == service.ErrAPIKeyNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
 			return
 		}
-		logger.Error("删除Token失败", logger.F("error", err.Error()), logger.F("id", id))
+		logger.Error("删除API Key失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("删除Token成功", logger.F("id", id))
+	logger.Info("删除API Key成功", logger.F("id", id))
 	c.Status(http.StatusNoContent)
 }
 
-// ResetToken 重置Token
-// @Summary Reset token
-// @Description Reset token value (generate new token)
-// @Tags tokens
+// DeleteToken 保持向后兼容的函数别名
+// Deprecated: 使用 DeleteAPIKey 代替
+func (h *APIKeyHandler) DeleteToken(c *gin.Context) {
+	h.DeleteAPIKey(c)
+}
+
+// ResetAPIKey 重置API Key
+// @Summary Reset API key
+// @Description Reset API key value (generate new API key)
+// @Tags api-keys
 // @Accept json
 // @Produce json
-// @Param id path string true "Token ID"
-// @Success 200 {object} map[string]interface{} "Reset token with new value"
-// @Failure 404 {object} map[string]string "Token not found"
-// @Router /api/v1/tokens/{id}/reset [post]
-func (h *TokenHandler) ResetToken(c *gin.Context) {
+// @Param id path string true "API Key ID"
+// @Success 200 {object} map[string]interface{} "Reset API key with new value"
+// @Failure 404 {object} map[string]string "API key not found"
+// @Router /api/v1/api-keys/{id}/reset [post]
+func (h *APIKeyHandler) ResetAPIKey(c *gin.Context) {
 	id := c.Param("id")
-	token, err := h.tokenService.ResetToken(id)
+	apiKey, err := h.apiKeyService.ResetAPIKey(id)
 	if err != nil {
-		if err == service.ErrTokenNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
+		if err == service.ErrAPIKeyNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
 			return
 		}
-		logger.Error("重置Token失败", logger.F("error", err.Error()), logger.F("id", id))
+		logger.Error("重置API Key失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("重置Token成功", logger.F("id", id), logger.F("name", token.Name))
+	logger.Info("重置API Key成功", logger.F("id", id), logger.F("name", apiKey.Name))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":         token.ID,
-			"name":       token.Name,
-			"token":      token.Token, // 重置时返回完整Token
-			"prefix":     token.Prefix,
-			"status":     token.Status,
-			"policy_id":  token.PolicyID,
-			"updated_at": token.UpdatedAt,
+			"id":         apiKey.ID,
+			"name":       apiKey.Name,
+			"api_key":    apiKey.APIKey, // 重置时返回完整API Key
+			"prefix":     apiKey.Prefix,
+			"status":     apiKey.Status,
+			"policy_id":  apiKey.PolicyID,
+			"updated_at": apiKey.UpdatedAt,
 		},
 	})
 }
 
-// SetTokenPolicyRequest 设置Token策略请求
+// ResetToken 保持向后兼容的函数别名
+// Deprecated: 使用 ResetAPIKey 代替
+func (h *APIKeyHandler) ResetToken(c *gin.Context) {
+	id := c.Param("id")
+	apiKey, err := h.apiKeyService.ResetToken(id)
+	if err != nil {
+		if err == service.ErrTokenNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
+			return
+		}
+		logger.Error("重置API Key失败", logger.F("error", err.Error()), logger.F("id", id))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Info("重置API Key成功", logger.F("id", id), logger.F("name", apiKey.Name))
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"id":         apiKey.ID,
+			"name":       apiKey.Name,
+			"token":      apiKey.APIKey, // 重置时返回完整API Key
+			"prefix":     apiKey.Prefix,
+			"status":     apiKey.Status,
+			"policy_id":  apiKey.PolicyID,
+			"updated_at": apiKey.UpdatedAt,
+		},
+	})
+}
+
+// SetTokenPolicyRequest 设置API Key策略请求
 type SetTokenPolicyRequest struct {
 	PolicyID string `json:"policy_id"`
 }
 
-// SetTokenPolicy 设置Token的策略
-// @Summary Set token policy
-// @Description Assign a policy to a token
-// @Tags tokens
+// SetAPIKeyPolicy 设置API Key的策略
+// @Summary Set API key policy
+// @Description Assign a policy to an API key
+// @Tags api-keys
 // @Accept json
 // @Produce json
-// @Param id path string true "Token ID"
+// @Param id path string true "API Key ID"
 // @Param request body SetTokenPolicyRequest true "Policy assignment"
-// @Success 200 {object} map[string]interface{} "Token with policy"
-// @Failure 404 {object} map[string]string "Token or policy not found"
-// @Router /api/v1/tokens/{id}/policy [put]
-func (h *TokenHandler) SetTokenPolicy(c *gin.Context) {
+// @Success 200 {object} map[string]interface{} "API key with policy"
+// @Failure 404 {object} map[string]string "API key or policy not found"
+// @Router /api/v1/api-keys/{id}/policy [put]
+func (h *APIKeyHandler) SetAPIKeyPolicy(c *gin.Context) {
 	id := c.Param("id")
 	var req SetTokenPolicyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error("设置Token策略失败", logger.F("error", err.Error()), logger.F("id", id))
+		logger.Error("设置API Key策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	token, err := h.tokenService.UpdateTokenPolicy(id, req.PolicyID)
+	apiKey, err := h.apiKeyService.UpdateAPIKeyPolicy(id, req.PolicyID)
 	if err != nil {
-		if err == service.ErrTokenNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
+		if err == service.ErrAPIKeyNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
 			return
 		}
-		logger.Error("设置Token策略失败", logger.F("error", err.Error()), logger.F("id", id))
+		logger.Error("设置API Key策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("设置Token策略成功", logger.F("id", id), logger.F("policy_id", req.PolicyID))
+	logger.Info("设置API Key策略成功", logger.F("id", id), logger.F("policy_id", req.PolicyID))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":        token.ID,
-			"name":      token.Name,
-			"policy_id": token.PolicyID,
-			"status":    token.Status,
+			"id":        apiKey.ID,
+			"name":      apiKey.Name,
+			"policy_id": apiKey.PolicyID,
+			"status":    apiKey.Status,
 		},
 	})
 }
 
-// RemoveTokenPolicy 移除Token的策略
-// @Summary Remove token policy
-// @Description Remove policy assignment from a token
-// @Tags tokens
+// SetTokenPolicy 保持向后兼容的函数别名
+// Deprecated: 使用 SetAPIKeyPolicy 代替
+func (h *APIKeyHandler) SetTokenPolicy(c *gin.Context) {
+	h.SetAPIKeyPolicy(c)
+}
+
+// RemoveAPIKeyPolicy 移除API Key的策略
+// @Summary Remove API key policy
+// @Description Remove policy assignment from an API key
+// @Tags api-keys
 // @Accept json
 // @Produce json
-// @Param id path string true "Token ID"
-// @Success 200 {object} map[string]interface{} "Token without policy"
-// @Failure 404 {object} map[string]string "Token not found"
-// @Router /api/v1/tokens/{id}/policy [delete]
-func (h *TokenHandler) RemoveTokenPolicy(c *gin.Context) {
+// @Param id path string true "API Key ID"
+// @Success 200 {object} map[string]interface{} "API key without policy"
+// @Failure 404 {object} map[string]string "API key not found"
+// @Router /api/v1/api-keys/{id}/policy [delete]
+func (h *APIKeyHandler) RemoveAPIKeyPolicy(c *gin.Context) {
 	id := c.Param("id")
-	token, err := h.tokenService.RemoveTokenPolicy(id)
+	apiKey, err := h.apiKeyService.RemoveAPIKeyPolicy(id)
 	if err != nil {
-		if err == service.ErrTokenNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
+		if err == service.ErrAPIKeyNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
 			return
 		}
-		logger.Error("移除Token策略失败", logger.F("error", err.Error()), logger.F("id", id))
+		logger.Error("移除API Key策略失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Info("移除Token策略成功", logger.F("id", id))
+	logger.Info("移除API Key策略成功", logger.F("id", id))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":        token.ID,
-			"name":      token.Name,
-			"policy_id": token.PolicyID,
-			"status":    token.Status,
+			"id":        apiKey.ID,
+			"name":      apiKey.Name,
+			"policy_id": apiKey.PolicyID,
+			"status":    apiKey.Status,
 		},
 	})
+}
+
+// RemoveTokenPolicy 保持向后兼容的函数别名
+// Deprecated: 使用 RemoveAPIKeyPolicy 代替
+func (h *APIKeyHandler) RemoveTokenPolicy(c *gin.Context) {
+	h.RemoveAPIKeyPolicy(c)
 }

@@ -31,13 +31,27 @@ type Storage interface {
 	GetRequest(id string) (*Request, error)
 	ListRequests(params *RequestQueryParams) ([]*Request, error)
 
-	// Token methods
-	CreateToken(token *Token) error
-	GetToken(id string) (*Token, error)
-	GetTokenByValue(tokenValue string) (*Token, error)
-	UpdateToken(token *Token) error
+	// API Key methods
+	CreateAPIKey(apiKey *APIKey) error
+	GetAPIKey(id string) (*APIKey, error)
+	GetAPIKeyByValue(apiKeyValue string) (*APIKey, error)
+	UpdateAPIKey(apiKey *APIKey) error
+	DeleteAPIKey(id string) error
+	ListAPIKeys() ([]*APIKey, error)
+
+	// 保持向后兼容的方法别名
+	// Deprecated: 使用 CreateAPIKey 代替
+	CreateToken(token *APIKey) error
+	// Deprecated: 使用 GetAPIKey 代替
+	GetToken(id string) (*APIKey, error)
+	// Deprecated: 使用 GetAPIKeyByValue 代替
+	GetTokenByValue(tokenValue string) (*APIKey, error)
+	// Deprecated: 使用 UpdateAPIKey 代替
+	UpdateToken(token *APIKey) error
+	// Deprecated: 使用 DeleteAPIKey 代替
 	DeleteToken(id string) error
-	ListTokens() ([]*Token, error)
+	// Deprecated: 使用 ListAPIKeys 代替
+	ListTokens() ([]*APIKey, error)
 
 	// PolicyTemplate methods
 	CreatePolicyTemplate(template *PolicyTemplate) error

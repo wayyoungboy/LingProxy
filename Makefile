@@ -423,6 +423,49 @@ docs:
 	fi
 
 # ============================================================================
+# 官网构建相关
+# ============================================================================
+
+## 安装官网依赖
+website-install:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Installing website dependencies...$(COLOR_RESET)"
+	@cd website && npm install
+	@echo "$(COLOR_GREEN)✓ Dependencies installed$(COLOR_RESET)"
+
+## 启动官网开发服务器
+website-start:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Starting website development server...$(COLOR_RESET)"
+	@cd website && npm start
+
+## 构建官网
+website-build:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Building website...$(COLOR_RESET)"
+	@cd website && npm run build
+	@echo "$(COLOR_GREEN)✓ Website built successfully. Files are in website/build/$(COLOR_RESET)"
+
+## 预览构建后的官网
+website-serve:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Serving built website...$(COLOR_RESET)"
+	@cd website && npm run serve
+
+## 清理官网构建缓存
+website-clean:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Cleaning website cache...$(COLOR_RESET)"
+	@cd website && npm run clear
+	@echo "$(COLOR_GREEN)✓ Cache cleaned$(COLOR_RESET)"
+
+## 部署官网到 GitHub Pages
+website-deploy:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Deploying website to GitHub Pages...$(COLOR_RESET)"
+	@if [ -z "$(GIT_USER)" ]; then \
+		echo "$(COLOR_RED)✗ Error: GIT_USER environment variable is required$(COLOR_RESET)"; \
+		echo "Example: $(COLOR_YELLOW)GIT_USER=your-username make website-deploy$(COLOR_RESET)"; \
+		exit 1; \
+	fi
+	@cd website && GIT_USER=$(GIT_USER) USE_SSH=true npm run deploy
+	@echo "$(COLOR_GREEN)✓ Website deployed successfully$(COLOR_RESET)"
+
+# ============================================================================
 # 发布相关
 # ============================================================================
 
@@ -534,6 +577,11 @@ help:
 	@echo ""
 	@echo "$(COLOR_BOLD)文档和工具:$(COLOR_RESET)"
 	@echo "  $(COLOR_GREEN)make docs$(COLOR_RESET)            - 生成 API 文档（Swagger）"
+	@echo "  $(COLOR_GREEN)make website-install$(COLOR_RESET) - 安装官网依赖"
+	@echo "  $(COLOR_GREEN)make website-start$(COLOR_RESET)   - 启动官网开发服务器"
+	@echo "  $(COLOR_GREEN)make website-build$(COLOR_RESET)   - 构建官网"
+	@echo "  $(COLOR_GREEN)make website-serve$(COLOR_RESET)  - 预览构建后的官网"
+	@echo "  $(COLOR_GREEN)make website-deploy$(COLOR_RESET) - 部署官网到 GitHub Pages"
 	@echo "  $(COLOR_GREEN)make release$(COLOR_RESET)         - 创建发布版本"
 	@echo "  $(COLOR_GREEN)make check-env$(COLOR_RESET)       - 检查开发环境"
 	@echo "  $(COLOR_GREEN)make init$(COLOR_RESET)            - 初始化开发环境"

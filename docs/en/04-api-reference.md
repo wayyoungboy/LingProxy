@@ -7,10 +7,10 @@
 
 ## Authentication
 
-Most APIs require authentication. Include the API key or token in the Authorization header:
+Most APIs require authentication. Include the API key in the Authorization header:
 
 ```
-Authorization: Bearer YOUR_API_KEY_OR_TOKEN
+Authorization: Bearer YOUR_API_KEY
 ```
 
 ## OpenAI-Compatible API
@@ -93,7 +93,56 @@ data: [DONE]
 - Each data chunk starts with `data: ` followed by a JSON object
 - Streaming response ends with `data: [DONE]`
 - Each chunk contains a `delta` field with incremental content
-- For detailed usage instructions, see [Streaming Documentation](../STREAMING.md)
+
+**Client Examples:**
+
+Python:
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="your-api-key",
+    base_url="http://localhost:8080/llm/v1"
+)
+
+stream = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello!"}],
+    stream=True
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+JavaScript:
+```javascript
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  apiKey: 'your-api-key',
+  baseURL: 'http://localhost:8080/llm/v1'
+});
+
+const stream = await client.chat.completions.create({
+  model: 'gpt-3.5-turbo',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  if (chunk.choices[0].delta.content) {
+    process.stdout.write(chunk.choices[0].delta.content);
+  }
+}
+```
+
+**Notes:**
+- Streaming reduces first token latency and provides better user experience
+- Ensure stable network connection between client and server
+- Configure appropriate timeout for long-running streams
+- Errors in streaming responses are sent via SSE events
 
 ### List Models
 
@@ -337,35 +386,59 @@ List available models.
 - For chat resources, MaxTokens is limited to 10 to minimize costs
 - Returns detailed information including model, response content, token usage, and duration
 
-### Tokens
+### API Keys
 
-#### List Tokens
+#### List API Keys
 
-**Endpoint:** `GET /api/v1/tokens`
+**Endpoint:** `GET /api/v1/api-keys`
 
-#### Create Token
+**Note:** The old endpoint `GET /api/v1/tokens` is still available for backward compatibility but is deprecated.
 
-**Endpoint:** `POST /api/v1/tokens`
+#### Create API Key
+
+**Endpoint:** `POST /api/v1/api-keys`
+
+**Note:** The old endpoint `POST /api/v1/tokens` is still available for backward compatibility but is deprecated.
 
 **Request:**
 ```json
 {
-  "name": "My Token",
+  "name": "My API Key",
   "policy_id": "policy-id"
 }
 ```
 
-#### Update Token
+**Response:**
+```json
+{
+  "data": {
+    "id": "api-key-id",
+    "name": "My API Key",
+    "api_key": "ling-...",
+    "prefix": "ling-...",
+    "status": "active",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
 
-**Endpoint:** `PUT /api/v1/tokens/:id`
+#### Update API Key
 
-#### Delete Token
+**Endpoint:** `PUT /api/v1/api-keys/:id`
 
-**Endpoint:** `DELETE /api/v1/tokens/:id`
+**Note:** The old endpoint `PUT /api/v1/tokens/:id` is still available for backward compatibility but is deprecated.
 
-#### Reset Token
+#### Delete API Key
 
-**Endpoint:** `POST /api/v1/tokens/:id/reset`
+**Endpoint:** `DELETE /api/v1/api-keys/:id`
+
+**Note:** The old endpoint `DELETE /api/v1/tokens/:id` is still available for backward compatibility but is deprecated.
+
+#### Reset API Key
+
+**Endpoint:** `POST /api/v1/api-keys/:id/reset`
+
+**Note:** The old endpoint `POST /api/v1/tokens/:id/reset` is still available for backward compatibility but is deprecated.
 
 ### Policies
 
@@ -520,6 +593,29 @@ All errors follow this format:
 - `401`: Unauthorized
 - `404`: Not Found
 - `500`: Internal Server Error
+
+## Automatic Retry
+
+LingProxy automatically retries failed requests based on configurable settings:
+
+**Retry Behavior:**
+- Failed requests are automatically retried for network errors, timeouts, and 5xx server errors
+- Uses exponential backoff: delay increases with each retry attempt
+- Maximum retry count and delay are configurable via admin interface (Settings → Provider Settings)
+- Default: 3 retries with 1 second base delay
+
+**Retryable Errors:**
+- Network connection failures
+- Request timeouts
+- 5xx server errors (500, 502, 503, 504)
+- 429 rate limit errors
+
+**Non-Retryable Errors:**
+- 4xx client errors (except 429)
+- Authentication failures (401, 403)
+- Invalid request parameters
+
+**Note:** Retry configuration changes take effect immediately without requiring a service restart.
 
 ## Swagger Documentation
 

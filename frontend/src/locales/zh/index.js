@@ -38,7 +38,7 @@ export default {
   },
   menu: {
     dashboard: '仪表盘',
-    tokens: 'Token管理',
+    tokens: 'API Key管理',
     llmResources: 'LLM资源管理',
     llmResourceUsage: '用量统计',
     requests: '请求管理',
@@ -86,7 +86,7 @@ export default {
     noRequests: '暂无请求记录'
   },
   tokens: {
-    title: 'Token管理',
+    title: 'API Key管理',
     name: 'Token名称',
     prefix: '前缀',
     token: 'Token',
@@ -443,6 +443,13 @@ export default {
     checkInterval: '检查间隔(秒)',
     timeout: '超时时间(秒)',
     maxFailures: '最大失败次数',
+    providerSettings: 'Provider设置',
+    requestTimeout: '请求超时时间',
+    maxRetries: '最大重试次数',
+    maxRetriesDescription: '请求失败时的最大重试次数（0 = 禁用重试）',
+    retryDelay: '重试延迟',
+    retryDelayDescription: '重试之间的延迟时间（秒）。实际延迟会随每次重试指数增长。',
+    seconds: '秒',
     systemInfo: '系统信息',
     systemInfoName: '系统名称',
     systemInfoVersion: '系统版本',

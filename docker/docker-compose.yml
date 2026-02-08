@@ -8,7 +8,7 @@ services:
     image: lingproxy:latest
     container_name: lingproxy
     ports:
-      - "8080:8080"
+      - "80:80"
     environment:
       - GIN_MODE=release
       - TZ=Asia/Shanghai
@@ -23,15 +23,8 @@ services:
       - ../run:/app/run
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - lingproxy-network
-
-networks:
-  lingproxy-network:
-    driver: bridge
-    name: lingproxy-network

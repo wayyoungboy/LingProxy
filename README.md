@@ -14,13 +14,14 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **Unified API Interface**: Supports OpenAI compatible API, seamlessly integrates with various AI services
 - **Streaming Support**: Full support for Server-Sent Events (SSE) streaming responses for chat completions
 - **Intelligent Load Balancing**: Round-robin load balancing strategy, automatically distributes requests to multiple resources
+- **Automatic Retry**: Configurable automatic retry mechanism for failed requests with exponential backoff, supports retry for network errors, timeouts, and 5xx server errors
 - **Circuit Breaking**: Automatically detects service failures and triggers circuit breaking to prevent cascading failures
 - **Request Logging**: Complete request chain tracing and logging
 
 ### 🔐 Security & Authentication
 - **Flexible Authentication**: Global authentication toggle, configurable authentication requirement
 - **Admin Login**: Username/password login with password hash storage
-- **Token Management**: Request-side token management with policy association and API key authentication
+- **API Key Management**: Request-side API key management with policy association and API key authentication
 - **CORS Support**: Flexible cross-origin resource sharing configuration
 - **Secure Storage**: Encrypted storage for API keys and passwords
 
@@ -28,13 +29,13 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **Admin Dashboard**: Modern web-based management interface built with Vue 3 + Element Plus
 - **Internationalization (i18n)**: Full support for Chinese and English language switching in the frontend interface
 - **Admin Management**: Single admin mode with password and API key management
-- **Token Management**: Create and manage request-side tokens with policy binding, supports token copying functionality
+- **API Key Management**: Create and manage request-side API keys with policy binding, supports API key copying functionality
 - **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances, supports LLM resource pool configuration for random selection policy
 - **LLM Resource Management**: Supports configuration of AI service resources with driver-based architecture (currently supports OpenAI driver), supports model categories (chat, image, embedding, rerank, audio, video), supports batch import/export via Excel templates or JSON format, includes resource testing functionality to verify connectivity
 - **Model Management**: Flexible model configuration, supports pricing, usage limits and other parameters
 - **Request Management**: Complete request logging and tracking, supports request detail viewing and export
 - **Usage Statistics**: Detailed usage statistics grouped by LLM resources, including token usage, request count, success rate, average tokens per request, and more, with support for time range and resource name filtering
-- **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing configurations
+- **System Settings**: Dynamic configuration management including basic settings, cache, rate limiting, security, logging, load balancing, and provider retry configurations
 - **System Monitoring**: Real-time system information (CPU, memory, uptime, etc.)
 - **Log Management**: View and manage system logs with filtering and search capabilities
 
@@ -170,13 +171,13 @@ Response example:
 }
 ```
 
-### 2. Create Request-side Token
+### 2. Create Request-side API Key
 ```bash
-curl -X POST http://localhost:8080/api/v1/tokens \
+curl -X POST http://localhost:8080/api/v1/api-keys \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "My API Token",
+    "name": "My API Key",
     "status": "active"
   }'
 ```
@@ -186,7 +187,7 @@ Response example:
 {
   "data": {
     "id": "...",
-    "name": "My API Token",
+    "name": "My API Key",
     "token": "ling-xxxxxxxxxxxxx",
     "status": "active"
   }
@@ -207,15 +208,17 @@ curl -X POST http://localhost:8080/api/v1/policies \
   }'
 ```
 
-### 4. Bind Policy to Token (Optional)
+### 4. Bind Policy to API Key (Optional)
 ```bash
-curl -X PUT http://localhost:8080/api/v1/tokens/TOKEN_ID/policy \
+curl -X PUT http://localhost:8080/api/v1/api-keys/API_KEY_ID/policy \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "policy_id": "POLICY_ID"
   }'
 ```
+
+**Note**: Replace `API_KEY_ID` with the actual API key ID from step 2.
 
 ### 5. Proxy AI Request
 ```bash
@@ -237,15 +240,17 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
 - `GET /api/v1/admin/info` - Get admin information
 - `PUT /api/v1/admin/api-key` - Reset admin API key
 
-#### Token Management
-- `GET /api/v1/tokens` - Get token list
-- `GET /api/v1/tokens/:id` - Get token details
-- `POST /api/v1/tokens` - Create token
-- `PUT /api/v1/tokens/:id` - Update token
-- `DELETE /api/v1/tokens/:id` - Delete token
-- `POST /api/v1/tokens/:id/reset` - Reset token
-- `PUT /api/v1/tokens/:id/policy` - Bind policy to token
-- `DELETE /api/v1/tokens/:id/policy` - Remove policy binding from token
+#### API Key Management
+- `GET /api/v1/api-keys` - Get API key list
+- `GET /api/v1/api-keys/:id` - Get API key details
+- `POST /api/v1/api-keys` - Create API key
+- `PUT /api/v1/api-keys/:id` - Update API key
+- `DELETE /api/v1/api-keys/:id` - Delete API key
+- `POST /api/v1/api-keys/:id/reset` - Reset API key
+- `PUT /api/v1/api-keys/:id/policy` - Bind policy to API key
+- `DELETE /api/v1/api-keys/:id/policy` - Remove policy binding from API key
+
+**Note**: The old `/api/v1/tokens` endpoints are still available for backward compatibility but are deprecated.
 
 #### Policy Management
 - `GET /api/v1/policy-templates` - Get policy template list
@@ -389,12 +394,19 @@ load_balancer:
 ```yaml
 provider:
   timeout: "30s"  # Request timeout
-  max_retries: 3   # Maximum retry count
-  retry_delay: "1s"  # Retry delay between attempts
+  max_retries: 3   # Maximum retry count for failed requests (0 = disabled)
+  retry_delay: "1s"  # Base retry delay between attempts (actual delay increases exponentially)
   max_idle_conns: 100  # Maximum idle connections
   max_conns_per_host: 100  # Maximum connections per host
   idle_conn_timeout: "90s"  # Idle connection timeout
 ```
+
+**Retry Mechanism:**
+- Automatically retries failed requests for network errors, timeouts, and 5xx server errors
+- Uses exponential backoff: delay = retry_delay × attempt_number
+- Does not retry 4xx client errors (except 429 rate limit), authentication errors, or context cancellations
+- Configurable via admin interface: Settings → Provider Settings
+- Applies to all request types: chat completions (streaming and non-streaming), text completions, and embeddings
 
 ## Monitoring & Operations
 
@@ -477,12 +489,12 @@ type User struct {
     UpdatedAt    time.Time  // Updated at
 }
 
-// Token token model - request-side token management
+// Token API Key model - request-side API key management
 type Token struct {
-    ID         string     // Token unique identifier
-    Name       string     // Token name/description
-    Token      string     // Token value (API Key, prefixed with "ling-")
-    Prefix     string     // Token prefix (for display)
+    ID         string     // API Key unique identifier
+    Name       string     // API Key name/description
+    Token      string     // API Key value (prefixed with "ling-")
+    Prefix     string     // API Key prefix (for display)
     Status     string     // Status (active/inactive)
     PolicyID   string     // Associated policy ID (optional)
     LastUsedAt *time.Time // Last used time
@@ -579,7 +591,7 @@ type Storage interface {
     DeleteUser(id string) error
     ListUsers() ([]*User, error)
 
-    // Token management
+    // API Key management
     CreateToken(token *Token) error
     GetToken(id string) (*Token, error)
     GetTokenByToken(token string) (*Token, error)
@@ -670,6 +682,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Email**: support@lingproxy.com
 
 ## Changelog
+
+### v1.5.0 (2026-02-08)
+- **Automatic Retry**: Added configurable automatic retry mechanism with exponential backoff for failed requests
+- **Provider Configuration**: Added provider settings (timeout, max retries, retry delay) configurable via admin interface
+- **Error Classification**: Intelligent error classification for retryable vs non-retryable errors
+- **Streaming Retry**: Retry logic now applies to streaming requests before stream establishment
+- **API Key Management**: Renamed "Token Management" to "API Key Management" across all documentation and UI to avoid confusion with LLM tokens
+- **Documentation**: Comprehensive updates to all documentation (README, configuration guide, API reference, architecture)
 
 ### v1.4.0 (2026-02-05)
 - **Internationalization**: Full frontend i18n support with Chinese and English language switching

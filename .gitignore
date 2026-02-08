@@ -11,11 +11,18 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependency directories
+vendor/
+node_modules/
 
 # Go workspace file
 go.work
+
+# Go coverage files
+coverage/
+coverage.txt
+coverage.html
+*.coverprofile
 
 # IDE files
 .vscode/
@@ -23,6 +30,8 @@ go.work
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
 # OS files
 .DS_Store
@@ -44,6 +53,17 @@ lingproxy
 *.sqlite
 *.sqlite3
 
+# Frontend build outputs
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/.cache/
+
+# Docusaurus build outputs
+website/.docusaurus/
+website/build/
+website/.cache/
+
 # Environment files
 .env
 .env.local
@@ -61,9 +81,23 @@ configs/config.yaml
 # Docker volumes
 docker-compose.override.yml
 
-# test report
+# Test reports and coverage
 test_report/
+coverage/
+.nyc_output/
+*.lcov
 
+# Temporary files
 设计方案*main
 main
 dev_doc/
+test.json
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Package manager lock files (optional - uncomment if you don't want to track them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

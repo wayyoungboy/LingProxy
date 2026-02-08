@@ -38,7 +38,7 @@ export default {
   },
   menu: {
     dashboard: 'Dashboard',
-    tokens: 'Token Management',
+    tokens: 'API Key Management',
     llmResources: 'LLM Resources',
     llmResourceUsage: 'Usage Statistics',
     requests: 'Request Management',
@@ -86,7 +86,7 @@ export default {
     noRequests: 'No request records'
   },
   tokens: {
-    title: 'Token Management',
+    title: 'API Key Management',
     name: 'Token Name',
     prefix: 'Prefix',
     token: 'Token',
@@ -443,6 +443,13 @@ export default {
     checkInterval: 'Check Interval (seconds)',
     timeout: 'Timeout (seconds)',
     maxFailures: 'Max Failures',
+    providerSettings: 'Provider Settings',
+    requestTimeout: 'Request Timeout',
+    maxRetries: 'Max Retries',
+    maxRetriesDescription: 'Maximum number of retry attempts for failed requests (0 = disabled)',
+    retryDelay: 'Retry Delay',
+    retryDelayDescription: 'Delay between retry attempts (seconds). Actual delay increases exponentially with each retry.',
+    seconds: 'seconds',
     systemInfo: 'System Information',
     systemInfoName: 'System Name',
     systemInfoVersion: 'System Version',

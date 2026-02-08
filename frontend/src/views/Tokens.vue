@@ -11,7 +11,7 @@
         </div>
       </template>
       
-      <!-- Token列表 -->
+      <!-- API Key列表 -->
       <el-table
         v-loading="loading"
         :data="tokens"
@@ -20,10 +20,10 @@
         stripe
       >
         <el-table-column prop="name" :label="$t('tokens.name')" />
-        <el-table-column prop="token" :label="$t('tokens.tokenValue')" width="280">
+        <el-table-column prop="api_key" :label="$t('tokens.tokenValue')" width="280">
           <template #default="scope">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <el-tag>{{ scope.row.prefix || scope.row.token || 'ling-...' }}</el-tag>
+              <el-tag>{{ scope.row.prefix || scope.row.api_key || 'ling-...' }}</el-tag>
               <el-button
                 type="primary"
                 size="small"
@@ -106,7 +106,7 @@
       </el-table>
     </el-card>
     
-    <!-- 创建/编辑Token对话框 -->
+    <!-- 创建/编辑API Key对话框 -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
@@ -164,7 +164,7 @@
       </template>
     </el-dialog>
 
-    <!-- Token显示对话框（创建/重置后显示完整Token） -->
+    <!-- API Key显示对话框（创建/重置后显示完整API Key） -->
     <el-dialog
       v-model="tokenDisplayVisible"
       :title="$t('tokens.tokenCreated')"
@@ -185,7 +185,7 @@
         </el-form-item>
         <el-form-item :label="$t('tokens.token')">
           <el-input
-            :value="newToken.token"
+            :value="newToken.api_key || newToken.token"
             readonly
             ref="tokenInputRef"
           >
@@ -280,23 +280,23 @@ const tokenRules = computed(() => ({
   ]
 }))
 
-// 获取Token列表
+// 获取API Key列表
 const getTokenList = async () => {
   try {
     loading.value = true
-    const response = await api.getTokens()
+    const response = await api.getAPIKeys()
     if (response && response.data) {
       tokens.value = response.data.items || []
     }
   } catch (error) {
-    console.error('获取Token列表失败:', error)
+    console.error('获取API Key列表失败:', error)
     ElMessage.error(t('tokens.getListFailed'))
   } finally {
     loading.value = false
   }
 }
 
-// 处理添加Token
+// 处理添加API Key
 const handleAddToken = () => {
   isAddMode.value = true
   dialogTitle.value = t('tokens.createToken')
@@ -314,7 +314,7 @@ const handleAddToken = () => {
   dialogVisible.value = true
 }
 
-// 处理编辑Token
+// 处理编辑API Key
 const handleEditToken = (token) => {
   isAddMode.value = false
   dialogTitle.value = t('tokens.editToken')
@@ -327,14 +327,14 @@ const handleEditToken = (token) => {
   dialogVisible.value = true
 }
 
-// 处理保存Token
+// 处理保存API Key
 const handleSaveToken = async () => {
   try {
     await tokenFormRef.value.validate()
     
     if (isAddMode.value) {
-      // 创建Token
-      const response = await api.createToken({
+      // 创建API Key
+      const response = await api.createAPIKey({
         name: tokenForm.name,
         expires_at: tokenForm.expires_at || undefined
       })
@@ -343,7 +343,7 @@ const handleSaveToken = async () => {
         // 创建成功后立即设置策略
         if (tokenForm.policy_id) {
           try {
-            await api.setTokenPolicy(response.data.id, {
+            await api.setAPIKeyPolicy(response.data.id, {
               policy_id: tokenForm.policy_id
             })
           } catch (error) {
@@ -357,8 +357,8 @@ const handleSaveToken = async () => {
         getTokenList()
       }
     } else {
-      // 更新Token
-      await api.updateToken(tokenForm.id, {
+      // 更新API Key
+      await api.updateAPIKey(tokenForm.id, {
         name: tokenForm.name,
         status: tokenForm.status
       })
@@ -367,12 +367,12 @@ const handleSaveToken = async () => {
       getTokenList()
     }
   } catch (error) {
-    console.error('保存Token失败:', error)
+    console.error('保存API Key失败:', error)
     ElMessage.error(t('tokens.saveFailed'))
   }
 }
 
-// 处理删除Token
+// 处理删除API Key
 const handleDeleteToken = async (id) => {
   try {
     await ElMessageBox.confirm(
@@ -385,18 +385,18 @@ const handleDeleteToken = async (id) => {
       }
     )
     
-    await api.deleteToken(id)
+    await api.deleteAPIKey(id)
     ElMessage.success(t('tokens.deleteSuccess'))
     getTokenList()
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('删除Token失败:', error)
+      console.error('删除API Key失败:', error)
       ElMessage.error(t('tokens.deleteFailed'))
     }
   }
 }
 
-// 处理重置Token
+// 处理重置API Key
 const handleResetToken = async (id) => {
   try {
     await ElMessageBox.confirm(
@@ -409,7 +409,7 @@ const handleResetToken = async (id) => {
       }
     )
     
-    const response = await api.resetToken(id)
+    const response = await api.resetAPIKey(id)
     if (response && response.data) {
       newToken.value = response.data
       tokenDisplayVisible.value = true
@@ -418,7 +418,7 @@ const handleResetToken = async (id) => {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('重置Token失败:', error)
+      console.error('重置API Key失败:', error)
       ElMessage.error(t('tokens.resetFailed'))
     }
   }
@@ -439,12 +439,12 @@ const copyToken = () => {
 // 复制Token（用于列表）
 const handleCopyToken = async (token) => {
   try {
-    // 如果列表中没有完整token，则从API获取
-    let tokenValue = token.token
+    // 如果列表中没有完整API Key，则从API获取
+    let tokenValue = token.api_key || token.token
     if (!tokenValue || tokenValue.includes('...')) {
-      const response = await api.getToken(token.id)
+      const response = await api.getAPIKey(token.id)
       if (response && response.data) {
-        tokenValue = response.data.token
+        tokenValue = response.data.api_key || response.data.token
       } else {
         ElMessage.error(t('tokens.getTokenFailed'))
         return
@@ -468,7 +468,7 @@ const handleCopyToken = async (token) => {
       ElMessage.success(t('tokens.tokenCopied'))
     }
   } catch (error) {
-    console.error('复制Token失败:', error)
+    console.error('复制API Key失败:', error)
     ElMessage.error(t('tokens.copyFailed'))
   }
 }
@@ -499,12 +499,12 @@ const handleSavePolicy = async () => {
   
   try {
     if (selectedPolicyId.value) {
-      await api.setTokenPolicy(selectedToken.value.id, {
+      await api.setAPIKeyPolicy(selectedToken.value.id, {
         policy_id: selectedPolicyId.value
       })
       ElMessage.success(t('tokens.policySetSuccess'))
     } else {
-      await api.removeTokenPolicy(selectedToken.value.id)
+      await api.removeAPIKeyPolicy(selectedToken.value.id)
       ElMessage.success(t('tokens.policyRemoved'))
     }
     policyDialogVisible.value = false
@@ -520,7 +520,7 @@ const handleRemovePolicy = async () => {
   if (!selectedToken.value) return
   
   try {
-    await api.removeTokenPolicy(selectedToken.value.id)
+    await api.removeAPIKeyPolicy(selectedToken.value.id)
     ElMessage.success(t('tokens.policyRemoved'))
     policyDialogVisible.value = false
     getTokenList()

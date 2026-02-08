@@ -89,7 +89,7 @@ docker-compose -f docker/docker-compose.yml logs -f
 docker-compose -f docker/docker-compose.yml down
 ```
 
-更多详情请参阅 [Docker 部署指南](../docker/README.md)。
+更多详情请参考项目根目录下的 `docker/README.md` 文件。
 
 ## 第一步
 
@@ -105,12 +105,12 @@ docker-compose -f docker/docker-compose.yml down
    - 基础 URL：API 端点 URL
    - API 密钥：您的 API 密钥
 
-### 2. 创建 Token
+### 2. 创建 API Key
 
-1. 在管理后台导航到 **Token 管理**
-2. 点击 **创建 Token**
-3. 填写 Token 信息：
-   - 名称：Token 名称/描述
+1. 在管理后台导航到 **API Key 管理**
+2. 点击 **创建 API Key**
+3. 填写 API Key 信息：
+   - 名称：API Key 名称/描述
    - 策略：选择路由策略（可选）
 
 ### 3. 测试 API
@@ -118,7 +118,7 @@ docker-compose -f docker/docker-compose.yml down
 ```bash
 # 使用 curl
 curl -X POST http://localhost:8080/llm/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Authorization: Bearer YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-3.5-turbo",

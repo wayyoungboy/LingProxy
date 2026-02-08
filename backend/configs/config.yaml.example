@@ -11,11 +11,12 @@ app:
 storage:
   type: "gorm"  # memory 或 gorm
   gorm:
-    driver: "sqlite"  # sqlite, mysql
+    driver: "sqlite"  # sqlite, SeekDB
     dsn: "lingproxy.db"
-    # MySQL 示例（请修改为实际值）
+
+    # SeekDB 示例（兼容 MySQL 协议，使用 mysql 驱动）
     # driver: "mysql"
-    # dsn: "username:password@tcp(localhost:3306)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+    # dsn: "username:password@tcp(seekdb-host:port)/database?charset=utf8mb4&parseTime=True&loc=Local"
 
 log:
   level: "info"  # debug, info, warn, error, fatal

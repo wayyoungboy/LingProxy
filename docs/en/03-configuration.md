@@ -69,6 +69,25 @@ security:
 - When `enabled: true`: All APIs (except login) require authentication
 - When `enabled: false`: All APIs (except login) are accessible without authentication
 
+### Provider Configuration
+
+```yaml
+provider:
+  timeout: "30s"        # Request timeout
+  max_retries: 3        # Maximum retry count (0 = disabled)
+  retry_delay: "1s"     # Base retry delay (actual delay increases exponentially)
+  max_idle_conns: 100   # Maximum idle connections
+  max_conns_per_host: 100  # Maximum connections per host
+  idle_conn_timeout: "90s"  # Idle connection timeout
+```
+
+**Retry Configuration:**
+- `max_retries`: Maximum number of retry attempts for failed requests. Set to `0` to disable retry.
+- `retry_delay`: Base delay between retry attempts. The actual delay increases exponentially: `delay = retry_delay × attempt_number`.
+- Retry applies to network errors, timeouts, and 5xx server errors.
+- Does not retry 4xx client errors (except 429 rate limit), authentication errors, or context cancellations.
+- Configurable via admin interface: Settings → Provider Settings.
+
 ## Environment Variables
 
 You can override configuration values using environment variables with the `LINGPROXY_` prefix:
@@ -95,6 +114,9 @@ All configuration options have sensible defaults. See `backend/internal/config/c
 - `log.format`: "json"
 - `log.output`: "both"
 - `security.auth.enabled`: true
+- `provider.timeout`: "30s"
+- `provider.max_retries`: 3
+- `provider.retry_delay`: "1s"
 
 ## Admin Credentials
 
@@ -107,13 +129,25 @@ Default admin credentials (set on first startup):
 ## Configuration via Admin Interface
 
 Many settings can be configured via the admin dashboard:
-- System settings (basic, cache, rate limiting, security, logging, load balancing)
-- LLM resources
-- Models
-- Policies
-- Tokens
+- **System Settings**: Basic settings, cache, rate limiting, security, logging, load balancing, provider retry
+- **LLM Resources**: Add, edit, and manage AI service resources
+- **Models**: Configure model details, pricing, and limits
+- **Policies**: Create and manage routing policies
+- **API Keys**: Create and manage request-side API keys with policy binding
 
 Changes made via the admin interface are saved to the configuration file.
+
+### Provider Retry Settings
+
+You can configure retry behavior for resource requests through the admin interface:
+
+1. Navigate to **Settings** → **Provider Settings**
+2. Configure:
+   - **Request Timeout**: Maximum time to wait for a response (seconds)
+   - **Max Retries**: Maximum number of retry attempts (0-10, 0 = disabled)
+   - **Retry Delay**: Base delay between retries (seconds, actual delay increases exponentially)
+
+These settings apply immediately to all new requests without requiring a restart.
 
 ## Production Configuration
 
