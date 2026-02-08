@@ -473,6 +473,7 @@ export default {
     logLevel: '日志级别',
     all: '全部',
     searchKeyword: '搜索关键词',
+    searchFiles: '搜索日志文件',
     readFromTail: '从尾部读取',
     noLogFiles: '暂无日志文件',
     noLogContent: '暂无日志内容',

@@ -60,7 +60,7 @@
               <el-icon><Check /></el-icon>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-value">{{ stats.success_rate }}%</div>
+              <div class="stat-card-value">{{ (stats.success_rate || 0).toFixed(2) }}%</div>
               <div class="stat-card-label">{{ $t('dashboard.successRate') }}</div>
             </div>
           </div>
@@ -79,7 +79,7 @@
             <div class="performance-metrics">
               <div class="metric-item">
                 <div class="metric-label">{{ $t('dashboard.avgResponseTime') }}</div>
-                <div class="metric-value">{{ stats.avg_response_time }}ms</div>
+                <div class="metric-value">{{ (stats.avg_response_time || 0).toFixed(2) }}ms</div>
               </div>
               <div class="metric-item">
                 <div class="metric-label">{{ $t('dashboard.todayRequests') }}</div>

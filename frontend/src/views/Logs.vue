@@ -26,29 +26,46 @@
         <el-col :span="6">
           <el-card shadow="hover">
             <template #header>
-              <span>{{ $t('logs.logFiles') }}</span>
-            </template>
-            <el-scrollbar height="600px">
-              <el-menu
-                :default-active="selectedFile"
-                @select="handleFileSelect"
-                class="log-files-menu"
-              >
-                <el-menu-item
-                  v-for="file in logFiles"
-                  :key="file.name"
-                  :index="file.name"
+              <div class="files-header">
+                <span>{{ $t('logs.logFiles') }}</span>
+                <el-input
+                  v-model="fileSearchKeyword"
+                  :placeholder="$t('logs.searchFiles')"
+                  size="small"
+                  clearable
+                  style="width: 100%; margin-top: 8px"
                 >
-                  <div class="file-item">
-                    <div class="file-name">{{ file.name }}</div>
-                    <div class="file-info">
-                      <span class="file-size">{{ formatFileSize(file.size) }}</span>
-                      <span class="file-time">{{ formatTime(file.mod_time) }}</span>
-                    </div>
+                  <template #prefix>
+                    <el-icon><Search /></el-icon>
+                  </template>
+                </el-input>
+              </div>
+            </template>
+            <el-scrollbar height="600px" v-loading="loading">
+              <div class="log-files-list">
+                <div
+                  v-for="file in filteredLogFiles"
+                  :key="file.name"
+                  :class="['file-item', { 'file-item-active': selectedFile === file.name }]"
+                  @click="handleFileSelect(file.name)"
+                >
+                  <div class="file-item-header">
+                    <el-icon class="file-icon"><Document /></el-icon>
+                    <div class="file-name" :title="file.name">{{ file.name }}</div>
                   </div>
-                </el-menu-item>
-              </el-menu>
-              <el-empty v-if="logFiles.length === 0" :description="$t('logs.noLogFiles')" />
+                  <div class="file-info">
+                    <span class="file-size">
+                      <el-icon><Folder /></el-icon>
+                      {{ formatFileSize(file.size) }}
+                    </span>
+                    <span class="file-time">
+                      <el-icon><Clock /></el-icon>
+                      {{ formatTime(file.mod_time) }}
+                    </span>
+                  </div>
+                </div>
+                <el-empty v-if="filteredLogFiles.length === 0 && !loading" :description="$t('logs.noLogFiles')" />
+              </div>
             </el-scrollbar>
           </el-card>
         </el-col>
@@ -125,9 +142,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Delete, Download, Search } from '@element-plus/icons-vue'
+import { Refresh, Delete, Download, Search, Document, Folder, Clock } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import api from '../api'
 
@@ -142,6 +159,18 @@ const keyword = ref('')
 const lines = ref(100)
 const tail = ref(true)
 const logContentRef = ref(null)
+const fileSearchKeyword = ref('')
+
+// 过滤日志文件列表
+const filteredLogFiles = computed(() => {
+  if (!fileSearchKeyword.value) {
+    return logFiles.value
+  }
+  const keyword = fileSearchKeyword.value.toLowerCase()
+  return logFiles.value.filter(file => 
+    file.name.toLowerCase().includes(keyword)
+  )
+})
 
 // 获取日志文件列表
 const getLogFiles = async () => {
@@ -335,29 +364,87 @@ onMounted(() => {
   align-items: center;
 }
 
-.log-files-menu {
-  border: none;
+.files-header {
+  width: 100%;
+}
+
+.log-files-list {
+  padding: 4px 0;
 }
 
 .file-item {
-  width: 100%;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #fff;
+}
+
+.file-item:hover {
+  border-color: #409eff;
+  background-color: #f5f7fa;
+  box-shadow: 0 2px 4px rgba(64, 158, 255, 0.1);
+}
+
+.file-item-active {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+}
+
+.file-item-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.file-icon {
+  margin-right: 8px;
+  color: #409eff;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .file-name {
   font-weight: 500;
-  margin-bottom: 4px;
-  word-break: break-all;
+  font-size: 14px;
+  color: #303133;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-item-active .file-name {
+  color: #409eff;
+  font-weight: 600;
 }
 
 .file-info {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 12px;
   color: #909399;
+  margin-left: 26px;
 }
 
-.file-size {
-  margin-right: 10px;
+.file-info .el-icon {
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.file-size,
+.file-time {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.file-time {
+  justify-content: flex-end;
 }
 
 .log-header {
@@ -455,5 +542,74 @@ onMounted(() => {
 
 .log-level-fatal {
   color: #f48771;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .log-controls {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .log-controls .el-select,
+  .log-controls .el-input,
+  .log-controls .el-input-number {
+    width: 100% !important;
+    margin-right: 0 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .logs-container {
+    padding: 10px;
+  }
+  
+  .el-row {
+    flex-direction: column;
+  }
+  
+  .el-col {
+    width: 100% !important;
+    margin-bottom: 16px;
+  }
+  
+  .log-content {
+    height: 400px;
+  }
+  
+  .files-header {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .card-header > div {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .log-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .log-controls {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .log-controls > * {
+    width: 100% !important;
+    margin-right: 0 !important;
+    margin-bottom: 8px;
+  }
 }
 </style>

@@ -473,6 +473,7 @@ export default {
     logLevel: 'Log Level',
     all: 'All',
     searchKeyword: 'Search Keyword',
+    searchFiles: 'Search log files',
     readFromTail: 'Read from Tail',
     noLogFiles: 'No log files',
     noLogContent: 'No log content',
