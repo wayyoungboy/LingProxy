@@ -30,6 +30,9 @@ FRONTEND_DIST=frontend/dist
 BACKEND_PORT ?= 8080
 FRONTEND_PORT ?= 3000
 
+# Docker Compose 命令适配（优先使用 V2，回退到 V1）
+DOCKER_COMPOSE := $(shell command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
+
 # 颜色输出
 COLOR_RESET=\033[0m
 COLOR_BOLD=\033[1m
@@ -383,16 +386,15 @@ logs:
 # Docker 相关
 # ============================================================================
 
-## 构建 Docker 镜像
+## 构建 Docker 镜像（使用 Docker Compose）
 docker-build:
-	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Building Docker image...$(COLOR_RESET)"
-	@docker build -f docker/Dockerfile -t lingproxy:$(VERSION) .
-	@echo "$(COLOR_GREEN)✓ Docker image built: lingproxy:$(VERSION)$(COLOR_RESET)"
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Building Docker images with Docker Compose...$(COLOR_RESET)"
+	@$(DOCKER_COMPOSE) -f docker/docker-compose.yml build
+	@echo "$(COLOR_GREEN)✓ Docker images built successfully$(COLOR_RESET)"
 
-## 运行 Docker 容器
-docker-run:
-	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Running Docker container...$(COLOR_RESET)"
-	@docker run -p $(BACKEND_PORT):$(BACKEND_PORT) lingproxy:$(VERSION)
+## 运行 Docker 容器（使用 Docker Compose）
+docker-run: docker-compose-up
+	@echo "$(COLOR_GREEN)✓ Services are running$(COLOR_RESET)"
 
 ## 检查 Docker Compose 配置文件
 docker-compose-check:
@@ -418,35 +420,35 @@ docker-compose-init-db:
 ## 使用 Docker Compose 启动（完整流程）
 docker-compose-up: docker-compose-check
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Starting services with Docker Compose...$(COLOR_RESET)"
-	@docker-compose -f docker/docker-compose.yml up -d --build
+	@$(DOCKER_COMPOSE) -f docker/docker-compose.yml up -d --build
 	@echo "$(COLOR_GREEN)✓ Services started$(COLOR_RESET)"
 	@echo "$(COLOR_YELLOW)Waiting for SeekDB to be ready...$(COLOR_RESET)"
 	@sleep 15
 	@$(MAKE) docker-compose-init-db
 	@echo "$(COLOR_GREEN)✓ Services are running$(COLOR_RESET)"
 	@echo "$(COLOR_BOLD)Access URLs:$(COLOR_RESET)"
-	@echo "  Frontend: $(COLOR_GREEN)http://localhost:8080$(COLOR_RESET)"
-	@echo "  API: $(COLOR_GREEN)http://localhost:8080/api/v1$(COLOR_RESET)"
-	@echo "  Health: $(COLOR_GREEN)http://localhost:8080/api/v1/health$(COLOR_RESET)"
+	@echo "  Backend API: $(COLOR_GREEN)http://localhost:8080/api/v1$(COLOR_RESET)"
+	@echo "  Health Check: $(COLOR_GREEN)http://localhost:8080/api/v1/health$(COLOR_RESET)"
+	@echo "$(COLOR_YELLOW)Note: Frontend should be run separately with 'cd frontend && npm run dev'$(COLOR_RESET)"
 
 ## 停止 Docker Compose 服务
 docker-compose-down:
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Stopping Docker Compose services...$(COLOR_RESET)"
-	@docker-compose -f docker/docker-compose.yml down
+	@$(DOCKER_COMPOSE) -f docker/docker-compose.yml down
 	@echo "$(COLOR_GREEN)✓ Services stopped$(COLOR_RESET)"
 
 ## 查看 Docker Compose 日志
 docker-compose-logs:
-	@docker-compose -f docker/docker-compose.yml logs -f
+	@$(DOCKER_COMPOSE) -f docker/docker-compose.yml logs -f
 
 ## 查看 Docker Compose 服务状态
 docker-compose-ps:
-	@docker-compose -f docker/docker-compose.yml ps
+	@$(DOCKER_COMPOSE) -f docker/docker-compose.yml ps
 
 ## 重启 Docker Compose 服务
 docker-compose-restart:
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Restarting Docker Compose services...$(COLOR_RESET)"
-	@docker-compose -f docker/docker-compose.yml restart
+	@$(DOCKER_COMPOSE) -f docker/docker-compose.yml restart
 	@echo "$(COLOR_GREEN)✓ Services restarted$(COLOR_RESET)"
 
 # ============================================================================

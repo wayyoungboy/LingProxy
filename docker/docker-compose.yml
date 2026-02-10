@@ -50,6 +50,27 @@ services:
     networks:
       - lingproxy-network
 
+  lingproxy-frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+    image: lingproxy-frontend:latest
+    container_name: lingproxy-frontend
+    ports:
+      - "3000:80"  # 前端 Web 端口
+    depends_on:
+      lingproxy-backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - lingproxy-network
+
 volumes:
   seekdb-data:
     driver: local

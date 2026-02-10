@@ -11,14 +11,18 @@ app:
 storage:
   type: "gorm"  # memory 或 gorm
   gorm:
-    driver: "sqlite"  # sqlite, mysql
-    dsn: "lingproxy.db"
-
-    # SeekDB/MySQL 示例（兼容 MySQL 协议，使用 mysql 驱动）
+    driver: "seekdb"  # sqlite, mysql, seekdb
     # 本地开发：使用 localhost:2881 连接 Docker 中的 SeekDB
     # Docker 环境：使用 config.yaml.docker（已配置为 seekdb:2881）
+    dsn: "root:@tcp(localhost:2881)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+
+    # MySQL 示例（兼容 MySQL 协议）
     # driver: "mysql"
-    # dsn: "root:@tcp(localhost:2881)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+    # dsn: "root:@tcp(localhost:3306)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+
+    # SQLite 示例（用于本地开发，无需数据库服务）
+    # driver: "sqlite"
+    # dsn: "lingproxy.db"
 
 log:
   level: "info"  # debug, info, warn, error, fatal

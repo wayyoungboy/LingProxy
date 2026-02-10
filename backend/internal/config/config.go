@@ -237,7 +237,7 @@ func validateConfig() error {
 
 	// 如果是gorm存储类型，验证driver配置
 	if C.Storage.Type == "gorm" {
-		if C.Storage.GORM.Driver != "sqlite" && C.Storage.GORM.Driver != "mysql" {
+		if C.Storage.GORM.Driver != "sqlite" && C.Storage.GORM.Driver != "mysql" && C.Storage.GORM.Driver != "seekdb" {
 			return fmt.Errorf("不支持的GORM驱动类型: %s", C.Storage.GORM.Driver)
 		}
 		if C.Storage.GORM.DSN == "" {

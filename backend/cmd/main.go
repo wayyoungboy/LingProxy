@@ -70,8 +70,9 @@ func main() {
 			if err != nil {
 				logger.Fatal("Failed to connect to database", logger.F("error", err))
 			}
-		case "mysql":
+		case "mysql", "seekdb":
 			// MySQL/SeekDB: 如果数据库不存在，先创建数据库
+			// SeekDB 兼容 MySQL 协议，使用相同的驱动
 			if err := ensureMySQLDatabase(cfg.Storage.GORM.DSN); err != nil {
 				logger.Fatal("Failed to ensure database exists", logger.F("error", err.Error()))
 			}

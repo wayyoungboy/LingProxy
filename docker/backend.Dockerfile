@@ -6,10 +6,18 @@
 # 构建阶段
 FROM golang:1.24-alpine AS builder
 
+# 配置 Alpine 镜像源（使用阿里云镜像，加速国内访问）
+RUN if [ -f /etc/apk/repositories ]; then \
+        sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories; \
+    else \
+        echo "https://mirrors.aliyun.com/alpine/v3.19/main" > /etc/apk/repositories && \
+        echo "https://mirrors.aliyun.com/alpine/v3.19/community" >> /etc/apk/repositories; \
+    fi
+
 WORKDIR /app
 
 # 安装构建依赖
-RUN apk add --no-cache git ca-certificates tzdata
+RUN apk update && apk add --no-cache git ca-certificates tzdata
 
 # 设置 Go 代理（可选，加速依赖下载）
 ENV GOPROXY=https://goproxy.cn,direct
@@ -33,8 +41,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # 运行阶段
 FROM alpine:latest
 
+# 配置 Alpine 镜像源（使用阿里云镜像，加速国内访问）
+RUN if [ -f /etc/apk/repositories ]; then \
+        sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories; \
+    else \
+        echo "https://mirrors.aliyun.com/alpine/v3.19/main" > /etc/apk/repositories && \
+        echo "https://mirrors.aliyun.com/alpine/v3.19/community" >> /etc/apk/repositories; \
+    fi
+
 # 安装运行时依赖
-RUN apk --no-cache add \
+RUN apk update && apk --no-cache add \
     ca-certificates \
     curl \
     tzdata \
