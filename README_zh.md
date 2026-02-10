@@ -98,53 +98,40 @@ npm run dev
 
 前端将在 `http://localhost:3000` 可用
 
-### Docker 运行
+### Docker 部署
+
+项目采用**前后端分离**架构。Docker 部署仅包含后端服务。
 
 #### 使用 Docker Compose（推荐）
 
-1. **准备配置文件**
+1. **启动后端服务**
 ```bash
-# 复制配置示例文件
-cp backend/configs/config.yaml.example backend/configs/config.yaml
-# 根据需要编辑 backend/configs/config.yaml
-```
-
-2. **启动服务**
-```bash
-# 构建并启动（在项目根目录执行）
+# 构建并启动后端 + 数据库（在项目根目录执行）
 docker-compose -f docker/docker-compose.yml up -d
 
 # 查看日志
-docker-compose -f docker/docker-compose.yml logs -f
+docker-compose -f docker/docker-compose.yml logs -f lingproxy-backend
 
 # 停止服务
 docker-compose -f docker/docker-compose.yml down
 ```
 
-#### 直接使用 Docker
+**后端 API**: http://localhost:8080/api/v1
 
+2. **单独运行前端**（开发时）
 ```bash
-# 构建镜像（在项目根目录执行）
-docker build -f docker/Dockerfile -t lingproxy:latest .
-
-# 运行容器
-docker run -d \
-  --name lingproxy \
-  -p 8080:8080 \
-  -v $(pwd)/backend/configs:/app/configs:ro \
-  -v $(pwd)/logs:/app/logs \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/run:/app/run \
-  -e GIN_MODE=release \
-  -e TZ=Asia/Shanghai \
-  --restart unless-stopped \
-  lingproxy:latest
+cd frontend
+npm install
+npm run dev
 ```
 
+**前端**: http://localhost:3000（API 请求会自动代理到后端）
+
 **注意**: 
-- 所有Docker相关文件位于 `docker/` 目录
-- 运行容器前请确保已创建 `backend/configs/config.yaml` 配置文件
-- 详细Docker部署指南请查看 `docker/README.md`
+- Docker 部署使用 `docker/backend.Dockerfile`（仅后端）
+- 数据库会在后端启动时自动创建
+- 使用 `config.yaml.docker` 作为 Docker 专用配置
+- 详细 Docker 部署指南请查看[快速开始指南](docs/zh/02-quick-start.md#docker-部署)
 
 ## API 使用指南
 

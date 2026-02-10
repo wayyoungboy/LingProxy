@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -133,6 +134,8 @@ func Init(configPath string) error {
 
 	// 设置环境变量前缀
 	viper.SetEnvPrefix("LINGPROXY")
+	// 设置环境变量键名替换器，将下划线替换为点号，以便支持嵌套结构
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	// 设置默认值

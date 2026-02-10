@@ -352,6 +352,7 @@ run:
 ## 仅运行后端（前台运行）
 run-backend:
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Running backend service...$(COLOR_RESET)"
+	@echo "$(COLOR_YELLOW)Note: For local development, set LINGPROXY_STORAGE_GORM_DSN=root:@tcp(localhost:2881)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local$(COLOR_RESET)"
 	@cd backend && $(GO_CMD) run ./cmd/main.go
 
 ## 仅运行前端（前台运行）
@@ -393,19 +394,60 @@ docker-run:
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Running Docker container...$(COLOR_RESET)"
 	@docker run -p $(BACKEND_PORT):$(BACKEND_PORT) lingproxy:$(VERSION)
 
-## 使用 Docker Compose 启动
-docker-compose-up:
+## 检查 Docker Compose 配置文件
+docker-compose-check:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Checking Docker Compose configuration...$(COLOR_RESET)"
+	@if [ ! -f "backend/configs/config.yaml" ]; then \
+		echo "$(COLOR_YELLOW)⚠ Config file not found, creating from example...$(COLOR_RESET)"; \
+		cp backend/configs/config.yaml.example backend/configs/config.yaml; \
+		echo "$(COLOR_YELLOW)⚠ Please edit backend/configs/config.yaml and configure SeekDB connection$(COLOR_RESET)"; \
+	fi
+	@if [ ! -d "logs" ]; then mkdir -p logs; fi
+	@if [ ! -d "run" ]; then mkdir -p run; fi
+	@echo "$(COLOR_GREEN)✓ Configuration check completed$(COLOR_RESET)"
+
+## 创建 SeekDB 数据库
+docker-compose-init-db:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Initializing SeekDB database...$(COLOR_RESET)"
+	@echo "Waiting for SeekDB to be ready..."
+	@sleep 10
+	@docker exec seekdb mysql -h127.0.0.1 -uroot -P2881 -e "CREATE DATABASE IF NOT EXISTS lingproxy CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null && \
+		echo "$(COLOR_GREEN)✓ Database 'lingproxy' created successfully$(COLOR_RESET)" || \
+		echo "$(COLOR_YELLOW)⚠ Database creation failed or already exists$(COLOR_RESET)"
+
+## 使用 Docker Compose 启动（完整流程）
+docker-compose-up: docker-compose-check
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Starting services with Docker Compose...$(COLOR_RESET)"
-	@docker-compose -f docker/docker-compose.yml up -d
+	@docker-compose -f docker/docker-compose.yml up -d --build
+	@echo "$(COLOR_GREEN)✓ Services started$(COLOR_RESET)"
+	@echo "$(COLOR_YELLOW)Waiting for SeekDB to be ready...$(COLOR_RESET)"
+	@sleep 15
+	@$(MAKE) docker-compose-init-db
+	@echo "$(COLOR_GREEN)✓ Services are running$(COLOR_RESET)"
+	@echo "$(COLOR_BOLD)Access URLs:$(COLOR_RESET)"
+	@echo "  Frontend: $(COLOR_GREEN)http://localhost:8080$(COLOR_RESET)"
+	@echo "  API: $(COLOR_GREEN)http://localhost:8080/api/v1$(COLOR_RESET)"
+	@echo "  Health: $(COLOR_GREEN)http://localhost:8080/api/v1/health$(COLOR_RESET)"
 
 ## 停止 Docker Compose 服务
 docker-compose-down:
 	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Stopping Docker Compose services...$(COLOR_RESET)"
 	@docker-compose -f docker/docker-compose.yml down
+	@echo "$(COLOR_GREEN)✓ Services stopped$(COLOR_RESET)"
 
 ## 查看 Docker Compose 日志
 docker-compose-logs:
 	@docker-compose -f docker/docker-compose.yml logs -f
+
+## 查看 Docker Compose 服务状态
+docker-compose-ps:
+	@docker-compose -f docker/docker-compose.yml ps
+
+## 重启 Docker Compose 服务
+docker-compose-restart:
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Restarting Docker Compose services...$(COLOR_RESET)"
+	@docker-compose -f docker/docker-compose.yml restart
+	@echo "$(COLOR_GREEN)✓ Services restarted$(COLOR_RESET)"
 
 # ============================================================================
 # 文档生成
@@ -569,11 +611,13 @@ help:
 	@echo "  $(COLOR_GREEN)make logs-frontend$(COLOR_RESET)  - 实时查看前端日志"
 	@echo ""
 	@echo "$(COLOR_BOLD)Docker 相关:$(COLOR_RESET)"
-	@echo "  $(COLOR_GREEN)make docker-build$(COLOR_RESET)    - 构建 Docker 镜像"
-	@echo "  $(COLOR_GREEN)make docker-run$(COLOR_RESET)      - 运行 Docker 容器"
-	@echo "  $(COLOR_GREEN)make docker-compose-up$(COLOR_RESET) - 使用 Docker Compose 启动"
-	@echo "  $(COLOR_GREEN)make docker-compose-down$(COLOR_RESET) - 停止 Docker Compose 服务"
-	@echo "  $(COLOR_GREEN)make docker-compose-logs$(COLOR_RESET) - 查看 Docker Compose 日志"
+	@echo "  $(COLOR_GREEN)make docker-build$(COLOR_RESET)         - 构建 Docker 镜像"
+	@echo "  $(COLOR_GREEN)make docker-run$(COLOR_RESET)           - 运行 Docker 容器"
+	@echo "  $(COLOR_GREEN)make docker-compose-up$(COLOR_RESET)    - 启动服务（包含检查配置、创建数据库）"
+	@echo "  $(COLOR_GREEN)make docker-compose-down$(COLOR_RESET)  - 停止 Docker Compose 服务"
+	@echo "  $(COLOR_GREEN)make docker-compose-logs$(COLOR_RESET)  - 查看 Docker Compose 日志"
+	@echo "  $(COLOR_GREEN)make docker-compose-ps$(COLOR_RESET)    - 查看服务状态"
+	@echo "  $(COLOR_GREEN)make docker-compose-restart$(COLOR_RESET) - 重启服务"
 	@echo ""
 	@echo "$(COLOR_BOLD)文档和工具:$(COLOR_RESET)"
 	@echo "  $(COLOR_GREEN)make docs$(COLOR_RESET)            - 生成 API 文档（Swagger）"

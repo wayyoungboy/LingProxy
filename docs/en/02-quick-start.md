@@ -76,20 +76,137 @@ The frontend will be available at `http://localhost:3000`
 
 ## Docker Deployment
 
-### Using Docker Compose (Recommended)
+### Prerequisites
+
+- **Docker**: Docker 20.10+ and Docker Compose 2.0+
+- **Configuration**: Ensure `backend/configs/config.yaml` exists and is properly configured
+
+### Quick Start with Makefile (Recommended)
+
+The easiest way to start all services:
 
 ```bash
-# From project root
-docker-compose -f docker/docker-compose.yml up -d
+# From project root - one command to start everything
+make docker-compose-up
+```
 
-# View logs
+This command will:
+1. ✅ Check if configuration file exists (create from example if needed)
+2. ✅ Create necessary directories (logs, run)
+3. ✅ Start SeekDB and LingProxy services (build if needed)
+4. ✅ Wait for SeekDB to be ready
+5. ✅ Create the database automatically
+6. ✅ Display access URLs
+
+**Access URLs** (after startup):
+- **Backend API**: http://localhost:8080/api/v1
+- **Health Check**: http://localhost:8080/api/v1/health
+
+**Note**: The Docker deployment only includes the backend service. For frontend development, run it separately:
+```bash
+cd frontend
+npm run dev
+# Frontend will be available at http://localhost:3000
+```
+
+### Manual Docker Compose Commands
+
+If you prefer to use Docker Compose directly:
+
+```bash
+# 1. Prepare configuration file
+cp backend/configs/config.yaml.example backend/configs/config.yaml
+# Edit backend/configs/config.yaml and configure SeekDB connection:
+# storage:
+#   type: "gorm"
+#   gorm:
+#     driver: "mysql"
+#     dsn: "root:@tcp(seekdb:2881)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+
+# 2. Start services
+docker-compose -f docker/docker-compose.yml up -d --build
+
+# 3. Database will be created automatically on backend startup
+# No manual database creation needed
+
+# 4. View logs
 docker-compose -f docker/docker-compose.yml logs -f
 
-# Stop services
+# 5. Stop services
 docker-compose -f docker/docker-compose.yml down
 ```
 
-For more details about Docker deployment, see the Docker section above or check the project's `docker/README.md` file.
+### Other Useful Makefile Commands
+
+```bash
+# Check service status
+make docker-compose-ps
+
+# View logs
+make docker-compose-logs
+
+# Stop services
+make docker-compose-down
+
+# Restart services
+make docker-compose-restart
+
+# Initialize database only
+make docker-compose-init-db
+```
+
+### Service Architecture
+
+The Docker deployment uses a **frontend-backend separation** architecture:
+
+- **SeekDB**: MySQL-compatible database (ports 2881, 2886)
+  - Data stored in Docker volume `seekdb-data`
+  - Health check ensures service is ready before backend starts
+
+- **LingProxy Backend**: Backend API service (port 8080)
+  - Pure backend service, no frontend included
+  - Automatically creates database on startup if not exists
+  - Uses Docker-specific configuration (`config.yaml.docker`)
+
+- **Frontend**: Run separately for development
+  - Use `npm run dev` in the `frontend` directory
+  - Runs on port 3000 with Vite dev server
+  - API requests are proxied to `http://localhost:8080` via Vite proxy
+
+### Troubleshooting
+
+**Service won't start:**
+```bash
+# Check service status
+make docker-compose-ps
+
+# View logs
+make docker-compose-logs
+
+# Check if ports are in use
+lsof -i :8080
+lsof -i :2881
+```
+
+**Database connection issues:**
+```bash
+# Verify SeekDB is running
+docker exec seekdb mysql -h127.0.0.1 -uroot -P2881 -e "SHOW DATABASES;"
+
+# Recreate database
+make docker-compose-init-db
+```
+
+**Configuration issues:**
+```bash
+# Check configuration file
+cat backend/configs/config.yaml
+
+# Verify SeekDB connection string
+grep -A 3 "storage:" backend/configs/config.yaml
+```
+
+For more details about Docker deployment, see the [Configuration Guide](03-configuration.md) and [Development Guide](06-development.md).
 
 ## First Steps
 
@@ -116,7 +233,7 @@ For more details about Docker deployment, see the Docker section above or check 
 ### 3. Test the API
 
 ```bash
-# Using curl
+# Using curl (backend runs on port 8080)
 curl -X POST http://localhost:8080/llm/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
@@ -127,6 +244,8 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
     ]
   }'
 ```
+
+**Note**: If you're running the frontend locally (`npm run dev`), API requests from the frontend will be automatically proxied to the backend.
 
 ## Next Steps
 

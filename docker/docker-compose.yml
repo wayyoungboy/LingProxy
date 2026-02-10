@@ -1,30 +1,59 @@
-version: '3.8'
-
 services:
-  lingproxy:
+  seekdb:
+    image: oceanbase/seekdb:latest
+    container_name: seekdb
+    ports:
+      - "2881:2881"  # MySQL 兼容端口
+      - "2886:2886"  # OceanBase 协议端口
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      # SeekDB 数据目录（使用 Docker volume）
+      - seekdb-data:/var/lib/oceanbase
+    restart: unless-stopped
+    healthcheck:
+      # 使用 MySQL 客户端检查（SeekDB 兼容 MySQL 协议）
+      test: ["CMD-SHELL", "mysql -h127.0.0.1 -uroot -P2881 -e 'SELECT 1' > /dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - lingproxy-network
+
+  lingproxy-backend:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
-    image: lingproxy:latest
-    container_name: lingproxy
+      dockerfile: docker/backend.Dockerfile
+    image: lingproxy-backend:latest
+    container_name: lingproxy-backend
     ports:
-      - "80:80"
+      - "8080:8080"  # 后端 API 端口
     environment:
       - GIN_MODE=release
       - TZ=Asia/Shanghai
     volumes:
-      # 配置文件目录（挂载配置文件，注意：config.yaml需要手动创建或从example复制）
-      - ../backend/configs:/app/configs:ro
       # 日志目录
       - ../logs:/app/logs
-      # 数据目录（SQLite数据库等）
-      - ../data:/app/data
       # 运行目录（PID文件等）
       - ../run:/app/run
+    depends_on:
+      seekdb:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/api/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - lingproxy-network
+
+volumes:
+  seekdb-data:
+    driver: local
+
+networks:
+  lingproxy-network:
+    driver: bridge

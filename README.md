@@ -99,53 +99,40 @@ npm run dev
 
 The frontend will be available at `http://localhost:3000`
 
-### Docker Run
+### Docker Deployment
+
+The project uses a **frontend-backend separation** architecture. Docker deployment includes only the backend service.
 
 #### Using Docker Compose (Recommended)
 
-1. **Prepare Configuration**
+1. **Start Backend Services**
 ```bash
-# Copy configuration example
-cp backend/configs/config.yaml.example backend/configs/config.yaml
-# Edit backend/configs/config.yaml as needed
-```
-
-2. **Start Services**
-```bash
-# Build and start (from project root)
+# Build and start backend + database (from project root)
 docker-compose -f docker/docker-compose.yml up -d
 
 # View logs
-docker-compose -f docker/docker-compose.yml logs -f
+docker-compose -f docker/docker-compose.yml logs -f lingproxy-backend
 
 # Stop services
 docker-compose -f docker/docker-compose.yml down
 ```
 
-#### Using Docker Directly
+**Backend API**: http://localhost:8080/api/v1
 
+2. **Run Frontend Separately** (for development)
 ```bash
-# Build image (from project root)
-docker build -f docker/Dockerfile -t lingproxy:latest .
-
-# Run container
-docker run -d \
-  --name lingproxy \
-  -p 8080:8080 \
-  -v $(pwd)/backend/configs:/app/configs:ro \
-  -v $(pwd)/logs:/app/logs \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/run:/app/run \
-  -e GIN_MODE=release \
-  -e TZ=Asia/Shanghai \
-  --restart unless-stopped \
-  lingproxy:latest
+cd frontend
+npm install
+npm run dev
 ```
 
+**Frontend**: http://localhost:3000 (API requests are proxied to backend)
+
 **Note**: 
-- All Docker-related files are located in the `docker/` directory
-- Make sure to create `backend/configs/config.yaml` before running the container
-- See `docker/README.md` for detailed Docker deployment guide
+- Docker deployment uses `docker/backend.Dockerfile` (backend-only)
+- Database is automatically created on backend startup
+- Uses `config.yaml.docker` for Docker-specific configuration
+- See [Quick Start Guide](docs/en/02-quick-start.md#docker-deployment) for detailed instructions
 
 ## API Usage Guide
 

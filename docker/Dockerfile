@@ -1,6 +1,6 @@
 # ============================================================================
 # 多阶段构建：统一的前后端 Dockerfile
-# 只暴露一个端口（80），同时提供前端和后端服务
+# 对外暴露端口 8080（容器内 Nginx 监听 80），同时提供前端和后端服务
 # ============================================================================
 
 # 阶段1: 构建后端
@@ -77,18 +77,20 @@ COPY --from=backend-builder /app/lingproxy /app/lingproxy
 
 # 从后端构建阶段复制配置文件
 COPY --from=backend-builder /app/configs /app/configs
+# 在 Docker 环境中使用 Docker 专用配置文件
+RUN cp /app/configs/config.yaml.docker /app/configs/config.yaml
 
 # 从前端构建阶段复制构建产物到 nginx 目录
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
-# 复制 nginx 配置文件（修改为代理到 localhost:8080）
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# 复制 nginx 配置文件到 http.d 目录（server 块必须在 http 块内）
+COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 
 # 复制 supervisor 配置文件
 COPY docker/supervisord.conf /etc/supervisord.conf
 
 # 创建必要的目录
-RUN mkdir -p /app/data /app/logs /app/run /var/log/supervisor && \
+RUN mkdir -p /app/logs /app/run /var/log/supervisor && \
     chown -R lingproxy:lingproxy /app && \
     chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/log/nginx
@@ -96,7 +98,7 @@ RUN mkdir -p /app/data /app/logs /app/run /var/log/supervisor && \
 # 设置时区
 ENV TZ=Asia/Shanghai
 
-# 暴露端口（只暴露一个端口）
+# 暴露端口（容器内 Nginx 监听 80，对外映射到 8080）
 EXPOSE 80
 
 # 健康检查

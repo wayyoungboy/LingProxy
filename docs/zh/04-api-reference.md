@@ -138,6 +138,130 @@ for await (const chunk of stream) {
 }
 ```
 
+## 客户端库
+
+LingProxy 提供了多种编程语言的官方客户端库。这些客户端位于 `clients/` 目录下，可以直接使用或作为参考实现自己的客户端。
+
+### Python 客户端
+
+**位置：** `clients/python/`
+
+**安装：**
+```bash
+cd clients/python
+pip install -r requirements.txt
+```
+
+**使用：**
+```python
+from lingproxy_client import LingProxyClient
+
+# 初始化客户端（从环境变量读取 API Key）
+client = LingProxyClient()
+
+# 或直接指定 API Key
+client = LingProxyClient(
+    api_key="ling-your-api-key-here",
+    base_url="http://localhost:8080/llm/v1"
+)
+
+# 创建聊天补全
+response = client.create_chat_completion(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "user", "content": "你好！"}
+    ]
+)
+
+print(response['choices'][0]['message']['content'])
+```
+
+### JavaScript/TypeScript 客户端
+
+**位置：** `clients/javascript/`
+
+**安装：**
+```bash
+cd clients/javascript
+npm install
+```
+
+**使用：**
+```javascript
+import { LingProxyClient } from './lingproxy-client.js';
+
+const client = new LingProxyClient({
+  apiKey: 'ling-your-api-key-here',
+  baseURL: 'http://localhost:8080/llm/v1'
+});
+
+const response = await client.createChatCompletion({
+  model: 'gpt-3.5-turbo',
+  messages: [
+    { role: 'user', content: '你好！' }
+  ]
+});
+
+console.log(response.choices[0].message.content);
+```
+
+### Go 客户端
+
+**位置：** `clients/go/`
+
+**安装：**
+```bash
+cd clients/go
+go mod init lingproxy-client-example
+go get github.com/openai/openai-go/v3
+```
+
+**使用：**
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "github.com/lingproxy/lingproxy/clients/go/client"
+)
+
+func main() {
+    c, err := client.NewClient(&client.ClientOptions{
+        APIKey:  "ling-your-api-key-here",
+        BaseURL: "http://localhost:8080/llm/v1",
+    })
+    if err != nil {
+        panic(err)
+    }
+    
+    ctx := context.Background()
+    resp, err := c.CreateChatCompletion(ctx, client.ChatCompletionRequest{
+        Model: "gpt-3.5-turbo",
+        Messages: []client.ChatMessage{
+            {Role: "user", Content: "你好！"},
+        },
+    })
+    if err != nil {
+        panic(err)
+    }
+    
+    fmt.Println(resp.Choices[0].Message.Content)
+}
+```
+
+### 环境变量
+
+所有客户端都支持通过环境变量设置 API Key：
+
+```bash
+export LINGPROXY_API_KEY=ling-your-api-key-here
+```
+
+### Web 测试页面
+
+在 `clients/test-page.html` 提供了一个独立的 HTML 测试页面，可以快速测试 API，无需安装任何依赖。只需在浏览器中打开并配置 API 端点和密钥即可。
+
 **注意事项：**
 - 流式响应可以减少首字延迟，提供更好的用户体验
 - 确保客户端和服务器之间的网络连接稳定

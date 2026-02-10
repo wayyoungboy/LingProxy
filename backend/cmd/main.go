@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -64,15 +65,22 @@ func main() {
 
 		switch cfg.Storage.GORM.Driver {
 		case "sqlite":
+			// SQLite 数据库文件会在连接时自动创建
 			db, err = gorm.Open(sqlite.Open(cfg.Storage.GORM.DSN), &gorm.Config{})
+			if err != nil {
+				logger.Fatal("Failed to connect to database", logger.F("error", err))
+			}
 		case "mysql":
+			// MySQL/SeekDB: 如果数据库不存在，先创建数据库
+			if err := ensureMySQLDatabase(cfg.Storage.GORM.DSN); err != nil {
+				logger.Fatal("Failed to ensure database exists", logger.F("error", err.Error()))
+			}
 			db, err = gorm.Open(mysql.Open(cfg.Storage.GORM.DSN), &gorm.Config{})
+			if err != nil {
+				logger.Fatal("Failed to connect to database", logger.F("error", err))
+			}
 		default:
 			logger.Fatal("Unsupported GORM driver", logger.F("driver", cfg.Storage.GORM.Driver))
-		}
-
-		if err != nil {
-			logger.Fatal("Failed to connect to database", logger.F("error", err))
 		}
 
 		storageImpl = storage.NewGormStorage(db)
@@ -156,6 +164,86 @@ func main() {
 	}
 
 	logger.Info("Application exited")
+}
+
+// ensureMySQLDatabase 确保 MySQL 数据库存在，如果不存在则创建
+func ensureMySQLDatabase(dsn string) error {
+	// 解析 DSN 提取数据库名和服务器连接信息
+	// DSN 格式: username:password@tcp(host:port)/database?params
+	dbName, serverDSN, err := parseMySQLDSN(dsn)
+	if err != nil {
+		return fmt.Errorf("failed to parse DSN: %w", err)
+	}
+
+	// 连接到 MySQL 服务器（不指定数据库）
+	tempDB, err := gorm.Open(mysql.Open(serverDSN), &gorm.Config{})
+	if err != nil {
+		return fmt.Errorf("failed to connect to MySQL server: %w", err)
+	}
+	defer func() {
+		sqlDB, _ := tempDB.DB()
+		if sqlDB != nil {
+			sqlDB.Close()
+		}
+	}()
+
+	// 检查数据库是否存在
+	var dbNameResult string
+	err = tempDB.Raw("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", dbName).Scan(&dbNameResult).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return fmt.Errorf("failed to check if database exists: %w", err)
+	}
+
+	exists := dbNameResult == dbName
+	if !exists {
+		// 创建数据库
+		logger.Info("Database does not exist, creating database", logger.F("database", dbName))
+		createSQL := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", dbName)
+		if err := tempDB.Exec(createSQL).Error; err != nil {
+			return fmt.Errorf("failed to create database: %w", err)
+		}
+		logger.Info("Database created successfully", logger.F("database", dbName))
+	} else {
+		logger.Info("Database already exists", logger.F("database", dbName))
+	}
+
+	return nil
+}
+
+// parseMySQLDSN 解析 MySQL DSN，返回数据库名和服务器连接 DSN（连接到 mysql 系统数据库）
+func parseMySQLDSN(dsn string) (dbName string, serverDSN string, err error) {
+	// DSN 格式: username:password@tcp(host:port)/database?params
+	// 或者: username:password@tcp(host:port)/database
+	// 或者: username:password@(host:port)/database?params
+
+	// 找到最后一个 / 的位置（数据库名分隔符）
+	lastSlash := strings.LastIndex(dsn, "/")
+	if lastSlash == -1 {
+		return "", "", fmt.Errorf("invalid DSN format: no database separator found")
+	}
+
+	// 提取数据库名和查询参数部分
+	dbPart := dsn[lastSlash+1:]
+	
+	// 分离数据库名和查询参数
+	queryStart := strings.Index(dbPart, "?")
+	var queryParams string
+	if queryStart != -1 {
+		dbName = dbPart[:queryStart]
+		queryParams = dbPart[queryStart:]
+	} else {
+		dbName = dbPart
+	}
+
+	if dbName == "" {
+		return "", "", fmt.Errorf("invalid DSN format: database name is empty")
+	}
+
+	// 构建连接到 mysql 系统数据库的 DSN（用于检查和创建目标数据库）
+	// 保留查询参数，但将数据库名替换为 mysql
+	serverDSN = dsn[:lastSlash+1] + "mysql" + queryParams
+
+	return dbName, serverDSN, nil
 }
 
 // initAdminUser 初始化管理员用户

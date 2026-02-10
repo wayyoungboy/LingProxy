@@ -181,6 +181,69 @@ cd frontend
 npm run build
 ```
 
+## Docker 开发
+
+项目采用**前后端分离**架构进行 Docker 部署。
+
+### 后端 Docker 服务
+
+后端在 Docker 中运行，配合 SeekDB：
+
+```bash
+# 启动后端和数据库
+docker-compose -f docker/docker-compose.yml up -d
+
+# 查看后端日志
+docker-compose -f docker/docker-compose.yml logs -f lingproxy-backend
+
+# 停止服务
+docker-compose -f docker/docker-compose.yml down
+```
+
+**后端 Docker 配置：**
+- 使用 `docker/backend.Dockerfile`（仅后端，不包含前端）
+- 暴露 8080 端口供 API 访问
+- 启动时自动创建数据库
+- 使用 `config.yaml.docker` 作为 Docker 专用配置
+
+### 前端开发
+
+前端开发时，在本地运行（不在 Docker 中）：
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+前端开发服务器：
+- 运行在 `http://localhost:3000`
+- API 请求代理到 `http://localhost:8080`（后端）
+- 支持热重载，便于开发
+
+### 开发工作流
+
+1. **在 Docker 中启动后端：**
+   ```bash
+   docker-compose -f docker/docker-compose.yml up -d
+   ```
+
+2. **在本地启动前端：**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+3. **访问应用：**
+   - 前端：http://localhost:3000
+   - 后端 API：http://localhost:8080/api/v1
+
+### Docker 配置文件
+
+- `docker/backend.Dockerfile`: 仅后端的 Docker 镜像
+- `docker/docker-compose.yml`: Docker Compose 配置
+- `backend/configs/config.yaml.docker`: Docker 专用后端配置（使用 `seekdb:2881` 连接数据库）
+
 ## 调试
 
 ### 后端调试
@@ -329,9 +392,60 @@ docs: 更新 API 文档
 **问题**：端口已被使用
 **解决方案**：在 `config.yaml` 中更改端口或停止使用该端口的进程
 
+## 前端优化
+
+### 代码结构
+
+- **工具函数模块** (`src/utils/index.js`): 防抖、节流、日期格式化、文件工具等
+- **常量配置** (`src/utils/constants.js`): 统一的 API 配置、存储键名、路由路径
+- **Composables** (`src/composables/`): 可复用逻辑，如 `useLoading`、`usePagination`
+
+### 性能优化
+
+- 代码分割：Element Plus 和 Vue 核心库单独打包
+- 路由懒加载：所有路由使用动态导入
+- 并行请求：Dashboard 使用 `Promise.allSettled` 并发请求多个 API
+- 防抖/节流工具函数可用于高频操作
+
+### 构建配置
+
+- 路径别名 `@` 指向 `src` 目录
+- 生产构建移除 console 和 debugger 语句
+- 优化的代码压缩和分割
+
+## 官网开发
+
+项目包含一个基于 Docusaurus 的文档网站，位于 `website/` 目录。
+
+### 构建官网
+
+```bash
+cd website
+npm install
+npm run build
+```
+
+### 本地开发
+
+```bash
+npm start
+```
+
+网站将在 `http://localhost:5000` 启动（如果 5000 端口被占用会自动使用其他端口）。
+
+### 部署
+
+网站可以部署到：
+- GitHub Pages: `npm run deploy`
+- Docker: 构建并运行 `website/` 目录下的 Dockerfile
+- 静态文件服务器: 将 `build/` 目录部署到任何静态文件服务器
+
+网站从 `docs/` 目录读取文档，支持中英文双语。
+
 ## 资源
 
 - [Go 文档](https://go.dev/doc/)
 - [Gin 框架](https://gin-gonic.com/docs/)
 - [Vue 3 文档](https://vuejs.org/)
 - [Element Plus](https://element-plus.org/)
+- [Docusaurus 文档](https://docusaurus.io/docs)

@@ -138,6 +138,130 @@ for await (const chunk of stream) {
 }
 ```
 
+## Client Libraries
+
+LingProxy provides official client libraries for multiple programming languages. These clients are located in the `clients/` directory and can be used directly or as references for implementing your own clients.
+
+### Python Client
+
+**Location:** `clients/python/`
+
+**Installation:**
+```bash
+cd clients/python
+pip install -r requirements.txt
+```
+
+**Usage:**
+```python
+from lingproxy_client import LingProxyClient
+
+# Initialize client (reads API key from environment variable)
+client = LingProxyClient()
+
+# Or specify API key directly
+client = LingProxyClient(
+    api_key="ling-your-api-key-here",
+    base_url="http://localhost:8080/llm/v1"
+)
+
+# Create chat completion
+response = client.create_chat_completion(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "user", "content": "Hello!"}
+    ]
+)
+
+print(response['choices'][0]['message']['content'])
+```
+
+### JavaScript/TypeScript Client
+
+**Location:** `clients/javascript/`
+
+**Installation:**
+```bash
+cd clients/javascript
+npm install
+```
+
+**Usage:**
+```javascript
+import { LingProxyClient } from './lingproxy-client.js';
+
+const client = new LingProxyClient({
+  apiKey: 'ling-your-api-key-here',
+  baseURL: 'http://localhost:8080/llm/v1'
+});
+
+const response = await client.createChatCompletion({
+  model: 'gpt-3.5-turbo',
+  messages: [
+    { role: 'user', content: 'Hello!' }
+  ]
+});
+
+console.log(response.choices[0].message.content);
+```
+
+### Go Client
+
+**Location:** `clients/go/`
+
+**Installation:**
+```bash
+cd clients/go
+go mod init lingproxy-client-example
+go get github.com/openai/openai-go/v3
+```
+
+**Usage:**
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "github.com/lingproxy/lingproxy/clients/go/client"
+)
+
+func main() {
+    c, err := client.NewClient(&client.ClientOptions{
+        APIKey:  "ling-your-api-key-here",
+        BaseURL: "http://localhost:8080/llm/v1",
+    })
+    if err != nil {
+        panic(err)
+    }
+    
+    ctx := context.Background()
+    resp, err := c.CreateChatCompletion(ctx, client.ChatCompletionRequest{
+        Model: "gpt-3.5-turbo",
+        Messages: []client.ChatMessage{
+            {Role: "user", Content: "Hello!"},
+        },
+    })
+    if err != nil {
+        panic(err)
+    }
+    
+    fmt.Println(resp.Choices[0].Message.Content)
+}
+```
+
+### Environment Variables
+
+All clients support setting the API key via environment variable:
+
+```bash
+export LINGPROXY_API_KEY=ling-your-api-key-here
+```
+
+### Web Test Page
+
+A standalone HTML test page is available at `clients/test-page.html` for quick API testing without installing any dependencies. Simply open it in a browser and configure your API endpoint and key.
+
 **Notes:**
 - Streaming reduces first token latency and provides better user experience
 - Ensure stable network connection between client and server

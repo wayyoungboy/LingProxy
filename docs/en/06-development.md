@@ -181,6 +181,69 @@ cd frontend
 npm run build
 ```
 
+## Docker Development
+
+The project uses a **frontend-backend separation** architecture for Docker deployment.
+
+### Backend Docker Service
+
+The backend runs in Docker with SeekDB:
+
+```bash
+# Start backend and database
+docker-compose -f docker/docker-compose.yml up -d
+
+# View backend logs
+docker-compose -f docker/docker-compose.yml logs -f lingproxy-backend
+
+# Stop services
+docker-compose -f docker/docker-compose.yml down
+```
+
+**Backend Docker Configuration:**
+- Uses `docker/backend.Dockerfile` (backend-only, no frontend)
+- Exposes port 8080 for API access
+- Automatically creates database on startup
+- Uses `config.yaml.docker` for Docker-specific settings
+
+### Frontend Development
+
+For frontend development, run it locally (not in Docker):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend dev server:
+- Runs on `http://localhost:3000`
+- Proxies API requests to `http://localhost:8080` (backend)
+- Hot reload enabled for development
+
+### Development Workflow
+
+1. **Start backend in Docker:**
+   ```bash
+   docker-compose -f docker/docker-compose.yml up -d
+   ```
+
+2. **Start frontend locally:**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+3. **Access the application:**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8080/api/v1
+
+### Docker Configuration Files
+
+- `docker/backend.Dockerfile`: Backend-only Docker image
+- `docker/docker-compose.yml`: Docker Compose configuration
+- `backend/configs/config.yaml.docker`: Docker-specific backend config (uses `seekdb:2881` for database connection)
+
 ## Debugging
 
 ### Backend Debugging
@@ -329,9 +392,60 @@ docs: update API documentation
 **Issue**: Port already in use
 **Solution**: Change port in `config.yaml` or stop the process using the port
 
+## Frontend Optimization
+
+### Code Structure
+
+- **Utils Module** (`src/utils/index.js`): Debounce, throttle, date formatting, file utilities
+- **Constants** (`src/utils/constants.js`): Unified API config, storage keys, route paths
+- **Composables** (`src/composables/`): Reusable logic like `useLoading`, `usePagination`
+
+### Performance Optimizations
+
+- Code splitting: Element Plus and Vue core libraries are split separately
+- Route lazy loading: All routes use dynamic imports
+- Parallel requests: Dashboard uses `Promise.allSettled` for concurrent API calls
+- Debounce/throttle utilities available for high-frequency operations
+
+### Build Configuration
+
+- Path alias `@` points to `src` directory
+- Production build removes console and debugger statements
+- Optimized code compression and splitting
+
+## Website Development
+
+The project includes a Docusaurus-based documentation website in the `website/` directory.
+
+### Building the Website
+
+```bash
+cd website
+npm install
+npm run build
+```
+
+### Local Development
+
+```bash
+npm start
+```
+
+The website runs on `http://localhost:5000` (or another port if 5000 is occupied).
+
+### Deployment
+
+The website can be deployed to:
+- GitHub Pages: `npm run deploy`
+- Docker: Build and run the Dockerfile in `website/`
+- Static hosting: Deploy the `build/` directory to any static file server
+
+The website reads documentation from `docs/` directory and supports both English and Chinese.
+
 ## Resources
 
 - [Go Documentation](https://go.dev/doc/)
 - [Gin Framework](https://gin-gonic.com/docs/)
 - [Vue 3 Documentation](https://vuejs.org/)
 - [Element Plus](https://element-plus.org/)
+- [Docusaurus Documentation](https://docusaurus.io/docs)
