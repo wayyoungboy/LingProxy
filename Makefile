@@ -451,6 +451,12 @@ docker-compose-restart:
 	@$(DOCKER_COMPOSE) -f docker/docker-compose.yml restart
 	@echo "$(COLOR_GREEN)✓ Services restarted$(COLOR_RESET)"
 
+## 重新构建并启动 Docker Compose 服务（停止 → 构建 → 启动）
+docker-rebuild: docker-compose-down
+	@echo "$(COLOR_BOLD)$(COLOR_BLUE)Rebuilding and starting Docker Compose services...$(COLOR_RESET)"
+	@$(MAKE) docker-compose-up
+	@echo "$(COLOR_GREEN)✓ Services rebuilt and started$(COLOR_RESET)"
+
 # ============================================================================
 # 文档生成
 # ============================================================================
@@ -619,7 +625,8 @@ help:
 	@echo "  $(COLOR_GREEN)make docker-compose-down$(COLOR_RESET)  - 停止 Docker Compose 服务"
 	@echo "  $(COLOR_GREEN)make docker-compose-logs$(COLOR_RESET)  - 查看 Docker Compose 日志"
 	@echo "  $(COLOR_GREEN)make docker-compose-ps$(COLOR_RESET)    - 查看服务状态"
-	@echo "  $(COLOR_GREEN)make docker-compose-restart$(COLOR_RESET) - 重启服务"
+	@echo "  $(COLOR_GREEN)make docker-compose-restart$(COLOR_RESET) - 重启服务（不重新构建）"
+	@echo "  $(COLOR_GREEN)make docker-rebuild$(COLOR_RESET)       - 重新构建并启动服务（停止 → 构建 → 启动）"
 	@echo ""
 	@echo "$(COLOR_BOLD)文档和工具:$(COLOR_RESET)"
 	@echo "  $(COLOR_GREEN)make docs$(COLOR_RESET)            - 生成 API 文档（Swagger）"

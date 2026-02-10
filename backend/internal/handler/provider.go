@@ -99,6 +99,28 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "模型类别是必填项"})
 		return
 	}
+	// 验证资源类型
+	typeValLower := strings.ToLower(resource.Type)
+	validTypes := map[string]bool{
+		"chat":       true,
+		"completion": true,
+		"embedding":  true,
+		"image":      true,
+		"audio":      true,
+		"moderation": true,
+		"rerank":     true,
+	}
+	if !validTypes[typeValLower] {
+		if typeValLower == "rank" {
+			logger.Warn("创建LLM资源失败：不支持的资源类型", logger.F("type", resource.Type))
+			c.JSON(http.StatusBadRequest, gin.H{"error": "资源类型 'rank' 不支持，请使用 'rerank'"})
+		} else {
+			logger.Warn("创建LLM资源失败：不支持的资源类型", logger.F("type", resource.Type))
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("不支持的资源类型 '%s'，支持的类型: chat, completion, embedding, image, audio, moderation, rerank", resource.Type)})
+		}
+		return
+	}
+	resource.Type = typeValLower // 统一转换为小写
 	// 驱动固定为openai
 	if resource.Driver == "" {
 		resource.Driver = "openai"
@@ -170,6 +192,28 @@ func (h *LLMResourceHandler) UpdateLLMResource(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "模型类别是必填项"})
 		return
 	}
+	// 验证资源类型
+	typeValLower := strings.ToLower(resource.Type)
+	validTypes := map[string]bool{
+		"chat":       true,
+		"completion": true,
+		"embedding":  true,
+		"image":      true,
+		"audio":      true,
+		"moderation": true,
+		"rerank":     true,
+	}
+	if !validTypes[typeValLower] {
+		if typeValLower == "rank" {
+			logger.Warn("更新LLM资源失败：不支持的资源类型", logger.F("id", id), logger.F("type", resource.Type))
+			c.JSON(http.StatusBadRequest, gin.H{"error": "资源类型 'rank' 不支持，请使用 'rerank'"})
+		} else {
+			logger.Warn("更新LLM资源失败：不支持的资源类型", logger.F("id", id), logger.F("type", resource.Type))
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("不支持的资源类型 '%s'，支持的类型: chat, completion, embedding, image, audio, moderation, rerank", resource.Type)})
+		}
+		return
+	}
+	resource.Type = typeValLower // 统一转换为小写
 	// 驱动固定为openai
 	if resource.Driver == "" {
 		resource.Driver = "openai"
@@ -332,12 +376,13 @@ func (h *LLMResourceHandler) testEmbeddingResource(resource *storage.LLMResource
 
 // testRerankResource 测试rerank类型资源
 func (h *LLMResourceHandler) testRerankResource(resource *storage.LLMResource) map[string]interface{} {
-	// rerank类型暂时不支持测试，返回提示信息
-	return map[string]interface{}{
-		"success": false,
-		"error":   "Not implemented",
-		"message": "rerank类型资源测试功能暂未实现",
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	logger.Debug("Test rerank resource", logger.F("component", "handler"), logger.F("base_url", resource.BaseURL), logger.F("model", resource.Model))
+
+	// 使用统一的服务层进行测试
+	return h.openaiService.TestRerankResource(ctx, resource)
 }
 
 // ImportLLMResources 批量导入LLM资源
@@ -489,6 +534,27 @@ func (h *LLMResourceHandler) ImportLLMResources(c *gin.Context) {
 			continue
 		}
 
+		// 验证资源类型
+		typeValLower := strings.ToLower(typeVal)
+		validTypes := map[string]bool{
+			"chat":       true,
+			"completion": true,
+			"embedding":  true,
+			"image":      true,
+			"audio":      true,
+			"moderation": true,
+			"rerank":     true,
+		}
+		if !validTypes[typeValLower] {
+			failCount++
+			if typeValLower == "rank" {
+				errors = append(errors, fmt.Sprintf("第%d行: 资源类型 'rank' 不支持，请使用 'rerank'", rowNum))
+			} else {
+				errors = append(errors, fmt.Sprintf("第%d行: 不支持的资源类型 '%s'，支持的类型: chat, completion, embedding, image, audio, moderation, rerank", rowNum, typeVal))
+			}
+			continue
+		}
+
 		// 创建资源对象（用于重复检查）
 		resourceToCheck := &storage.LLMResource{
 			Type:    strings.ToLower(typeVal),
@@ -597,6 +663,27 @@ func (h *LLMResourceHandler) importLLMResourcesFromJSON(c *gin.Context) {
 		if name == "" || typeVal == "" || model == "" || baseURL == "" || apiKey == "" {
 			failCount++
 			errors = append(errors, fmt.Sprintf("第%d条: 必填字段不能为空", rowNum))
+			continue
+		}
+
+		// 验证资源类型
+		typeValLower := strings.ToLower(typeVal)
+		validTypes := map[string]bool{
+			"chat":       true,
+			"completion": true,
+			"embedding":  true,
+			"image":      true,
+			"audio":      true,
+			"moderation": true,
+			"rerank":     true,
+		}
+		if !validTypes[typeValLower] {
+			failCount++
+			if typeValLower == "rank" {
+				errors = append(errors, fmt.Sprintf("第%d条: 资源类型 'rank' 不支持，请使用 'rerank'", rowNum))
+			} else {
+				errors = append(errors, fmt.Sprintf("第%d条: 不支持的资源类型 '%s'，支持的类型: chat, completion, embedding, image, audio, moderation, rerank", rowNum, typeVal))
+			}
 			continue
 		}
 

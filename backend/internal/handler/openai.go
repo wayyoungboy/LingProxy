@@ -990,6 +990,172 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// RerankRequest 重排序请求
+type RerankRequest struct {
+	Model     string   `json:"model" binding:"required"`
+	Query     string   `json:"query" binding:"required"`
+	Documents []string `json:"documents" binding:"required"`
+	TopN      int      `json:"top_n,omitempty"` // 返回前N个结果，可选
+}
+
+// CreateRerank godoc
+// @Summary Create rerank
+// @Description Rerank documents based on a query
+// @Tags openai
+// @Accept json
+// @Produce json
+// @Param request body RerankRequest true "Rerank request"
+// @Success 200 {object} map[string]interface{} "Rerank response"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /llm/v1/reranks [post]
+func (h *OpenAIHandler) CreateRerank(c *gin.Context) {
+	var req RerankRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": map[string]interface{}{
+				"message": err.Error(),
+				"type":    "invalid_request_error",
+				"param":   nil,
+				"code":    "invalid_request",
+			},
+		})
+		return
+	}
+
+	// 验证必填字段
+	if req.Query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": map[string]interface{}{
+				"message": "query is required",
+				"type":    "invalid_request_error",
+				"param":   "query",
+				"code":    "invalid_request",
+			},
+		})
+		return
+	}
+	if len(req.Documents) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": map[string]interface{}{
+				"message": "documents cannot be empty",
+				"type":    "invalid_request_error",
+				"param":   "documents",
+				"code":    "invalid_request",
+			},
+		})
+		return
+	}
+
+	// 查找对应的LLM资源（rerank类型）
+	llmResource, err := h.findLLMResourceByModel(c, req.Model, "rerank")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Failed to find LLM resource: " + err.Error(),
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
+			},
+		})
+		return
+	}
+
+	requestID := middleware.GetRequestID(c)
+
+	// 使用资源中配置的model覆写请求中的model（如果资源配置了model）
+	modelToUse := req.Model
+	if llmResource.Model != "" {
+		modelToUse = llmResource.Model
+		logger.Debug("Model overridden by resource", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("request_model", req.Model), logger.F("resource_model", llmResource.Model), logger.F("final_model", modelToUse))
+	}
+
+	// 获取用户ID
+	userID := ""
+	if token, exists := c.Get("token"); exists {
+		if t, ok := token.(*storage.APIKey); ok {
+			userID = t.ID
+		} else if t, ok := token.(*storage.Token); ok {
+			// 向后兼容：如果存储的是Token类型别名
+			userID = t.ID
+		}
+	} else if user, exists := c.Get("user"); exists {
+		if u, ok := user.(*storage.User); ok {
+			userID = u.ID
+		}
+	}
+
+	// 构建服务层请求
+	serviceReq := service.RerankRequest{
+		Model:     modelToUse,
+		Query:     req.Query,
+		Documents: req.Documents,
+		TopN:      req.TopN,
+	}
+
+	// 调用服务层
+	ctx := c.Request.Context()
+	serviceResp, err := h.openaiService.CreateRerank(ctx, llmResource, serviceReq)
+	var duration int64
+	var rerankResponse map[string]interface{}
+
+	if serviceResp != nil {
+		duration = serviceResp.Duration.Milliseconds()
+		rerankResponse = serviceResp.Response
+	}
+
+	// 记录请求到数据库
+	requestRecord := &storage.Request{
+		UserID:        userID,
+		LLMResourceID: llmResource.ID,
+		Endpoint:      "/llm/v1/reranks",
+		Method:        "POST",
+		Duration:      duration,
+		Status:        "success",
+		Tokens:        0,
+		CreatedAt:     time.Now(),
+	}
+
+	if err != nil {
+		requestRecord.Status = "error"
+		logger.Error("Rerank failed", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()), logger.F("request_model", req.Model), logger.F("actual_model", modelToUse), logger.F("resource_id", llmResource.ID), logger.F("resource_name", llmResource.Name))
+		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+			logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Failed to create rerank: " + err.Error(),
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
+			},
+		})
+		return
+	}
+
+	// 保存请求记录
+	if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
+		logger.Error("Failed to save request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
+	} else {
+		logger.Debug("Rerank request record saved successfully", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("resource_id", llmResource.ID), logger.F("user_id", userID), logger.F("status", requestRecord.Status))
+	}
+
+	// 直接返回从资源侧收到的响应
+	if rerankResponse == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": map[string]interface{}{
+				"message": "Received nil response from rerank API",
+				"type":    "internal_server_error",
+				"param":   nil,
+				"code":    "internal_server_error",
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, rerankResponse)
+}
+
 // ModelInfo 模型信息
 type ModelInfo struct {
 	ID      string `json:"id"`

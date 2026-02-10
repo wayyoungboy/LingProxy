@@ -179,7 +179,7 @@ func (h *ModelHandler) DeleteModel(c *gin.Context) {
 // @Router /api/v1/models/types [get]
 func (h *ModelHandler) ListModelTypes(c *gin.Context) {
 	types := map[string][]string{
-		"types":      {"chat", "completion", "embedding", "image", "audio", "moderation"},
+		"types":      {"chat", "completion", "embedding", "image", "audio", "moderation", "rerank"},
 		"categories": {"gpt", "claude", "gemini", "llama", "mistral", "custom"},
 	}
 	c.JSON(http.StatusOK, types)

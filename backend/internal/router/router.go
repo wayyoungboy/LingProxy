@@ -68,6 +68,8 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		openai.POST("/completions", openaiHandler.CreateCompletion)
 		logger.Debug("Adding OpenAI embeddings route")
 		openai.POST("/embeddings", openaiHandler.CreateEmbedding)
+		logger.Debug("Adding OpenAI reranks route")
+		openai.POST("/reranks", openaiHandler.CreateRerank)
 	}
 
 	// API路由组
