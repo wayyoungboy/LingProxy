@@ -232,37 +232,196 @@ type Policy struct {
 
 ## Request Flow
 
-### OpenAI-Compatible API Request
+### Complete OpenAI-Compatible API Request Flow
 
+The following flowchart shows the complete flow from client request to resource response, including all middleware, policy selection, retry mechanisms, and error handling branches:
+
+```mermaid
+flowchart TD
+    Start([Client Request]) --> Auth{Authentication Middleware}
+    
+    Auth -->|Invalid API Key| AuthFail[Return 401 Unauthorized]
+    Auth -->|Valid API Key| LogMiddleware[Request Logger Middleware]
+    
+    LogMiddleware --> CORS{CORS Middleware}
+    CORS -->|CORS Check Failed| CORSFail[Return CORS Error]
+    CORS -->|CORS Check Passed| Handler[Handler Layer: Parse Request]
+    
+    Handler -->|Invalid Request Format| BadRequest[Return 400 Bad Request]
+    Handler -->|Valid Request Format| ValidateToken{Validate Token Permission}
+    
+    ValidateToken -->|Token Disabled| TokenDisabled[Return 403 Forbidden]
+    ValidateToken -->|Token Enabled| CheckModelPerm{Check Model Permission}
+    
+    CheckModelPerm -->|Model Not Allowed| ModelDenied[Return 403 Forbidden]
+    CheckModelPerm -->|Model Permission OK| FilterResources[Filter Resource Pool<br/>By Type: chat/embedding/rerank]
+    
+    FilterResources -->|No Available Resources| NoResources[Return 500<br/>No resources available]
+    FilterResources -->|Resources Available| GetPolicy{Get Policy}
+    
+    GetPolicy -->|Policy Disabled| PolicyDisabled[Fallback to Default Policy<br/>Random Selection]
+    GetPolicy -->|Policy Enabled| ExecutePolicy[Execute Policy to Select Resource]
+    
+    ExecutePolicy -->|Policy Execution Failed| FallbackPolicy[Use Default Policy<br/>Random Selection]
+    ExecutePolicy -->|Policy Execution Success| ResourceSelected[Resource Selected Successfully]
+    
+    FallbackPolicy --> ResourceSelected
+    PolicyDisabled --> ResourceSelected
+    
+    ResourceSelected --> CheckStream{Is Streaming Request?}
+    
+    CheckStream -->|Yes| StreamHandler[Stream Handler]
+    CheckStream -->|No| ServiceLayer[Service Layer: Create Client]
+    
+    ServiceLayer --> BuildParams[Build Request Parameters]
+    BuildParams --> InitRetry[Initialize Retry Config<br/>maxRetries, retryDelay]
+    
+    InitRetry --> RetryLoop{Retry Loop<br/>attempt <= maxRetries}
+    
+    RetryLoop -->|First Attempt| CallAPI[Call Resource API]
+    RetryLoop -->|Retry| CheckCtx{Check Context}
+    
+    CheckCtx -->|Context Cancelled| CtxCanceled[Return Context Error]
+    CheckCtx -->|Context Valid| WaitRetry[Wait Retry Delay<br/>Exponential Backoff: delay × attempt]
+    
+    WaitRetry --> CallAPI
+    
+    CallAPI --> CheckSuccess{Call Success?}
+    
+    CheckSuccess -->|Success| RecordSuccess[Record Success Log]
+    CheckSuccess -->|Failure| CheckRetryable{Is Error Retryable?}
+    
+    CheckRetryable -->|Not Retryable<br/>4xx Errors/Auth Errors| NonRetryable[Return Error Immediately]
+    CheckRetryable -->|Retryable<br/>Network Errors/5xx/429| CheckAttempt{More Retry Attempts?}
+    
+    CheckAttempt -->|Yes| RetryLoop
+    CheckAttempt -->|No| AllRetriesFailed[All Retries Failed]
+    
+    RecordSuccess --> ProcessResponse[Process Response]
+    NonRetryable --> ProcessResponse
+    AllRetriesFailed --> ProcessResponse
+    
+    ProcessResponse --> SaveRequest[Save Request Record to Database]
+    SaveRequest --> CheckError{Has Error?}
+    
+    CheckError -->|Has Error| ReturnError[Return 500 Error Response]
+    CheckError -->|No Error| ReturnSuccess[Return 200 Success Response]
+    
+    StreamHandler --> StreamRetryLoop{Stream Retry Loop}
+    StreamRetryLoop --> CreateStream[Create Stream Connection]
+    CreateStream -->|Success| StreamResponse[Return Stream Response]
+    CreateStream -->|Failure| StreamRetryCheck{Retryable?}
+    StreamRetryCheck -->|Yes| StreamRetryLoop
+    StreamRetryCheck -->|No| StreamError[Return Stream Error]
+    
+    AuthFail --> End([End])
+    CORSFail --> End
+    BadRequest --> End
+    TokenDisabled --> End
+    ModelDenied --> End
+    NoResources --> End
+    CtxCanceled --> End
+    ReturnError --> End
+    ReturnSuccess --> End
+    StreamError --> End
+    StreamResponse --> End
+    
+    style Start fill:#e1f5ff
+    style End fill:#ffe1e1
+    style AuthFail fill:#ffcccc
+    style CORSFail fill:#ffcccc
+    style BadRequest fill:#ffcccc
+    style TokenDisabled fill:#ffcccc
+    style ModelDenied fill:#ffcccc
+    style NoResources fill:#ffcccc
+    style ReturnError fill:#ffcccc
+    style ReturnSuccess fill:#ccffcc
+    style StreamResponse fill:#ccffcc
+    style RetryLoop fill:#fff4e1
+    style CheckRetryable fill:#fff4e1
+    style ExecutePolicy fill:#e1f5ff
 ```
-1. Client Request
-   ↓
-2. Authentication Middleware
-   - Validate API key/token
-   ↓
-3. Request Logger Middleware
-   - Log request details
-   ↓
-4. OpenAI Handler
-   - Parse request
-   - Select resource (via policy)
-   ↓
-5. Policy Executor
-   - Execute routing policy
-   - Select LLM resource
-   ↓
-6. OpenAI Service (with Retry)
-   - Create/Get client
-   - Forward request to AI service
-   - Automatic retry on failure (configurable)
-   - Exponential backoff for retries
-   ↓
-7. Response Processing
-   - Format response
-   - Log response
-   ↓
-8. Return to Client
+
+### Flow Description
+
+#### 1. Request Entry Stage
+- **Client Request**: Client sends HTTP request to LingProxy
+- **Authentication Middleware**: Validates API Key, returns 401 if invalid
+- **Request Logger Middleware**: Logs request details
+- **CORS Middleware**: Handles cross-origin requests
+
+#### 2. Handler Layer Processing
+- **Parse Request**: Validates request format, returns 400 if invalid
+- **Token Validation**: Checks if token is enabled, returns 403 if disabled
+- **Model Permission Check**: Validates if requested model is in token's allowed list
+- **Resource Filtering**: Filters resource pool by request type (chat/embedding/rerank)
+
+#### 3. Policy Selection Stage
+- **Get Policy**: Retrieves policy ID from token configuration
+- **Policy Execution**: Executes policy to select resource (random/round-robin/weighted/match, etc.)
+- **Fallback Handling**: Uses default random policy if policy fails or is disabled
+
+#### 4. Service Layer Call
+- **Create Client**: Creates OpenAI client based on selected resource
+- **Build Parameters**: Prepares request parameters (model, messages, etc.)
+- **Initialize Retry**: Reads retry configuration (max retries, retry delay)
+
+#### 5. Retry Mechanism
+- **Retry Loop**: Retries up to `maxRetries` times (default: 3)
+- **Exponential Backoff**: Each retry delay = `retryDelay × attempt`
+- **Retryable Errors**:
+  - ✅ Network errors (connection failure, timeout)
+  - ✅ 5xx server errors (500, 502, 503, 504)
+  - ✅ 429 rate limit errors
+- **Non-Retryable Errors**:
+  - ❌ 4xx client errors (400, 401, 403, 404)
+  - ❌ Context cancellation
+  - ❌ Invalid request parameters
+
+#### 6. Response Processing
+- **Success Response**: Logs success, saves request record, returns 200
+- **Failure Response**: Logs error, saves failure record, returns 500
+- **Stream Response**: Special handling for streaming requests with stream retry support
+
+### Key Decision Points
+
+| Decision Point | Condition | Result |
+|----------------|-----------|--------|
+| Authentication Check | Invalid API Key | Return 401 |
+| Token Status | Token Disabled | Return 403 |
+| Model Permission | Model Not in Allowed List | Return 403 |
+| Resource Availability | No Available Resources | Return 500 |
+| Policy Execution | Policy Failed | Fallback to Default Policy |
+| Retry Decision | Error Retryable and Under Limit | Continue Retry |
+| Retry Decision | Error Not Retryable or Over Limit | Return Error |
+
+### Retry Mechanism Details
+
+**Retry Configuration**:
+- `maxRetries`: Maximum retry count (default: 3, 0 = disabled)
+- `retryDelay`: Base retry delay (default: 1 second)
+
+**Retry Delay Calculation**:
 ```
+1st Retry: delay × 1 = 1 second
+2nd Retry: delay × 2 = 2 seconds
+3rd Retry: delay × 3 = 3 seconds
+```
+
+**Retry Scope**:
+- ✅ Retries **the same resource**
+- ❌ Does not re-execute policy to select new resource
+- ✅ Supports exponential backoff strategy
+- ✅ Supports Context cancellation detection
+
+### Error Handling Branches
+
+1. **Authentication Error** (401): Invalid or missing API Key
+2. **Permission Error** (403): Token disabled or model not in allowed list
+3. **Request Error** (400): Invalid request format or parameters
+4. **Resource Error** (500): No available resources or policy execution failed
+5. **Service Error** (500): Resource API call failed (after retries)
+6. **Stream Error**: Stream connection creation failed
 
 ### Management API Request
 

@@ -232,37 +232,196 @@ type Policy struct {
 
 ## 请求流程
 
-### OpenAI 兼容 API 请求
+### OpenAI 兼容 API 请求完整流程图
 
+以下流程图展示了从客户端请求到资源侧响应的完整流程，包括所有中间件、策略选择、重试机制和错误处理分支：
+
+```mermaid
+flowchart TD
+    Start([客户端发起请求]) --> Auth{认证中间件}
+    
+    Auth -->|API Key无效| AuthFail[返回401 Unauthorized]
+    Auth -->|API Key有效| LogMiddleware[请求日志中间件]
+    
+    LogMiddleware --> CORS{CORS中间件}
+    CORS -->|CORS检查失败| CORSFail[返回CORS错误]
+    CORS -->|CORS检查通过| Handler[Handler层: 解析请求]
+    
+    Handler -->|请求格式错误| BadRequest[返回400 Bad Request]
+    Handler -->|请求格式正确| ValidateToken{验证Token权限}
+    
+    ValidateToken -->|Token未启用| TokenDisabled[返回403 Forbidden]
+    ValidateToken -->|Token已启用| CheckModelPerm{检查模型权限}
+    
+    CheckModelPerm -->|模型不在允许列表| ModelDenied[返回403 Forbidden]
+    CheckModelPerm -->|模型权限通过| FilterResources[过滤资源池<br/>按类型: chat/embedding/rerank]
+    
+    FilterResources -->|无可用资源| NoResources[返回500<br/>No resources available]
+    FilterResources -->|有可用资源| GetPolicy{获取策略}
+    
+    GetPolicy -->|策略未启用| PolicyDisabled[降级到默认策略<br/>随机选择]
+    GetPolicy -->|策略已启用| ExecutePolicy[执行策略选择资源]
+    
+    ExecutePolicy -->|策略执行失败| FallbackPolicy[使用默认策略<br/>随机选择]
+    ExecutePolicy -->|策略执行成功| ResourceSelected[资源选择成功]
+    
+    FallbackPolicy --> ResourceSelected
+    PolicyDisabled --> ResourceSelected
+    
+    ResourceSelected --> CheckStream{是否流式请求?}
+    
+    CheckStream -->|是| StreamHandler[流式处理]
+    CheckStream -->|否| ServiceLayer[服务层: 创建客户端]
+    
+    ServiceLayer --> BuildParams[构建请求参数]
+    BuildParams --> InitRetry[初始化重试配置<br/>maxRetries, retryDelay]
+    
+    InitRetry --> RetryLoop{重试循环<br/>attempt <= maxRetries}
+    
+    RetryLoop -->|首次尝试| CallAPI[调用资源API]
+    RetryLoop -->|重试| CheckCtx{检查Context}
+    
+    CheckCtx -->|Context已取消| CtxCanceled[返回Context错误]
+    CheckCtx -->|Context有效| WaitRetry[等待重试延迟<br/>指数退避: delay × attempt]
+    
+    WaitRetry --> CallAPI
+    
+    CallAPI --> CheckSuccess{调用成功?}
+    
+    CheckSuccess -->|成功| RecordSuccess[记录成功日志]
+    CheckSuccess -->|失败| CheckRetryable{错误可重试?}
+    
+    CheckRetryable -->|不可重试<br/>4xx错误/认证错误| NonRetryable[立即返回错误]
+    CheckRetryable -->|可重试<br/>网络错误/5xx/429| CheckAttempt{还有重试机会?}
+    
+    CheckAttempt -->|是| RetryLoop
+    CheckAttempt -->|否| AllRetriesFailed[所有重试失败]
+    
+    RecordSuccess --> ProcessResponse[处理响应]
+    NonRetryable --> ProcessResponse
+    AllRetriesFailed --> ProcessResponse
+    
+    ProcessResponse --> SaveRequest[保存请求记录到数据库]
+    SaveRequest --> CheckError{有错误?}
+    
+    CheckError -->|有错误| ReturnError[返回500错误响应]
+    CheckError -->|无错误| ReturnSuccess[返回200成功响应]
+    
+    StreamHandler --> StreamRetryLoop{流式重试循环}
+    StreamRetryLoop --> CreateStream[创建流式连接]
+    CreateStream -->|成功| StreamResponse[返回流式响应]
+    CreateStream -->|失败| StreamRetryCheck{可重试?}
+    StreamRetryCheck -->|是| StreamRetryLoop
+    StreamRetryCheck -->|否| StreamError[返回流式错误]
+    
+    AuthFail --> End([结束])
+    CORSFail --> End
+    BadRequest --> End
+    TokenDisabled --> End
+    ModelDenied --> End
+    NoResources --> End
+    CtxCanceled --> End
+    ReturnError --> End
+    ReturnSuccess --> End
+    StreamError --> End
+    StreamResponse --> End
+    
+    style Start fill:#e1f5ff
+    style End fill:#ffe1e1
+    style AuthFail fill:#ffcccc
+    style CORSFail fill:#ffcccc
+    style BadRequest fill:#ffcccc
+    style TokenDisabled fill:#ffcccc
+    style ModelDenied fill:#ffcccc
+    style NoResources fill:#ffcccc
+    style ReturnError fill:#ffcccc
+    style ReturnSuccess fill:#ccffcc
+    style StreamResponse fill:#ccffcc
+    style RetryLoop fill:#fff4e1
+    style CheckRetryable fill:#fff4e1
+    style ExecutePolicy fill:#e1f5ff
 ```
-1. 客户端请求
-   ↓
-2. 认证中间件
-   - 验证 API 密钥/Token
-   ↓
-3. 请求日志中间件
-   - 记录请求详情
-   ↓
-4. OpenAI 处理器
-   - 解析请求
-   - 选择资源（通过策略）
-   ↓
-5. 策略执行器
-   - 执行路由策略
-   - 选择 LLM 资源
-   ↓
-6. OpenAI 服务（带重试）
-   - 创建/获取客户端
-   - 转发请求到 AI 服务
-   - 失败时自动重试（可配置）
-   - 指数退避重试策略
-   ↓
-7. 响应处理
-   - 格式化响应
-   - 记录响应
-   ↓
-8. 返回客户端
+
+### 流程说明
+
+#### 1. 请求入口阶段
+- **客户端请求**: 客户端发送 HTTP 请求到 LingProxy
+- **认证中间件**: 验证 API Key，无效则返回 401
+- **请求日志中间件**: 记录请求详情
+- **CORS 中间件**: 处理跨域请求
+
+#### 2. Handler 层处理
+- **解析请求**: 验证请求格式，错误返回 400
+- **Token 验证**: 检查 Token 是否启用，禁用返回 403
+- **模型权限检查**: 验证请求的模型是否在 Token 允许列表中
+- **资源过滤**: 根据请求类型（chat/embedding/rerank）过滤资源池
+
+#### 3. 策略选择阶段
+- **获取策略**: 从 Token 配置中获取策略ID
+- **策略执行**: 执行策略选择资源（随机/轮询/加权/匹配等）
+- **降级处理**: 策略失败或未启用时，使用默认随机策略
+
+#### 4. 服务层调用
+- **创建客户端**: 根据选定的资源创建 OpenAI 客户端
+- **构建参数**: 准备请求参数（模型、消息等）
+- **初始化重试**: 读取重试配置（最大重试次数、重试延迟）
+
+#### 5. 重试机制
+- **重试循环**: 最多重试 `maxRetries` 次（默认3次）
+- **指数退避**: 每次重试延迟 = `retryDelay × attempt`
+- **可重试错误**: 
+  - ✅ 网络错误（连接失败、超时）
+  - ✅ 5xx 服务器错误（500、502、503、504）
+  - ✅ 429 限流错误
+- **不可重试错误**:
+  - ❌ 4xx 客户端错误（400、401、403、404）
+  - ❌ Context 取消
+  - ❌ 无效请求参数
+
+#### 6. 响应处理
+- **成功响应**: 记录日志，保存请求记录，返回 200
+- **失败响应**: 记录错误日志，保存失败记录，返回 500
+- **流式响应**: 特殊处理流式请求，支持流式重试
+
+### 关键决策点
+
+| 决策点 | 条件 | 结果 |
+|--------|------|------|
+| 认证检查 | API Key 无效 | 返回 401 |
+| Token 状态 | Token 未启用 | 返回 403 |
+| 模型权限 | 模型不在允许列表 | 返回 403 |
+| 资源可用性 | 无可用资源 | 返回 500 |
+| 策略执行 | 策略失败 | 降级到默认策略 |
+| 重试判断 | 错误可重试且未达上限 | 继续重试 |
+| 重试判断 | 错误不可重试或已达上限 | 返回错误 |
+
+### 重试机制详解
+
+**重试配置**:
+- `maxRetries`: 最大重试次数（默认 3，0 = 禁用）
+- `retryDelay`: 基础重试延迟（默认 1 秒）
+
+**重试延迟计算**:
 ```
+第1次重试: delay × 1 = 1秒
+第2次重试: delay × 2 = 2秒
+第3次重试: delay × 3 = 3秒
+```
+
+**重试范围**:
+- ✅ 对**同一个资源**进行重试
+- ❌ 不会重新走策略选择新资源
+- ✅ 支持指数退避策略
+- ✅ 支持 Context 取消检测
+
+### 错误处理分支
+
+1. **认证错误** (401): API Key 无效或缺失
+2. **权限错误** (403): Token 未启用或模型不在允许列表
+3. **请求错误** (400): 请求格式错误或参数无效
+4. **资源错误** (500): 无可用资源或策略执行失败
+5. **服务错误** (500): 资源 API 调用失败（重试后仍失败）
+6. **流式错误**: 流式连接创建失败
 
 ### 管理 API 请求
 
