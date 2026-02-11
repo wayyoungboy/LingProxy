@@ -45,12 +45,43 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="policy_id" :label="$t('tokens.policy')" width="150">
+        <el-table-column :label="$t('tokens.allowedModels')" width="200">
           <template #default="scope">
-            <el-tag v-if="scope.row.policy_id" type="info">
-              {{ getPolicyName(scope.row.policy_id) }}
-            </el-tag>
-            <span v-else style="color: #909399">{{ $t('dashboard.notConfigured') }}</span>
+            <div v-if="scope.row.allowed_models && scope.row.allowed_models.length > 0">
+              <el-tag
+                v-for="(model, index) in scope.row.allowed_models.slice(0, 2)"
+                :key="index"
+                size="small"
+                style="margin-right: 4px; margin-bottom: 4px"
+              >
+                {{ model }}
+              </el-tag>
+              <el-tag v-if="scope.row.allowed_models.length > 2" size="small" type="info">
+                +{{ scope.row.allowed_models.length - 2 }}
+              </el-tag>
+            </div>
+            <span v-else style="color: #909399">{{ $t('tokens.allModelsAllowed') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('tokens.policies')" width="250">
+          <template #default="scope">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <el-tag v-if="scope.row.chat_policy_id" size="small" type="success">
+                Chat: {{ getPolicyName(scope.row.chat_policy_id) }}
+              </el-tag>
+              <el-tag v-if="scope.row.embedding_policy_id" size="small" type="warning">
+                Embedding: {{ getPolicyName(scope.row.embedding_policy_id) }}
+              </el-tag>
+              <el-tag v-if="scope.row.rerank_policy_id" size="small" type="info">
+                Rerank: {{ getPolicyName(scope.row.rerank_policy_id) }}
+              </el-tag>
+              <el-tag v-if="scope.row.policy_id && !scope.row.chat_policy_id && !scope.row.embedding_policy_id && !scope.row.rerank_policy_id" size="small" type="info">
+                {{ getPolicyName(scope.row.policy_id) }}
+              </el-tag>
+              <span v-if="!scope.row.policy_id && !scope.row.chat_policy_id && !scope.row.embedding_policy_id && !scope.row.rerank_policy_id" style="color: #909399; font-size: 12px;">
+                {{ $t('dashboard.notConfigured') }}
+              </span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="last_used_at" :label="$t('tokens.lastUsedAt')" width="180">
@@ -110,23 +141,49 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="500px"
+      width="700px"
     >
       <el-form
         ref="tokenFormRef"
         :model="tokenForm"
         :rules="tokenRules"
-        label-width="100px"
+        label-width="120px"
       >
         <el-form-item :label="$t('tokens.name')" prop="name">
           <el-input v-model="tokenForm.name" :placeholder="$t('tokens.nameRequired')"></el-input>
         </el-form-item>
-        <el-form-item v-if="isAddMode" :label="$t('tokens.policy')" prop="policy_id">
+        
+        <!-- 模型许可配置 -->
+        <el-form-item :label="$t('tokens.allowedModels')">
           <el-select
-            v-model="tokenForm.policy_id"
-            :placeholder="$t('tokens.policyRequired')"
+            v-model="tokenForm.allowed_models"
+            multiple
+            filterable
+            :placeholder="$t('tokens.allowedModelsPlaceholder')"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="model in availableModels"
+              :key="model.model_id || model.id"
+              :label="`${model.name} (${model.model_id || model.id})`"
+              :value="model.model_id || model.id"
+            />
+          </el-select>
+          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+            {{ $t('tokens.allowedModelsHint') }}
+          </div>
+        </el-form-item>
+        
+        <!-- 按类型配置策略 -->
+        <el-divider content-position="left">{{ $t('tokens.typeSpecificPolicies') }}</el-divider>
+        
+        <el-form-item :label="$t('tokens.chatPolicy')">
+          <el-select
+            v-model="tokenForm.chat_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
             style="width: 100%"
             filterable
+            clearable
           >
             <el-option
               v-for="policy in policies"
@@ -139,6 +196,132 @@
             </el-option>
           </el-select>
         </el-form-item>
+        
+        <el-form-item :label="$t('tokens.embeddingPolicy')">
+          <el-select
+            v-model="tokenForm.embedding_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
+              <span>{{ policy.name }}</span>
+              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item :label="$t('tokens.rerankPolicy')">
+          <el-select
+            v-model="tokenForm.rerank_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
+              <span>{{ policy.name }}</span>
+              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item :label="$t('tokens.imagePolicy')">
+          <el-select
+            v-model="tokenForm.image_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
+              <span>{{ policy.name }}</span>
+              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item :label="$t('tokens.audioPolicy')">
+          <el-select
+            v-model="tokenForm.audio_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
+              <span>{{ policy.name }}</span>
+              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item :label="$t('tokens.videoPolicy')">
+          <el-select
+            v-model="tokenForm.video_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
+              <span>{{ policy.name }}</span>
+              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        
+        <!-- 向后兼容：通用策略 -->
+        <el-divider content-position="left">{{ $t('tokens.generalPolicy') }} ({{ $t('tokens.deprecated') }})</el-divider>
+        <el-form-item :label="$t('tokens.policy')">
+          <el-select
+            v-model="tokenForm.policy_id"
+            :placeholder="$t('tokens.policyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
+              <span>{{ policy.name }}</span>
+              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+            </el-option>
+          </el-select>
+          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+            {{ $t('tokens.generalPolicyHint') }}
+          </div>
+        </el-form-item>
+        
         <el-form-item :label="$t('tokens.expiresAt')" prop="expires_at">
           <el-date-picker
             v-model="tokenForm.expires_at"
@@ -252,6 +435,7 @@ const { t } = useI18n()
 const loading = ref(false)
 const tokens = ref([])
 const policies = ref([])
+const availableModels = ref([]) // 可用模型列表（用于模型许可配置）
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const isAddMode = ref(false)
@@ -266,7 +450,14 @@ const selectedPolicyId = ref('')
 const tokenForm = reactive({
   id: '',
   name: '',
-  policy_id: '',
+  policy_id: '', // 向后兼容的通用策略
+  allowed_models: [], // 允许使用的模型ID列表
+  chat_policy_id: '',
+  embedding_policy_id: '',
+  rerank_policy_id: '',
+  image_policy_id: '',
+  audio_policy_id: '',
+  video_policy_id: '',
   expires_at: '',
   status: 'active'
 })
@@ -274,10 +465,8 @@ const tokenForm = reactive({
 const tokenRules = computed(() => ({
   name: [
     { required: true, message: t('tokens.nameRequired'), trigger: 'blur' }
-  ],
-  policy_id: [
-    { required: true, message: t('tokens.policyRequiredSelect'), trigger: 'change' }
   ]
+  // policy_id 不再是必填项，因为可以使用按类型策略
 }))
 
 // 获取API Key列表
@@ -304,12 +493,22 @@ const handleAddToken = () => {
     id: '',
     name: '',
     policy_id: '',
+    allowed_models: [],
+    chat_policy_id: '',
+    embedding_policy_id: '',
+    rerank_policy_id: '',
+    image_policy_id: '',
+    audio_policy_id: '',
+    video_policy_id: '',
     expires_at: '',
     status: 'active'
   })
-  // 确保策略列表已加载
+  // 确保策略列表和模型列表已加载
   if (policies.value.length === 0) {
     getPolicyList()
+  }
+  if (availableModels.value.length === 0) {
+    getModelList()
   }
   dialogVisible.value = true
 }
@@ -321,9 +520,24 @@ const handleEditToken = (token) => {
   Object.assign(tokenForm, {
     id: token.id,
     name: token.name,
+    policy_id: token.policy_id || '',
+    allowed_models: token.allowed_models || [],
+    chat_policy_id: token.chat_policy_id || '',
+    embedding_policy_id: token.embedding_policy_id || '',
+    rerank_policy_id: token.rerank_policy_id || '',
+    image_policy_id: token.image_policy_id || '',
+    audio_policy_id: token.audio_policy_id || '',
+    video_policy_id: token.video_policy_id || '',
     expires_at: token.expires_at || '',
     status: token.status
   })
+  // 确保策略列表和模型列表已加载
+  if (policies.value.length === 0) {
+    getPolicyList()
+  }
+  if (availableModels.value.length === 0) {
+    getModelList()
+  }
   dialogVisible.value = true
 }
 
@@ -333,21 +547,28 @@ const handleSaveToken = async () => {
     await tokenFormRef.value.validate()
     
     if (isAddMode.value) {
-      // 创建API Key
+      // 创建API Key（包含所有配置）
       const response = await api.createAPIKey({
         name: tokenForm.name,
-        expires_at: tokenForm.expires_at || undefined
+        expires_at: tokenForm.expires_at || undefined,
+        allowed_models: tokenForm.allowed_models.length > 0 ? tokenForm.allowed_models : undefined,
+        chat_policy_id: tokenForm.chat_policy_id || undefined,
+        embedding_policy_id: tokenForm.embedding_policy_id || undefined,
+        rerank_policy_id: tokenForm.rerank_policy_id || undefined,
+        image_policy_id: tokenForm.image_policy_id || undefined,
+        audio_policy_id: tokenForm.audio_policy_id || undefined,
+        video_policy_id: tokenForm.video_policy_id || undefined
       })
       if (response && response.data) {
         newToken.value = response.data
-        // 创建成功后立即设置策略
+        // 向后兼容：如果设置了通用策略，也设置它
         if (tokenForm.policy_id) {
           try {
             await api.setAPIKeyPolicy(response.data.id, {
               policy_id: tokenForm.policy_id
             })
           } catch (error) {
-            console.error('设置策略失败:', error)
+            console.error('设置通用策略失败:', error)
             ElMessage.warning(t('tokens.createSuccessButPolicyFailed'))
           }
         }
@@ -357,11 +578,27 @@ const handleSaveToken = async () => {
         getTokenList()
       }
     } else {
-      // 更新API Key
-      await api.updateAPIKey(tokenForm.id, {
+      // 更新API Key（包含所有配置）
+      const updateData = {
         name: tokenForm.name,
         status: tokenForm.status
-      })
+      }
+      
+      // 只有提供了值才添加到更新数据中
+      if (tokenForm.allowed_models && tokenForm.allowed_models.length > 0) {
+        updateData.allowed_models = tokenForm.allowed_models
+      } else {
+        updateData.allowed_models = []
+      }
+      
+      if (tokenForm.chat_policy_id) updateData.chat_policy_id = tokenForm.chat_policy_id
+      if (tokenForm.embedding_policy_id) updateData.embedding_policy_id = tokenForm.embedding_policy_id
+      if (tokenForm.rerank_policy_id) updateData.rerank_policy_id = tokenForm.rerank_policy_id
+      if (tokenForm.image_policy_id) updateData.image_policy_id = tokenForm.image_policy_id
+      if (tokenForm.audio_policy_id) updateData.audio_policy_id = tokenForm.audio_policy_id
+      if (tokenForm.video_policy_id) updateData.video_policy_id = tokenForm.video_policy_id
+      
+      await api.updateAPIKey(tokenForm.id, updateData)
       ElMessage.success(t('tokens.updateSuccess'))
       dialogVisible.value = false
       getTokenList()
@@ -542,10 +779,39 @@ const getPolicyList = async () => {
   }
 }
 
+// 获取模型列表（用于模型许可配置）
+const getModelList = async () => {
+  try {
+    const response = await api.getModels()
+    if (response && response.data) {
+      // 从模型列表中提取唯一的模型ID
+      const models = Array.isArray(response.data) ? response.data : []
+      // 使用 model_id 或 id 作为唯一标识
+      availableModels.value = models.map(m => ({
+        id: m.model_id || m.id,
+        model_id: m.model_id || m.id,
+        name: m.name || m.model_id || m.id
+      }))
+      // 去重
+      const seen = new Set()
+      availableModels.value = availableModels.value.filter(m => {
+        if (seen.has(m.model_id)) {
+          return false
+        }
+        seen.add(m.model_id)
+        return true
+      })
+    }
+  } catch (error) {
+    console.error('获取模型列表失败:', error)
+  }
+}
+
 // 组件挂载时获取数据
 onMounted(() => {
   getTokenList()
   getPolicyList()
+  getModelList()
 })
 </script>
 

@@ -129,6 +129,11 @@ func (s *PolicyService) DeletePolicy(id string) error {
 
 // ExecutePolicy 执行策略，选择资源
 func (s *PolicyService) ExecutePolicy(policyID, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
+	return s.ExecutePolicyWithDimensions(policyID, modelName, resources, nil)
+}
+
+// ExecutePolicyWithDimensions 执行策略，选择资源（支持维度过滤）
+func (s *PolicyService) ExecutePolicyWithDimensions(policyID, modelName string, resources []*storage.LLMResource, dimensions *int) (*storage.LLMResource, error) {
 	// 获取策略
 	policy, err := s.storage.GetPolicy(policyID)
 	if err != nil {
@@ -140,11 +145,51 @@ func (s *PolicyService) ExecutePolicy(policyID, modelName string, resources []*s
 		return nil, ErrPolicyDisabled
 	}
 
+	// 对于 embedding 类型，如果指定了 dimensions，先过滤出支持该维度的资源
+	filteredResources := resources
+	if dimensions != nil {
+		filteredResources = filterResourcesByDimensions(resources, *dimensions)
+		if len(filteredResources) == 0 {
+			return nil, fmt.Errorf("no resources available that support dimension %d", *dimensions)
+		}
+		logger.Debug("Filtered resources by dimensions", logger.F("component", "service"), logger.F("policy_id", policyID), logger.F("dimension", *dimensions), logger.F("original_count", len(resources)), logger.F("filtered_count", len(filteredResources)))
+	}
+
 	// 获取执行器
 	executor := s.executorFactory.GetExecutor(policy.Type)
 
 	// 执行策略
-	return executor.Execute(policy, modelName, resources)
+	return executor.Execute(policy, modelName, filteredResources)
+}
+
+// filterResourcesByDimensions 根据维度过滤 embedding 资源
+func filterResourcesByDimensions(resources []*storage.LLMResource, dimension int) []*storage.LLMResource {
+	filtered := make([]*storage.LLMResource, 0)
+	for _, resource := range resources {
+		if resource.Type != "embedding" {
+			continue
+		}
+		// 解析 embedding_config
+		if resource.EmbeddingConfig == "" {
+			// 如果没有配置，允许通过（向后兼容）
+			filtered = append(filtered, resource)
+			continue
+		}
+		var config storage.EmbeddingConfig
+		if err := json.Unmarshal([]byte(resource.EmbeddingConfig), &config); err != nil {
+			// 解析失败，允许通过（向后兼容）
+			filtered = append(filtered, resource)
+			continue
+		}
+		// 检查是否支持该维度
+		for _, supportedDim := range config.SupportedDimensions {
+			if supportedDim == dimension {
+				filtered = append(filtered, resource)
+				break
+			}
+		}
+	}
+	return filtered
 }
 
 // GetDefaultPolicyExecutor 获取默认策略执行器（用于没有配置策略的情况）

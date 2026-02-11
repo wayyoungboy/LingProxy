@@ -345,6 +345,15 @@
             </el-form-item>
           </div>
           
+          <div v-else-if="selectedTemplate.type === 'regex_model_match'" class="policy-params">
+            <el-alert
+              :title="$t('policies.regexModelMatchHint')"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </div>
+          
           <div v-else-if="selectedTemplate.type === 'priority'" class="policy-params">
             <el-form-item :label="$t('policies.priorityConfig')" required>
               <div
@@ -489,6 +498,7 @@ const getTypeLabel = (type) => {
     weighted: t('policies.weightedLB'),
     model_match: t('policies.modelMatch'),
     regex_match: t('policies.regexMatch'),
+    regex_model_match: t('policies.regexModelMatch'),
     priority: t('policies.priorityPolicy'),
     failover: t('policies.failover')
   }
@@ -676,6 +686,10 @@ const initParameters = (template) => {
         rules: defaultParams.rules || [],
         default_resource_id: defaultParams.default_resource_id || ''
       }
+      break
+    case 'regex_model_match':
+      // 此策略不需要参数，请求端输入的模型名将作为正则表达式使用
+      policyForm.parameters = {}
       break
     case 'priority':
       policyForm.parameters = {
@@ -867,6 +881,8 @@ const addRegexRule = () => {
 const removeRegexRule = (index) => {
   policyForm.parameters.rules.splice(index, 1)
 }
+
+// 正则模型匹配模式管理
 
 // 优先级策略资源管理
 const addPriorityResource = () => {

@@ -349,6 +349,55 @@ func (e *RegexMatchPolicyExecutor) Execute(policy *storage.Policy, modelName str
 	return nil, ErrNoResourcesAvailable
 }
 
+// RegexModelMatchPolicyExecutor 正则模型匹配策略执行器
+// 将请求端输入的模型名作为正则表达式，匹配资源池中资源的模型名，然后从匹配的资源中随机选择一个
+type RegexModelMatchPolicyExecutor struct{}
+
+func (e *RegexModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
+	logger.Debug("Executing regex-model-match policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
+
+	// 将请求端输入的模型名作为正则表达式
+	if modelName == "" {
+		logger.Warn("Regex-model-match policy: empty model name", logger.F("component", "service"), logger.F("policy_id", policy.ID))
+		return nil, fmt.Errorf("%w: model name cannot be empty", ErrInvalidPolicyParams)
+	}
+
+	// 编译正则表达式
+	regex, err := regexp.Compile(modelName)
+	if err != nil {
+		logger.Warn("Regex-model-match policy: invalid regex pattern", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName), logger.F("error", err.Error()))
+		return nil, fmt.Errorf("%w: invalid regex pattern '%s': %v", ErrInvalidPolicyParams, modelName, err)
+	}
+
+	// 匹配的资源列表
+	matchedResources := make([]*storage.LLMResource, 0)
+
+	// 遍历所有资源，检查资源的模型名是否匹配正则表达式
+	for _, resource := range resources {
+		// 只处理活跃状态的资源
+		if resource.Status != "active" {
+			continue
+		}
+
+		// 使用请求的模型名作为正则表达式，匹配资源的模型名
+		if regex.MatchString(resource.Model) {
+			matchedResources = append(matchedResources, resource)
+			logger.Debug("Regex-model-match policy: resource model matched", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("request_model", modelName), logger.F("resource_model", resource.Model), logger.F("resource_id", resource.ID))
+		}
+	}
+
+	if len(matchedResources) == 0 {
+		logger.Warn("Regex-model-match policy: no matched resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
+		return nil, ErrNoResourcesAvailable
+	}
+
+	// 从匹配的资源中随机选择一个
+	selected := matchedResources[mathrand.Intn(len(matchedResources))]
+	logger.Debug("Regex-model-match policy selected resource", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("resource_id", selected.ID), logger.F("resource_name", selected.Name), logger.F("resource_model", selected.Model), logger.F("matched_count", len(matchedResources)))
+
+	return selected, nil
+}
+
 // PriorityPolicyExecutor 优先级策略执行器
 type PriorityPolicyExecutor struct{}
 
@@ -574,6 +623,8 @@ func (f *PolicyExecutorFactory) GetExecutor(policyType string) PolicyExecutor {
 		return &ModelMatchPolicyExecutor{}
 	case "regex_match":
 		return &RegexMatchPolicyExecutor{}
+	case "regex_model_match":
+		return &RegexModelMatchPolicyExecutor{}
 	case "priority":
 		return &PriorityPolicyExecutor{}
 	case "failover":

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -18,6 +19,121 @@ import (
 type LLMResourceHandler struct {
 	storage       *storage.StorageFacade
 	openaiService *service.OpenAIService
+}
+
+// LLMResourceRequest 资源请求结构（包含类型特定配置）
+type LLMResourceRequest struct {
+	storage.LLMResource
+	EmbeddingConfig *storage.EmbeddingConfig `json:"embedding_config,omitempty"`
+	RerankConfig    *storage.RerankConfig    `json:"rerank_config,omitempty"`
+	ChatConfig      *storage.ChatConfig       `json:"chat_config,omitempty"`
+	ImageConfig     map[string]interface{}   `json:"image_config,omitempty"`
+	AudioConfig     map[string]interface{}   `json:"audio_config,omitempty"`
+}
+
+// processTypeConfig 处理类型特定配置，将对象转换为JSON字符串存储
+func (h *LLMResourceHandler) processTypeConfig(resource *storage.LLMResource, req *LLMResourceRequest) error {
+	switch resource.Type {
+	case "embedding":
+		if req.EmbeddingConfig != nil {
+			configJSON, err := json.Marshal(req.EmbeddingConfig)
+			if err != nil {
+				return fmt.Errorf("failed to marshal embedding config: %w", err)
+			}
+			resource.EmbeddingConfig = string(configJSON)
+		}
+	case "rerank":
+		if req.RerankConfig != nil {
+			configJSON, err := json.Marshal(req.RerankConfig)
+			if err != nil {
+				return fmt.Errorf("failed to marshal rerank config: %w", err)
+			}
+			resource.RerankConfig = string(configJSON)
+		}
+	case "chat":
+		if req.ChatConfig != nil {
+			configJSON, err := json.Marshal(req.ChatConfig)
+			if err != nil {
+				return fmt.Errorf("failed to marshal chat config: %w", err)
+			}
+			resource.ChatConfig = string(configJSON)
+		}
+	case "image":
+		if req.ImageConfig != nil {
+			configJSON, err := json.Marshal(req.ImageConfig)
+			if err != nil {
+				return fmt.Errorf("failed to marshal image config: %w", err)
+			}
+			resource.ImageConfig = string(configJSON)
+		}
+	case "audio":
+		if req.AudioConfig != nil {
+			configJSON, err := json.Marshal(req.AudioConfig)
+			if err != nil {
+				return fmt.Errorf("failed to marshal audio config: %w", err)
+			}
+			resource.AudioConfig = string(configJSON)
+		}
+	}
+	return nil
+}
+
+// enrichResourceResponse 丰富资源响应，将JSON字符串解析为对象
+func (h *LLMResourceHandler) enrichResourceResponse(resource *storage.LLMResource) map[string]interface{} {
+	result := map[string]interface{}{
+		"id":          resource.ID,
+		"name":        resource.Name,
+		"type":        resource.Type,
+		"driver":      resource.Driver,
+		"model":       resource.Model,
+		"base_url":    resource.BaseURL,
+		"api_key":     resource.APIKey,
+		"status":      resource.Status,
+		"test_status": resource.TestStatus,
+		"created_at":  resource.CreatedAt,
+		"updated_at":  resource.UpdatedAt,
+	}
+
+	// 根据类型解析对应的配置
+	switch resource.Type {
+	case "embedding":
+		if resource.EmbeddingConfig != "" {
+			var config storage.EmbeddingConfig
+			if err := json.Unmarshal([]byte(resource.EmbeddingConfig), &config); err == nil {
+				result["embedding_config"] = config
+			}
+		}
+	case "rerank":
+		if resource.RerankConfig != "" {
+			var config storage.RerankConfig
+			if err := json.Unmarshal([]byte(resource.RerankConfig), &config); err == nil {
+				result["rerank_config"] = config
+			}
+		}
+	case "chat":
+		if resource.ChatConfig != "" {
+			var config storage.ChatConfig
+			if err := json.Unmarshal([]byte(resource.ChatConfig), &config); err == nil {
+				result["chat_config"] = config
+			}
+		}
+	case "image":
+		if resource.ImageConfig != "" {
+			var config map[string]interface{}
+			if err := json.Unmarshal([]byte(resource.ImageConfig), &config); err == nil {
+				result["image_config"] = config
+			}
+		}
+	case "audio":
+		if resource.AudioConfig != "" {
+			var config map[string]interface{}
+			if err := json.Unmarshal([]byte(resource.AudioConfig), &config); err == nil {
+				result["audio_config"] = config
+			}
+		}
+	}
+
+	return result
 }
 
 // NewLLMResourceHandler 创建新的LLM资源处理器
@@ -44,7 +160,14 @@ func (h *LLMResourceHandler) ListLLMResources(c *gin.Context) {
 		return
 	}
 	logger.Info("获取LLM资源列表成功", logger.F("count", len(resources)))
-	c.JSON(http.StatusOK, gin.H{"data": resources})
+	
+	// 丰富响应数据，包含类型特定配置
+	enrichedResources := make([]map[string]interface{}, len(resources))
+	for i, resource := range resources {
+		enrichedResources[i] = h.enrichResourceResponse(resource)
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"data": enrichedResources})
 }
 
 // GetLLMResource godoc
@@ -66,7 +189,10 @@ func (h *LLMResourceHandler) GetLLMResource(c *gin.Context) {
 		return
 	}
 	logger.Info("获取LLM资源成功", logger.F("id", id), logger.F("name", resource.Name))
-	c.JSON(http.StatusOK, gin.H{"data": resource})
+	
+	// 丰富响应数据，包含类型特定配置
+	responseData := h.enrichResourceResponse(resource)
+	c.JSON(http.StatusOK, gin.H{"data": responseData})
 }
 
 // CreateLLMResource godoc
@@ -81,12 +207,14 @@ func (h *LLMResourceHandler) GetLLMResource(c *gin.Context) {
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/v1/llm-resources [post]
 func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
-	var resource storage.LLMResource
-	if err := c.ShouldBindJSON(&resource); err != nil {
+	var req LLMResourceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Error("创建LLM资源失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	
+	resource := req.LLMResource
 
 	// 验证必填字段
 	if resource.Name == "" {
@@ -149,6 +277,13 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 		resource.TestStatus = "untested"
 	}
 
+	// 处理类型特定配置
+	if err := h.processTypeConfig(&resource, &req); err != nil {
+		logger.Error("处理类型特定配置失败", logger.F("error", err.Error()), logger.F("name", resource.Name), logger.F("type", resource.Type))
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	if err := h.storage.CreateLLMResource(&resource); err != nil {
 		logger.Error("创建LLM资源失败", logger.F("error", err.Error()), logger.F("name", resource.Name))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -156,7 +291,10 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 	}
 
 	logger.Info("创建LLM资源成功", logger.F("id", resource.ID), logger.F("name", resource.Name), logger.F("model", resource.Model))
-	c.JSON(http.StatusCreated, gin.H{"data": resource})
+	
+	// 返回时丰富响应数据
+	responseData := h.enrichResourceResponse(&resource)
+	c.JSON(http.StatusCreated, gin.H{"data": responseData})
 }
 
 // UpdateLLMResource godoc
@@ -174,12 +312,15 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 // @Router /api/v1/llm-resources/{id} [put]
 func (h *LLMResourceHandler) UpdateLLMResource(c *gin.Context) {
 	id := c.Param("id")
-	var resource storage.LLMResource
-	if err := c.ShouldBindJSON(&resource); err != nil {
+	var req LLMResourceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Error("更新LLM资源失败", logger.F("error", err.Error()), logger.F("id", id))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	
+	resource := req.LLMResource
+	resource.ID = id
 
 	// 验证必填字段
 	if resource.Name == "" {
@@ -253,7 +394,10 @@ func (h *LLMResourceHandler) UpdateLLMResource(c *gin.Context) {
 	}
 
 	logger.Info("更新LLM资源成功", logger.F("id", id), logger.F("name", resource.Name), logger.F("model", resource.Model))
-	c.JSON(http.StatusOK, gin.H{"data": resource})
+	
+	// 返回时丰富响应数据
+	responseData := h.enrichResourceResponse(&resource)
+	c.JSON(http.StatusOK, gin.H{"data": responseData})
 }
 
 // DeleteLLMResource godoc

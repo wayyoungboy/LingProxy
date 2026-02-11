@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -114,6 +115,22 @@ func (s *APIKeyService) ListTokens() ([]*storage.APIKey, error) {
 
 // UpdateAPIKey 更新API Key
 func (s *APIKeyService) UpdateAPIKey(id string, name *string, status *string) (*storage.APIKey, error) {
+	return s.UpdateAPIKeyFull(id, name, status, nil, nil, nil, nil, nil, nil, nil)
+}
+
+// UpdateAPIKeyFull 完整更新API Key（包括模型许可和按类型策略）
+func (s *APIKeyService) UpdateAPIKeyFull(
+	id string,
+	name *string,
+	status *string,
+	allowedModels []string,
+	chatPolicyID *string,
+	embeddingPolicyID *string,
+	rerankPolicyID *string,
+	imagePolicyID *string,
+	audioPolicyID *string,
+	videoPolicyID *string,
+) (*storage.APIKey, error) {
 	apiKey, err := s.storage.GetAPIKey(id)
 	if err != nil {
 		return nil, ErrAPIKeyNotFound
@@ -134,6 +151,31 @@ func (s *APIKeyService) UpdateAPIKey(id string, name *string, status *string) (*
 
 	if status != nil {
 		apiKey.Status = *status
+	}
+
+	if allowedModels != nil {
+		if err := apiKey.SetAllowedModels(allowedModels); err != nil {
+			return nil, fmt.Errorf("failed to set allowed models: %w", err)
+		}
+	}
+
+	if chatPolicyID != nil {
+		apiKey.ChatPolicyID = *chatPolicyID
+	}
+	if embeddingPolicyID != nil {
+		apiKey.EmbeddingPolicyID = *embeddingPolicyID
+	}
+	if rerankPolicyID != nil {
+		apiKey.RerankPolicyID = *rerankPolicyID
+	}
+	if imagePolicyID != nil {
+		apiKey.ImagePolicyID = *imagePolicyID
+	}
+	if audioPolicyID != nil {
+		apiKey.AudioPolicyID = *audioPolicyID
+	}
+	if videoPolicyID != nil {
+		apiKey.VideoPolicyID = *videoPolicyID
 	}
 
 	if err := s.storage.UpdateAPIKey(apiKey); err != nil {

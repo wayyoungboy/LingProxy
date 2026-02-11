@@ -33,14 +33,32 @@ func NewTokenHandler(tokenService *service.APIKeyService) *APIKeyHandler {
 
 // CreateTokenRequest 创建API Key请求
 type CreateTokenRequest struct {
-	Name      string `json:"name" binding:"required"`
-	ExpiresAt string `json:"expires_at,omitempty"` // ISO 8601格式
+	Name          string   `json:"name" binding:"required"`
+	ExpiresAt     string   `json:"expires_at,omitempty"`     // ISO 8601格式
+	AllowedModels []string `json:"allowed_models,omitempty"` // 允许使用的模型ID列表（空列表表示允许所有模型）
+	
+	// 按类型配置的策略
+	ChatPolicyID     string `json:"chat_policy_id,omitempty"`
+	EmbeddingPolicyID string `json:"embedding_policy_id,omitempty"`
+	RerankPolicyID    string `json:"rerank_policy_id,omitempty"`
+	ImagePolicyID     string `json:"image_policy_id,omitempty"`
+	AudioPolicyID     string `json:"audio_policy_id,omitempty"`
+	VideoPolicyID     string `json:"video_policy_id,omitempty"`
 }
 
 // UpdateTokenRequest 更新API Key请求
 type UpdateTokenRequest struct {
-	Name   *string `json:"name,omitempty"`
-	Status *string `json:"status,omitempty"` // active/inactive
+	Name          *string  `json:"name,omitempty"`
+	Status        *string  `json:"status,omitempty"`         // active/inactive
+	AllowedModels []string `json:"allowed_models,omitempty"` // 允许使用的模型ID列表
+	
+	// 按类型配置的策略
+	ChatPolicyID     *string `json:"chat_policy_id,omitempty"`
+	EmbeddingPolicyID *string `json:"embedding_policy_id,omitempty"`
+	RerankPolicyID    *string `json:"rerank_policy_id,omitempty"`
+	ImagePolicyID     *string `json:"image_policy_id,omitempty"`
+	AudioPolicyID     *string `json:"audio_policy_id,omitempty"`
+	VideoPolicyID     *string `json:"video_policy_id,omitempty"`
 }
 
 // CreateAPIKey 创建API Key
@@ -84,16 +102,93 @@ func (h *APIKeyHandler) CreateAPIKey(c *gin.Context) {
 		return
 	}
 
+	// 设置模型许可
+	if req.AllowedModels != nil {
+		if err := apiKey.SetAllowedModels(req.AllowedModels); err != nil {
+			logger.Error("设置模型许可失败", logger.F("error", err.Error()))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to set allowed models"})
+			return
+		}
+	}
+
+	// 设置按类型配置的策略
+	if req.ChatPolicyID != "" {
+		apiKey.ChatPolicyID = req.ChatPolicyID
+	}
+	if req.EmbeddingPolicyID != "" {
+		apiKey.EmbeddingPolicyID = req.EmbeddingPolicyID
+	}
+	if req.RerankPolicyID != "" {
+		apiKey.RerankPolicyID = req.RerankPolicyID
+	}
+	if req.ImagePolicyID != "" {
+		apiKey.ImagePolicyID = req.ImagePolicyID
+	}
+	if req.AudioPolicyID != "" {
+		apiKey.AudioPolicyID = req.AudioPolicyID
+	}
+	if req.VideoPolicyID != "" {
+		apiKey.VideoPolicyID = req.VideoPolicyID
+	}
+
+	// 如果有配置需要更新，使用完整更新方法
+	if req.AllowedModels != nil || req.ChatPolicyID != "" || req.EmbeddingPolicyID != "" || req.RerankPolicyID != "" || req.ImagePolicyID != "" || req.AudioPolicyID != "" || req.VideoPolicyID != "" {
+		var chatPolicyID, embeddingPolicyID, rerankPolicyID, imagePolicyID, audioPolicyID, videoPolicyID *string
+		if req.ChatPolicyID != "" {
+			chatPolicyID = &req.ChatPolicyID
+		}
+		if req.EmbeddingPolicyID != "" {
+			embeddingPolicyID = &req.EmbeddingPolicyID
+		}
+		if req.RerankPolicyID != "" {
+			rerankPolicyID = &req.RerankPolicyID
+		}
+		if req.ImagePolicyID != "" {
+			imagePolicyID = &req.ImagePolicyID
+		}
+		if req.AudioPolicyID != "" {
+			audioPolicyID = &req.AudioPolicyID
+		}
+		if req.VideoPolicyID != "" {
+			videoPolicyID = &req.VideoPolicyID
+		}
+		
+		apiKey, err = h.apiKeyService.UpdateAPIKeyFull(
+			apiKey.ID,
+			nil, // name 不变
+			nil, // status 不变
+			req.AllowedModels,
+			chatPolicyID,
+			embeddingPolicyID,
+			rerankPolicyID,
+			imagePolicyID,
+			audioPolicyID,
+			videoPolicyID,
+		)
+		if err != nil {
+			logger.Error("更新API Key配置失败", logger.F("error", err.Error()))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update API key configuration"})
+			return
+		}
+	}
+
 	logger.Info("创建API Key成功", logger.F("id", apiKey.ID), logger.F("name", apiKey.Name))
 	c.JSON(http.StatusCreated, gin.H{
 		"data": gin.H{
-			"id":         apiKey.ID,
-			"name":       apiKey.Name,
-			"api_key":    apiKey.APIKey, // 只在创建时返回完整API Key
-			"prefix":     apiKey.Prefix,
-			"status":     apiKey.Status,
-			"expires_at": apiKey.ExpiresAt,
-			"created_at": apiKey.CreatedAt,
+			"id":                apiKey.ID,
+			"name":              apiKey.Name,
+			"api_key":           apiKey.APIKey, // 只在创建时返回完整API Key
+			"prefix":            apiKey.Prefix,
+			"status":            apiKey.Status,
+			"allowed_models":   apiKey.GetAllowedModels(),
+			"chat_policy_id":    apiKey.ChatPolicyID,
+			"embedding_policy_id": apiKey.EmbeddingPolicyID,
+			"rerank_policy_id":   apiKey.RerankPolicyID,
+			"image_policy_id":    apiKey.ImagePolicyID,
+			"audio_policy_id":    apiKey.AudioPolicyID,
+			"video_policy_id":    apiKey.VideoPolicyID,
+			"expires_at":        apiKey.ExpiresAt,
+			"created_at":        apiKey.CreatedAt,
 		},
 	})
 }
@@ -124,14 +219,21 @@ func (h *APIKeyHandler) ListAPIKeys(c *gin.Context) {
 	apiKeyList := make([]gin.H, 0, len(apiKeys))
 	for _, apiKey := range apiKeys {
 		apiKeyList = append(apiKeyList, gin.H{
-			"id":           apiKey.ID,
-			"name":         apiKey.Name,
-			"prefix":      apiKey.Prefix, // 显示前缀
-			"status":       apiKey.Status,
-			"policy_id":    apiKey.PolicyID,
-			"last_used_at": apiKey.LastUsedAt,
-			"expires_at":   apiKey.ExpiresAt,
-			"created_at":   apiKey.CreatedAt,
+			"id":                apiKey.ID,
+			"name":              apiKey.Name,
+			"prefix":            apiKey.Prefix, // 显示前缀
+			"status":            apiKey.Status,
+			"policy_id":         apiKey.PolicyID, // 向后兼容
+			"allowed_models":    apiKey.GetAllowedModels(),
+			"chat_policy_id":    apiKey.ChatPolicyID,
+			"embedding_policy_id": apiKey.EmbeddingPolicyID,
+			"rerank_policy_id":   apiKey.RerankPolicyID,
+			"image_policy_id":    apiKey.ImagePolicyID,
+			"audio_policy_id":    apiKey.AudioPolicyID,
+			"video_policy_id":    apiKey.VideoPolicyID,
+			"last_used_at":      apiKey.LastUsedAt,
+			"expires_at":        apiKey.ExpiresAt,
+			"created_at":        apiKey.CreatedAt,
 		})
 	}
 
@@ -203,15 +305,22 @@ func (h *APIKeyHandler) GetAPIKey(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":           apiKey.ID,
-			"name":         apiKey.Name,
-			"api_key":      apiKey.APIKey, // 返回完整API Key（管理员权限）
-			"prefix":       apiKey.Prefix, // 同时返回前缀用于显示
-			"status":       apiKey.Status,
-			"policy_id":    apiKey.PolicyID,
-			"last_used_at": apiKey.LastUsedAt,
-			"expires_at":   apiKey.ExpiresAt,
-			"created_at":   apiKey.CreatedAt,
+			"id":                apiKey.ID,
+			"name":              apiKey.Name,
+			"api_key":           apiKey.APIKey, // 返回完整API Key（管理员权限）
+			"prefix":            apiKey.Prefix, // 同时返回前缀用于显示
+			"status":            apiKey.Status,
+			"policy_id":         apiKey.PolicyID, // 向后兼容
+			"allowed_models":    apiKey.GetAllowedModels(),
+			"chat_policy_id":    apiKey.ChatPolicyID,
+			"embedding_policy_id": apiKey.EmbeddingPolicyID,
+			"rerank_policy_id":   apiKey.RerankPolicyID,
+			"image_policy_id":    apiKey.ImagePolicyID,
+			"audio_policy_id":    apiKey.AudioPolicyID,
+			"video_policy_id":    apiKey.VideoPolicyID,
+			"last_used_at":      apiKey.LastUsedAt,
+			"expires_at":        apiKey.ExpiresAt,
+			"created_at":        apiKey.CreatedAt,
 		},
 	})
 }
@@ -267,7 +376,18 @@ func (h *APIKeyHandler) UpdateAPIKey(c *gin.Context) {
 		return
 	}
 
-	apiKey, err := h.apiKeyService.UpdateAPIKey(id, req.Name, req.Status)
+	apiKey, err := h.apiKeyService.UpdateAPIKeyFull(
+		id,
+		req.Name,
+		req.Status,
+		req.AllowedModels,
+		req.ChatPolicyID,
+		req.EmbeddingPolicyID,
+		req.RerankPolicyID,
+		req.ImagePolicyID,
+		req.AudioPolicyID,
+		req.VideoPolicyID,
+	)
 	if err != nil {
 		if err == service.ErrAPIKeyNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
@@ -285,13 +405,21 @@ func (h *APIKeyHandler) UpdateAPIKey(c *gin.Context) {
 	logger.Info("更新API Key成功", logger.F("id", id), logger.F("name", apiKey.Name))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":           apiKey.ID,
-			"name":         apiKey.Name,
-			"prefix":       apiKey.Prefix,
-			"status":       apiKey.Status,
-			"last_used_at": apiKey.LastUsedAt,
-			"expires_at":   apiKey.ExpiresAt,
-			"updated_at":   apiKey.UpdatedAt,
+			"id":                apiKey.ID,
+			"name":              apiKey.Name,
+			"prefix":            apiKey.Prefix,
+			"status":            apiKey.Status,
+			"policy_id":         apiKey.PolicyID, // 向后兼容
+			"allowed_models":    apiKey.GetAllowedModels(),
+			"chat_policy_id":    apiKey.ChatPolicyID,
+			"embedding_policy_id": apiKey.EmbeddingPolicyID,
+			"rerank_policy_id":   apiKey.RerankPolicyID,
+			"image_policy_id":    apiKey.ImagePolicyID,
+			"audio_policy_id":    apiKey.AudioPolicyID,
+			"video_policy_id":    apiKey.VideoPolicyID,
+			"last_used_at":      apiKey.LastUsedAt,
+			"expires_at":        apiKey.ExpiresAt,
+			"updated_at":        apiKey.UpdatedAt,
 		},
 	})
 }

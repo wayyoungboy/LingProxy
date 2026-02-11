@@ -86,22 +86,41 @@ func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string,
 		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
 
-	// 检查API Key是否有策略
-	if token.PolicyID == "" {
+	// 检查模型许可
+	if !token.IsModelAllowed(modelName) {
+		logger.Warn("Model not allowed for API key", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("model", modelName))
+		return nil, fmt.Errorf("model '%s' is not allowed for this API key", modelName)
+	}
+
+	// 获取按类型配置的策略ID
+	policyID := token.GetPolicyIDByType(resourceType)
+	if policyID == "" {
 		// API Key没有配置策略，使用默认策略
-		logger.Debug("API key has no policy, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("model", modelName), logger.F("resource_type", resourceType))
+		logger.Debug("API key has no policy for type, using default policy", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("model", modelName), logger.F("resource_type", resourceType))
 		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
 
 	// 使用API Key的策略选择资源
-	logger.Debug("Executing policy for API key", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("model", modelName), logger.F("resource_type", resourceType))
-	resource, err := h.policyService.ExecutePolicy(token.PolicyID, modelName, typeFiltered)
+	logger.Debug("Executing policy for API key", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", policyID), logger.F("model", modelName), logger.F("resource_type", resourceType))
+	
+	// 对于 embedding 类型，需要检查是否有 dimensions 参数
+	var dimensions *int
+	if resourceType == "embedding" {
+		// 尝试从请求中获取 dimensions 参数
+		if dims, exists := c.Get("embedding_dimensions"); exists {
+			if d, ok := dims.(*int); ok {
+				dimensions = d
+			}
+		}
+	}
+	
+	resource, err := h.policyService.ExecutePolicyWithDimensions(policyID, modelName, typeFiltered, dimensions)
 	if err != nil {
 		// 策略执行失败，降级到默认策略
-		logger.Warn("Policy execution failed, falling back to default", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("error", err.Error()), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID))
+		logger.Warn("Policy execution failed, falling back to default", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("error", err.Error()), logger.F("token_id", token.ID), logger.F("policy_id", policyID))
 		return h.selectResourceWithDefaultPolicy(c, modelName, typeFiltered)
 	}
-	logger.Debug("Resource selected successfully", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", token.PolicyID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("resource_type", resource.Type))
+	logger.Debug("Resource selected successfully", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", policyID), logger.F("resource_id", resource.ID), logger.F("resource_name", resource.Name), logger.F("resource_type", resource.Type))
 
 	return resource, nil
 }
@@ -1342,9 +1361,10 @@ func (h *OpenAIHandler) GetModel(c *gin.Context) {
 
 // EmbeddingRequest 嵌入请求
 type EmbeddingRequest struct {
-	Model string      `json:"model" binding:"required"`
-	Input interface{} `json:"input" binding:"required"` // 支持 string 或 []string
-	User  string      `json:"user,omitempty"`
+	Model      string      `json:"model" binding:"required"`
+	Input      interface{} `json:"input" binding:"required"` // 支持 string 或 []string
+	Dimensions *int        `json:"dimensions,omitempty"`     // 向量维度（可选）
+	User       string      `json:"user,omitempty"`
 }
 
 // EmbeddingResponse 嵌入响应
@@ -1385,6 +1405,11 @@ func (h *OpenAIHandler) CreateEmbedding(c *gin.Context) {
 			},
 		})
 		return
+	}
+
+	// 如果有 dimensions 参数，设置到 context 中供策略执行器使用
+	if req.Dimensions != nil {
+		c.Set("embedding_dimensions", req.Dimensions)
 	}
 
 	// 查找对应的LLM资源（embedding类型）

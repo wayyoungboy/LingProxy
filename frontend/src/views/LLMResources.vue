@@ -181,6 +181,7 @@
           <el-select 
             v-model="resourceForm.type" 
             :placeholder="$t('llmResources.selectType')"
+            @change="handleTypeChange"
           >
             <el-option :label="$t('llmResources.typeChat')" value="chat"></el-option>
             <el-option :label="$t('llmResources.typeImage')" value="image"></el-option>
@@ -230,6 +231,102 @@
             <el-option :label="$t('llmResources.inactive')" value="inactive"></el-option>
           </el-select>
         </el-form-item>
+        
+        <!-- Embedding 类型特定配置 -->
+        <template v-if="resourceForm.type === 'embedding'">
+          <el-divider content-position="left">{{ $t('llmResources.typeEmbedding') }} 配置</el-divider>
+          <el-form-item :label="$t('llmResources.supportedDimensions')">
+            <el-input 
+              v-model="resourceForm.embedding_config.supported_dimensions" 
+              :placeholder="$t('llmResources.supportedDimensionsPlaceholder')"
+            >
+              <template #append>
+                <el-button @click="parseDimensions">解析</el-button>
+              </template>
+            </el-input>
+            <div style="font-size: 12px; color: #909399; margin-top: 4px;">例如：512,1024,1536</div>
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.defaultDimension')">
+            <el-input-number 
+              v-model="resourceForm.embedding_config.default_dimension" 
+              :placeholder="$t('llmResources.defaultDimensionPlaceholder')"
+              :min="1"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.normalize')">
+            <el-switch v-model="resourceForm.embedding_config.normalize" />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.maxTokens')">
+            <el-input-number 
+              v-model="resourceForm.embedding_config.max_input_tokens" 
+              :min="1"
+              style="width: 100%"
+            />
+          </el-form-item>
+        </template>
+        
+        <!-- Rerank 类型特定配置 -->
+        <template v-if="resourceForm.type === 'rerank'">
+          <el-divider content-position="left">{{ $t('llmResources.typeRerank') }} 配置</el-divider>
+          <el-form-item :label="$t('llmResources.defaultTopN')">
+            <el-input-number 
+              v-model="resourceForm.rerank_config.default_top_n" 
+              :placeholder="$t('llmResources.defaultTopNPlaceholder')"
+              :min="1"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.maxDocuments')">
+            <el-input-number 
+              v-model="resourceForm.rerank_config.max_documents" 
+              :min="1"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.maxQueryLength')">
+            <el-input-number 
+              v-model="resourceForm.rerank_config.max_query_length" 
+              :min="1"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.maxDocumentLength')">
+            <el-input-number 
+              v-model="resourceForm.rerank_config.max_document_length" 
+              :min="1"
+              style="width: 100%"
+            />
+          </el-form-item>
+        </template>
+        
+        <!-- Chat 类型特定配置 -->
+        <template v-if="resourceForm.type === 'chat'">
+          <el-divider content-position="left">{{ $t('llmResources.typeChat') }} 配置</el-divider>
+          <el-form-item :label="$t('llmResources.maxTokens')">
+            <el-input-number 
+              v-model="resourceForm.chat_config.max_tokens" 
+              :min="1"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.contextWindow')">
+            <el-input-number 
+              v-model="resourceForm.chat_config.context_window" 
+              :min="1"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.supportsStreaming')">
+            <el-switch v-model="resourceForm.chat_config.supports_streaming" />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.supportsFunctionCalling')">
+            <el-switch v-model="resourceForm.chat_config.supports_function_calling" />
+          </el-form-item>
+          <el-form-item :label="$t('llmResources.supportsVision')">
+            <el-switch v-model="resourceForm.chat_config.supports_vision" />
+          </el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
@@ -354,7 +451,39 @@ const resourceForm = reactive({
   model: '',
   base_url: '',
   api_key: '',
-  status: 'active'
+  status: 'active',
+  // 类型特定配置
+  embedding_config: {
+    supported_dimensions: '', // 逗号分隔的字符串，如 "512,1024,1536"
+    default_dimension: null,
+    normalize: false,
+    max_input_tokens: null
+  },
+  rerank_config: {
+    default_top_n: null,
+    max_documents: null,
+    max_query_length: null,
+    max_document_length: null
+  },
+  chat_config: {
+    max_tokens: null,
+    context_window: null,
+    supports_streaming: true,
+    supports_function_calling: false,
+    supports_vision: false
+  },
+  image_config: {
+    max_image_size: null,
+    supported_formats: '',
+    max_images_per_request: 1,
+    quality: 'standard'
+  },
+  audio_config: {
+    max_audio_duration: null,
+    supported_formats: '',
+    max_file_size: null,
+    language: ''
+  }
 })
 
 // 表单验证规则
@@ -488,6 +617,47 @@ const handleDriverChange = (driver) => {
   }
 }
 
+// 处理类型变化
+const handleTypeChange = (type) => {
+  // 切换类型时重置类型特定配置
+  resetTypeConfig()
+}
+
+// 重置类型特定配置
+const resetTypeConfig = () => {
+  resourceForm.embedding_config = {
+    supported_dimensions: '',
+    default_dimension: null,
+    normalize: false,
+    max_input_tokens: null
+  }
+  resourceForm.rerank_config = {
+    default_top_n: null,
+    max_documents: null,
+    max_query_length: null,
+    max_document_length: null
+  }
+  resourceForm.chat_config = {
+    max_tokens: null,
+    context_window: null,
+    supports_streaming: true,
+    supports_function_calling: false,
+    supports_vision: false
+  }
+  resourceForm.image_config = {
+    max_image_size: null,
+    supported_formats: '',
+    max_images_per_request: 1,
+    quality: 'standard'
+  }
+  resourceForm.audio_config = {
+    max_audio_duration: null,
+    supported_formats: '',
+    max_file_size: null,
+    language: ''
+  }
+}
+
 // 处理添加资源
 const handleAddResource = () => {
   isAddMode.value = true
@@ -503,6 +673,7 @@ const handleAddResource = () => {
     api_key: '',
     status: 'active'
   })
+  resetTypeConfig()
   apiKeyVisible.value = false
   dialogVisible.value = true
 }
@@ -511,10 +682,112 @@ const handleAddResource = () => {
 const handleEditResource = (resource) => {
   isAddMode.value = false
   dialogTitle.value = t('llmResources.editResource')
-  // 填充表单
-  Object.assign(resourceForm, resource)
+  // 填充基础字段
+  Object.assign(resourceForm, {
+    id: resource.id,
+    name: resource.name,
+    type: resource.type,
+    driver: resource.driver,
+    model: resource.model,
+    base_url: resource.base_url,
+    api_key: resource.api_key,
+    status: resource.status
+  })
+  
+  // 填充类型特定配置
+  resetTypeConfig()
+  if (resource.type === 'embedding' && resource.embedding_config) {
+    const config = resource.embedding_config
+    resourceForm.embedding_config = {
+      supported_dimensions: Array.isArray(config.supported_dimensions) 
+        ? config.supported_dimensions.join(',') 
+        : (config.supported_dimensions || ''),
+      default_dimension: config.default_dimension || null,
+      normalize: config.normalize || false,
+      max_input_tokens: config.max_input_tokens || null
+    }
+  } else if (resource.type === 'rerank' && resource.rerank_config) {
+    const config = resource.rerank_config
+    resourceForm.rerank_config = {
+      default_top_n: config.default_top_n || null,
+      max_documents: config.max_documents || null,
+      max_query_length: config.max_query_length || null,
+      max_document_length: config.max_document_length || null
+    }
+  } else if (resource.type === 'chat' && resource.chat_config) {
+    const config = resource.chat_config
+    resourceForm.chat_config = {
+      max_tokens: config.max_tokens || null,
+      context_window: config.context_window || null,
+      supports_streaming: config.supports_streaming !== false,
+      supports_function_calling: config.supports_function_calling || false,
+      supports_vision: config.supports_vision || false
+    }
+  }
+  
   apiKeyVisible.value = false
   dialogVisible.value = true
+}
+
+// 解析维度字符串为数组
+const parseDimensions = () => {
+  if (!resourceForm.embedding_config.supported_dimensions) return
+  const dims = resourceForm.embedding_config.supported_dimensions
+    .split(',')
+    .map(d => d.trim())
+    .filter(d => d && !isNaN(d))
+    .map(d => parseInt(d))
+  resourceForm.embedding_config.supported_dimensions = dims.join(',')
+}
+
+// 准备提交数据
+const prepareSubmitData = () => {
+  const data = {
+    id: resourceForm.id,
+    name: resourceForm.name,
+    type: resourceForm.type,
+    driver: resourceForm.driver,
+    model: resourceForm.model,
+    base_url: resourceForm.base_url,
+    api_key: resourceForm.api_key,
+    status: resourceForm.status
+  }
+  
+  // 根据类型添加特定配置
+  if (resourceForm.type === 'embedding') {
+    // 解析维度字符串为数组
+    const dims = resourceForm.embedding_config.supported_dimensions
+      ? resourceForm.embedding_config.supported_dimensions
+          .split(',')
+          .map(d => d.trim())
+          .filter(d => d && !isNaN(d))
+          .map(d => parseInt(d))
+      : []
+    
+    data.embedding_config = {
+      supported_dimensions: dims,
+      default_dimension: resourceForm.embedding_config.default_dimension,
+      normalize: resourceForm.embedding_config.normalize,
+      max_input_tokens: resourceForm.embedding_config.max_input_tokens
+    }
+  } else if (resourceForm.type === 'rerank') {
+    data.rerank_config = {
+      default_top_n: resourceForm.rerank_config.default_top_n,
+      max_documents: resourceForm.rerank_config.max_documents,
+      max_query_length: resourceForm.rerank_config.max_query_length,
+      max_document_length: resourceForm.rerank_config.max_document_length
+    }
+  } else if (resourceForm.type === 'chat') {
+    data.chat_config = {
+      max_tokens: resourceForm.chat_config.max_tokens,
+      context_window: resourceForm.chat_config.context_window,
+      supports_streaming: resourceForm.chat_config.supports_streaming,
+      supports_function_calling: resourceForm.chat_config.supports_function_calling,
+      supports_vision: resourceForm.chat_config.supports_vision
+    }
+  }
+  
+  return data
 }
 
 // 处理保存资源
@@ -523,13 +796,16 @@ const handleSaveResource = async () => {
     // 验证表单
     await resourceFormRef.value.validate()
     
+    // 准备提交数据
+    const submitData = prepareSubmitData()
+    
     if (isAddMode.value) {
       // 创建资源
-      await api.createLLMResource(resourceForm)
+      await api.createLLMResource(submitData)
       ElMessage.success(t('llmResources.createSuccess'))
     } else {
       // 更新资源
-      await api.updateLLMResource(resourceForm.id, resourceForm)
+      await api.updateLLMResource(resourceForm.id, submitData)
       ElMessage.success(t('llmResources.updateSuccess'))
     }
     

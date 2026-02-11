@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -36,8 +37,41 @@ type LLMResource struct {
 	APIKey     string    `json:"api_key"`     // API密钥：此资源的认证密钥
 	Status     string    `json:"status"`      // 资源状态: active(活跃), inactive(禁用)
 	TestStatus string    `json:"test_status"` // 测试状态: untested(未测试), passed(测试通过), failed(测试失败)
+	
+	// 类型特定配置（临时使用 JSON 字段存储，重构后将迁移到扩展表）
+	EmbeddingConfig string `json:"embedding_config,omitempty" gorm:"type:text"` // JSON格式的embedding配置
+	RerankConfig    string `json:"rerank_config,omitempty" gorm:"type:text"`    // JSON格式的rerank配置
+	ChatConfig      string `json:"chat_config,omitempty" gorm:"type:text"`       // JSON格式的chat配置
+	ImageConfig     string `json:"image_config,omitempty" gorm:"type:text"`      // JSON格式的image配置
+	AudioConfig     string `json:"audio_config,omitempty" gorm:"type:text"`      // JSON格式的audio配置
+	
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// EmbeddingConfig Embedding类型配置结构
+type EmbeddingConfig struct {
+	SupportedDimensions []int `json:"supported_dimensions"` // 支持的维度列表
+	DefaultDimension    *int  `json:"default_dimension,omitempty"`
+	Normalize           bool  `json:"normalize"`
+	MaxInputTokens      *int  `json:"max_input_tokens,omitempty"`
+}
+
+// RerankConfig Rerank类型配置结构
+type RerankConfig struct {
+	DefaultTopN       *int `json:"default_top_n,omitempty"`
+	MaxDocuments      *int `json:"max_documents,omitempty"`
+	MaxQueryLength    *int `json:"max_query_length,omitempty"`
+	MaxDocumentLength *int `json:"max_document_length,omitempty"`
+}
+
+// ChatConfig Chat类型配置结构
+type ChatConfig struct {
+	MaxTokens            *int   `json:"max_tokens,omitempty"`
+	ContextWindow        *int   `json:"context_window,omitempty"`
+	SupportsStreaming    bool   `json:"supports_streaming"`
+	SupportsFunctionCalling bool `json:"supports_function_calling"`
+	SupportsVision       bool   `json:"supports_vision"`
 }
 
 // Endpoint 端点模型
@@ -120,7 +154,19 @@ type APIKey struct {
 	APIKey     string     `json:"api_key"`             // API Key值
 	Prefix     string     `json:"prefix"`             // API Key前缀（用于显示）
 	Status     string     `json:"status"`             // active/inactive
-	PolicyID   string     `json:"policy_id,omitempty"` // 关联的策略ID
+	PolicyID   string     `json:"policy_id,omitempty"` // 关联的策略ID（向后兼容，已废弃，使用按类型策略）
+	
+	// 模型许可：允许使用的模型ID列表（空列表表示允许所有模型）
+	AllowedModels string `json:"allowed_models,omitempty" gorm:"type:text"` // JSON数组格式: ["gpt-4", "gpt-3.5-turbo"]
+	
+	// 按类型配置的策略（优先级高于 PolicyID）
+	ChatPolicyID     string `json:"chat_policy_id,omitempty"`     // Chat类型模型的策略ID
+	EmbeddingPolicyID string `json:"embedding_policy_id,omitempty"` // Embedding类型模型的策略ID
+	RerankPolicyID    string `json:"rerank_policy_id,omitempty"`   // Rerank类型模型的策略ID
+	ImagePolicyID     string `json:"image_policy_id,omitempty"`     // Image类型模型的策略ID
+	AudioPolicyID     string `json:"audio_policy_id,omitempty"`     // Audio类型模型的策略ID
+	VideoPolicyID     string `json:"video_policy_id,omitempty"`    // Video类型模型的策略ID
+	
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
@@ -130,6 +176,80 @@ type APIKey struct {
 // TableName 指定数据库表名
 func (APIKey) TableName() string {
 	return "api_keys"
+}
+
+// GetAllowedModels 获取允许的模型列表
+func (k *APIKey) GetAllowedModels() []string {
+	if k.AllowedModels == "" {
+		return nil // nil 表示允许所有模型
+	}
+	var models []string
+	if err := json.Unmarshal([]byte(k.AllowedModels), &models); err != nil {
+		return nil
+	}
+	return models
+}
+
+// SetAllowedModels 设置允许的模型列表
+func (k *APIKey) SetAllowedModels(models []string) error {
+	if len(models) == 0 {
+		k.AllowedModels = ""
+		return nil
+	}
+	data, err := json.Marshal(models)
+	if err != nil {
+		return err
+	}
+	k.AllowedModels = string(data)
+	return nil
+}
+
+// GetPolicyIDByType 根据模型类型获取策略ID
+// 优先返回按类型配置的策略，如果没有则返回通用策略ID（向后兼容）
+func (k *APIKey) GetPolicyIDByType(modelType string) string {
+	switch modelType {
+	case "chat", "completion":
+		if k.ChatPolicyID != "" {
+			return k.ChatPolicyID
+		}
+	case "embedding":
+		if k.EmbeddingPolicyID != "" {
+			return k.EmbeddingPolicyID
+		}
+	case "rerank":
+		if k.RerankPolicyID != "" {
+			return k.RerankPolicyID
+		}
+	case "image":
+		if k.ImagePolicyID != "" {
+			return k.ImagePolicyID
+		}
+	case "audio":
+		if k.AudioPolicyID != "" {
+			return k.AudioPolicyID
+		}
+	case "video":
+		if k.VideoPolicyID != "" {
+			return k.VideoPolicyID
+		}
+	}
+	// 向后兼容：如果没有按类型配置的策略，使用通用策略ID
+	return k.PolicyID
+}
+
+// IsModelAllowed 检查模型是否被允许使用
+// 如果 AllowedModels 为空，表示允许所有模型
+func (k *APIKey) IsModelAllowed(modelID string) bool {
+	allowedModels := k.GetAllowedModels()
+	if len(allowedModels) == 0 {
+		return true // 空列表表示允许所有模型
+	}
+	for _, allowed := range allowedModels {
+		if allowed == modelID {
+			return true
+		}
+	}
+	return false
 }
 
 // Token 保持向后兼容的类型别名

@@ -151,6 +151,17 @@ func (s *PolicyTemplateService) InitBuiltinTemplates() error {
 			Builtin:           true,
 		},
 		{
+			Name:        "正则模型匹配",
+			Type:        "regex_model_match",
+			Description: "将请求端输入的模型名作为正则表达式，匹配资源池中资源的模型名，然后从匹配的资源中随机选择一个",
+			ParametersSchema: `{
+				"type": "object",
+				"properties": {}
+			}`,
+			DefaultParameters: `{}`,
+			Builtin:           true,
+		},
+		{
 			Name:        "优先级策略",
 			Type:        "priority",
 			Description: "按优先级顺序选择资源，优先使用优先级高的资源",
