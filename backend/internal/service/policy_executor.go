@@ -356,6 +356,25 @@ type RegexModelMatchPolicyExecutor struct{}
 func (e *RegexModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelName string, resources []*storage.LLMResource) (*storage.LLMResource, error) {
 	logger.Debug("Executing regex-model-match policy", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("policy_name", policy.Name), logger.F("model", modelName))
 
+	var params struct {
+		Resources      []string `json:"resources"`
+		FilterByStatus bool     `json:"filter_by_status"`
+	}
+
+	if err := json.Unmarshal([]byte(policy.Parameters), &params); err != nil {
+		logger.Error("Failed to parse regex-model-match policy parameters", logger.F("component", "service"), logger.F("error", err.Error()), logger.F("policy_id", policy.ID))
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPolicyParams, err)
+	}
+
+	// 过滤资源（根据资源池配置）
+	filtered := filterResources(resources, params.Resources, params.FilterByStatus)
+	logger.Debug("Regex-model-match policy filtered resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("original_count", len(resources)), logger.F("filtered_count", len(filtered)))
+
+	if len(filtered) == 0 {
+		logger.Warn("Regex-model-match policy: no available resources", logger.F("component", "service"), logger.F("policy_id", policy.ID), logger.F("model", modelName))
+		return nil, ErrNoResourcesAvailable
+	}
+
 	// 将请求端输入的模型名作为正则表达式
 	if modelName == "" {
 		logger.Warn("Regex-model-match policy: empty model name", logger.F("component", "service"), logger.F("policy_id", policy.ID))
@@ -372,13 +391,8 @@ func (e *RegexModelMatchPolicyExecutor) Execute(policy *storage.Policy, modelNam
 	// 匹配的资源列表
 	matchedResources := make([]*storage.LLMResource, 0)
 
-	// 遍历所有资源，检查资源的模型名是否匹配正则表达式
-	for _, resource := range resources {
-		// 只处理活跃状态的资源
-		if resource.Status != "active" {
-			continue
-		}
-
+	// 遍历过滤后的资源，检查资源的模型名是否匹配正则表达式
+	for _, resource := range filtered {
 		// 使用请求的模型名作为正则表达式，匹配资源的模型名
 		if regex.MatchString(resource.Model) {
 			matchedResources = append(matchedResources, resource)

@@ -372,7 +372,7 @@ export default {
     regexMatchRules: '正则匹配规则',
     regexPatternPlaceholder: '正则表达式（如 ^gpt-）',
     regexModelMatchPatterns: '正则表达式模式列表',
-    regexModelMatchHint: '此策略将请求端输入的模型名作为正则表达式，匹配资源池中资源的模型名，匹配成功后从匹配的资源中随机选择一个。无需配置参数，直接创建策略即可使用。',
+    regexModelMatchHint: '此策略将请求端输入的模型名作为正则表达式，匹配资源池中资源的模型名，匹配成功后从匹配的资源中随机选择一个。',
     addPattern: '添加模式',
     priorityConfig: '资源优先级配置',
     priorityPlaceholder: '优先级（数字越小优先级越高）',

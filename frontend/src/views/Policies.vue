@@ -346,11 +346,80 @@
           </div>
           
           <div v-else-if="selectedTemplate.type === 'regex_model_match'" class="policy-params">
+            <el-form-item :label="$t('policies.resourcePool')">
+              <div class="resource-pool-info">
+                <el-alert
+                  v-if="!policyForm.parameters.resources || !Array.isArray(policyForm.parameters.resources) || policyForm.parameters.resources.length === 0"
+                  type="info"
+                  :closable="false"
+                  show-icon
+                >
+                  <template #title>
+                    <span>{{ $t('policies.resourcePoolNotConfigured') }}</span>
+                  </template>
+                </el-alert>
+                <div v-else class="resource-pool-list">
+                  <div
+                    v-for="(resourceId, index) in policyForm.parameters.resources"
+                    :key="`${resourceId}-${index}`"
+                    class="resource-pool-item"
+                  >
+                    <el-tag
+                      :type="getResourceStatusType(resourceId)"
+                      closable
+                      @close="removeRandomResource(index)"
+                    >
+                      {{ getResourceName(resourceId) }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top: 10px">
+                <el-select
+                  v-model="newRandomResourceId"
+                  :placeholder="$t('policies.selectResourceToAdd')"
+                  filterable
+                  clearable
+                  style="width: 300px; margin-right: 10px"
+                  @change="addRandomResource"
+                >
+                  <el-option
+                    v-for="resource in availableRandomResources"
+                    :key="resource.id"
+                    :label="resource.name"
+                    :value="resource.id"
+                  >
+                    <span>{{ resource.name }}</span>
+                    <el-tag
+                      :type="resource.status === 'active' ? 'success' : 'danger'"
+                      size="small"
+                      style="margin-left: 8px"
+                    >
+                      {{ resource.status === 'active' ? $t('llmResources.active') : $t('llmResources.inactive') }}
+                    </el-tag>
+                  </el-option>
+                </el-select>
+                <el-button
+                  v-if="policyForm.parameters.resources && policyForm.parameters.resources.length > 0"
+                  type="danger"
+                  size="small"
+                  @click="clearRandomResources"
+                >
+                  {{ $t('policies.clearResourcePool') }}
+                </el-button>
+              </div>
+            </el-form-item>
+            <el-form-item :label="$t('policies.filterByStatus')">
+              <el-switch
+                v-model="policyForm.parameters.filter_by_status"
+              />
+            </el-form-item>
             <el-alert
               :title="$t('policies.regexModelMatchHint')"
               type="info"
               :closable="false"
               show-icon
+              style="margin-top: 10px"
             />
           </div>
           
@@ -688,8 +757,10 @@ const initParameters = (template) => {
       }
       break
     case 'regex_model_match':
-      // 此策略不需要参数，请求端输入的模型名将作为正则表达式使用
-      policyForm.parameters = {}
+      policyForm.parameters = {
+        resources: defaultParams.resources || [],
+        filter_by_status: defaultParams.filter_by_status !== false
+      }
       break
     case 'priority':
       policyForm.parameters = {

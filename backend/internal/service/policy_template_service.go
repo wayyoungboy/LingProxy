@@ -156,9 +156,20 @@ func (s *PolicyTemplateService) InitBuiltinTemplates() error {
 			Description: "将请求端输入的模型名作为正则表达式，匹配资源池中资源的模型名，然后从匹配的资源中随机选择一个",
 			ParametersSchema: `{
 				"type": "object",
-				"properties": {}
+				"properties": {
+					"resources": {
+						"type": "array",
+						"items": {"type": "string"},
+						"description": "指定资源列表，为空则使用所有可用资源"
+					},
+					"filter_by_status": {
+						"type": "boolean",
+						"default": true,
+						"description": "是否只选择状态为active的资源"
+					}
+				}
 			}`,
-			DefaultParameters: `{}`,
+			DefaultParameters: `{"filter_by_status": true}`,
 			Builtin:           true,
 		},
 		{

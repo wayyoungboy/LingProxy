@@ -372,7 +372,7 @@ export default {
     regexMatchRules: 'Regex Match Rules',
     regexPatternPlaceholder: 'Regular expression (e.g., ^gpt-)',
     regexModelMatchPatterns: 'Regular Expression Patterns',
-    regexModelMatchHint: 'This policy uses the model name from the request as a regular expression to match resource model names in the pool, then randomly selects from matched resources. No parameters need to be configured, just create the policy and use it.',
+    regexModelMatchHint: 'This policy uses the model name from the request as a regular expression to match resource model names in the pool, then randomly selects from matched resources.',
     addPattern: 'Add Pattern',
     priorityConfig: 'Resource Priority Configuration',
     priorityPlaceholder: 'Priority (smaller number = higher priority)',

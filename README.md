@@ -30,7 +30,7 @@ LingProxy is a high-performance AI API gateway designed for managing and proxyin
 - **Internationalization (i18n)**: Full support for Chinese and English language switching in the frontend interface
 - **Admin Management**: Single admin mode with password and API key management
 - **API Key Management**: Create and manage request-side API keys with policy binding, supports API key copying functionality
-- **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, priority, failover), supports custom policy instances, supports LLM resource pool configuration for random selection policy
+- **Policy Management**: Built-in routing policy templates (random, round-robin, weighted, model-match, regex-match, regex-model-match, priority, failover), supports custom policy instances, supports LLM resource pool configuration
 - **LLM Resource Management**: Supports configuration of AI service resources with driver-based architecture (currently supports OpenAI driver), supports model categories (chat, image, embedding, rerank, audio, video), supports batch import/export via Excel templates or JSON format, includes resource testing functionality to verify connectivity
 - **Model Management**: Flexible model configuration, supports pricing, usage limits and other parameters
 - **Request Management**: Complete request logging and tracking, supports request detail viewing and export
