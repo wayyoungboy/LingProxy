@@ -258,6 +258,10 @@ func (s *APIKeyService) ValidateAPIKey(apiKeyValue string) (*storage.APIKey, err
 		if err != nil {
 			return nil, ErrAPIKeyNotFound
 		}
+		// 检查用户状态
+		if user.Status != "active" {
+			return nil, ErrAPIKeyInactive
+		}
 		// 将User转换为API Key格式（用于兼容）
 		return &storage.APIKey{
 			ID:     user.ID,

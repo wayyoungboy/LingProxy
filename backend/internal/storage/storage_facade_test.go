@@ -300,7 +300,7 @@ func TestStorageFacade(t *testing.T) {
 		}
 
 		// 列出请求
-		requests, err := facade.ListRequests(&storage.RequestQueryParams{Limit: 5})
+		requests, err := facade.ListRequests(&RequestQueryParams{Limit: 5})
 		if err != nil {
 			t.Errorf("ListRequests failed: %v", err)
 		}
