@@ -1,26 +1,94 @@
-/* 全局样式重置和基础样式 */
+:root {
+  /* Claude Design System - Primary Colors */
+  --claude-terracotta: #c96442;
+  --claude-coral: #d97757;
+  --claude-error: #b53333;
+  --claude-focus: #3898ec;
+
+  /* Claude Design System - Surface Colors */
+  --claude-parchment: #f5f4ed;
+  --claude-ivory: #faf9f5;
+  --claude-white: #ffffff;
+  --claude-warm-sand: #e8e6dc;
+  --claude-dark-surface: #30302e;
+  --claude-near-black: #141413;
+
+  /* Claude Design System - Text Colors */
+  --claude-text-primary: #141413;
+  --claude-text-secondary: #5e5d59;
+  --claude-text-tertiary: #87867f;
+  --claude-text-dark-on-light: #4d4c48;
+  --claude-text-light-on-dark: #b0aea5;
+  --claude-dark-warm: #3d3d3a;
+
+  /* Claude Design System - Border Colors */
+  --claude-border-cream: #f0eee6;
+  --claude-border-warm: #e8e6dc;
+  --claude-border-dark: #30302e;
+
+  /* Claude Design System - Ring Colors */
+  --claude-ring-warm: #d1cfc5;
+  --claude-ring-deep: #c2c0b6;
+
+  /* Semantic Colors mapped to Claude */
+  --primary-color: var(--claude-terracotta);
+  --primary-hover: #b85a3b;
+  --primary-light: #f5e6df;
+
+  --bg-color: var(--claude-parchment);
+  --card-bg: var(--claude-ivory);
+  --text-main: var(--claude-text-primary);
+  --text-secondary: var(--claude-text-secondary);
+  --text-muted: var(--claude-text-tertiary);
+  --border-color: var(--claude-border-cream);
+
+  /* Status Colors - Warm variants */
+  --success-color: #7a9a6d;
+  --warning-color: #c96442;
+  --danger-color: var(--claude-error);
+  --info-color: var(--claude-focus);
+
+  /* Claude Shadow System */
+  --shadow-whisper: rgba(0, 0, 0, 0.05) 0px 4px 24px;
+  --shadow-ring: 0px 0px 0px 1px var(--claude-ring-warm);
+  --shadow-ring-active: 0px 0px 0px 1px var(--claude-ring-deep);
+  --shadow-none: none;
+
+  /* Claude Border Radius Scale */
+  --radius-sharp: 4px;
+  --radius-subtle: 6px;
+  --radius-comfortable: 8px;
+  --radius-generous: 12px;
+  --radius-very: 16px;
+  --radius-highly: 24px;
+
+  /* Typography */
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: Consolas, 'SF Mono', Monaco, 'Andale Mono', monospace;
+
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-:root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #f5f5f5;
-  color: #333;
+  background-color: var(--bg-color);
 }
 
 #app {
@@ -29,72 +97,148 @@ body {
   overflow: hidden;
 }
 
-/* 滚动条样式优化 */
+/* Claude Scrollbar Styling - Warm toned */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
+  background: var(--claude-parchment);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+  background: var(--claude-ring-warm);
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--claude-ring-deep);
 }
 
-/* 通用工具类 */
+/* Claude Typography Classes */
+.text-serif {
+  font-family: var(--font-serif);
+  font-weight: 500;
+}
+
+.text-display {
+  font-family: var(--font-serif);
+  font-size: 64px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.text-section {
+  font-family: var(--font-serif);
+  font-size: 52px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.text-subheading-large {
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.text-subheading {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.text-feature {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.text-body-large {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.text-body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.text-caption {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.43;
+}
+
+.text-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0.12px;
+}
+
+.text-code {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* Utility Classes */
 .text-center {
   text-align: center;
 }
 
-.text-left {
-  text-align: left;
+.text-secondary {
+  color: var(--text-secondary);
 }
 
-.text-right {
-  text-align: right;
+.text-muted {
+  color: var(--text-muted);
 }
 
-.mt-10 {
-  margin-top: 10px;
+.mt-4 {
+  margin-top: 1rem;
 }
 
-.mt-20 {
-  margin-top: 20px;
+.mb-4 {
+  margin-bottom: 1rem;
 }
 
-.mb-10 {
-  margin-bottom: 10px;
-}
-
-.mb-20 {
-  margin-bottom: 20px;
+.p-4 {
+  padding: 1rem;
 }
 
 .flex {
   display: flex;
 }
 
-.flex-center {
-  display: flex;
+.items-center {
   align-items: center;
-  justify-content: center;
 }
 
-.flex-between {
-  display: flex;
-  align-items: center;
+.justify-between {
   justify-content: space-between;
 }
 
-/* 过渡动画 */
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+/* Claude Transitions */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -105,15 +249,407 @@ body {
   opacity: 0;
 }
 
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease;
+/* Element Plus Claude Customization */
+
+/* Cards - Ivory surface, warm borders */
+.el-card {
+  border-radius: var(--radius-comfortable) !important;
+  border: 1px solid var(--claude-border-cream) !important;
+  background-color: var(--claude-ivory) !important;
+  box-shadow: var(--shadow-whisper) !important;
+  transition: box-shadow 0.3s ease !important;
 }
 
-.slide-enter-from {
-  transform: translateX(-100%);
+.el-card:hover {
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 8px 32px !important;
 }
 
-.slide-leave-to {
-  transform: translateX(100%);
+.el-card__header {
+  border-bottom: 1px solid var(--claude-border-warm) !important;
+  padding: 16px 20px !important;
+}
+
+.el-card__body {
+  padding: 20px !important;
+}
+
+/* Buttons - Claude styles */
+.el-button {
+  border-radius: var(--radius-comfortable) !important;
+  font-weight: 500 !important;
+  font-family: var(--font-sans) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Primary button - Terracotta */
+.el-button--primary {
+  background-color: var(--claude-terracotta) !important;
+  border-color: var(--claude-terracotta) !important;
+  color: var(--claude-ivory) !important;
+  box-shadow: 0px 0px 0px 1px var(--claude-terracotta) !important;
+}
+
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background-color: #b85a3b !important;
+  border-color: #b85a3b !important;
+  box-shadow: 0px 0px 0px 1px #b85a3b, rgba(0, 0, 0, 0.1) 0px 2px 8px !important;
+}
+
+/* Default button - Warm Sand */
+.el-button--default {
+  background-color: var(--claude-warm-sand) !important;
+  border-color: var(--claude-ring-warm) !important;
+  color: var(--claude-text-dark-on-light) !important;
+}
+
+.el-button--default:hover,
+.el-button--default:focus {
+  background-color: var(--claude-border-warm) !important;
+  border-color: var(--claude-ring-deep) !important;
+}
+
+/* Success button - Warm green */
+.el-button--success {
+  background-color: #7a9a6d !important;
+  border-color: #7a9a6d !important;
+  color: var(--claude-ivory) !important;
+}
+
+/* Danger button - Error Crimson */
+.el-button--danger {
+  background-color: var(--claude-error) !important;
+  border-color: var(--claude-error) !important;
+  color: var(--claude-ivory) !important;
+}
+
+/* Warning button - Terracotta variant */
+.el-button--warning {
+  background-color: var(--claude-coral) !important;
+  border-color: var(--claude-coral) !important;
+  color: var(--claude-ivory) !important;
+}
+
+/* Info button - Focus Blue */
+.el-button--info {
+  background-color: var(--claude-focus) !important;
+  border-color: var(--claude-focus) !important;
+  color: var(--claude-ivory) !important;
+}
+
+/* Text button */
+.el-button--text {
+  color: var(--claude-terracotta) !important;
+}
+
+.el-button--text:hover {
+  color: var(--claude-coral) !important;
+}
+
+/* Tables - Soft warm borders */
+.el-table {
+  border-radius: var(--radius-comfortable) !important;
+  border: 1px solid var(--claude-border-cream) !important;
+  background-color: var(--claude-ivory) !important;
+}
+
+.el-table th.el-table__cell {
+  background-color: #f8f7f3 !important;
+  color: var(--claude-text-secondary) !important;
+  font-weight: 500 !important;
+  font-family: var(--font-sans) !important;
+  border-bottom: 1px solid var(--claude-border-warm) !important;
+}
+
+.el-table td.el-table__cell {
+  border-bottom: 1px solid var(--claude-border-cream) !important;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background-color: #f9f8f4 !important;
+}
+
+.el-table__row:hover > td.el-table__cell {
+  background-color: #f5f4ef !important;
+}
+
+/* Inputs - Generous radius, warm borders */
+.el-input__wrapper {
+  border-radius: var(--radius-generous) !important;
+  background-color: var(--claude-ivory) !important;
+  box-shadow: 0 0 0 1px var(--claude-border-cream) inset !important;
+  padding: 4px 12px !important;
+}
+
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--claude-border-warm) inset !important;
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--claude-focus) inset !important;
+}
+
+.el-input__inner {
+  color: var(--claude-text-primary) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.el-input__inner::placeholder {
+  color: var(--claude-text-tertiary) !important;
+}
+
+/* Select */
+.el-select .el-input__wrapper {
+  border-radius: var(--radius-generous) !important;
+}
+
+.el-select-dropdown {
+  border-radius: var(--radius-comfortable) !important;
+  border: 1px solid var(--claude-border-cream) !important;
+  background-color: var(--claude-ivory) !important;
+}
+
+.el-select-dropdown__item {
+  font-family: var(--font-sans) !important;
+  color: var(--claude-text-primary) !important;
+}
+
+.el-select-dropdown__item:hover {
+  background-color: var(--claude-warm-sand) !important;
+}
+
+.el-select-dropdown__item.selected {
+  color: var(--claude-terracotta) !important;
+  font-weight: 500 !important;
+}
+
+/* Dropdown */
+.el-dropdown-menu {
+  border-radius: var(--radius-comfortable) !important;
+  border: 1px solid var(--claude-border-cream) !important;
+  background-color: var(--claude-ivory) !important;
+  box-shadow: var(--shadow-whisper) !important;
+}
+
+.el-dropdown-menu__item {
+  font-family: var(--font-sans) !important;
+  color: var(--claude-text-primary) !important;
+}
+
+.el-dropdown-menu__item:hover {
+  background-color: var(--claude-warm-sand) !important;
+  color: var(--claude-text-primary) !important;
+}
+
+/* Dialog */
+.el-dialog {
+  border-radius: var(--radius-very) !important;
+  border: 1px solid var(--claude-border-cream) !important;
+  background-color: var(--claude-ivory) !important;
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid var(--claude-border-warm) !important;
+}
+
+.el-dialog__title {
+  font-family: var(--font-serif) !important;
+  font-weight: 500 !important;
+  color: var(--claude-text-primary) !important;
+}
+
+.el-dialog__body {
+  font-family: var(--font-sans) !important;
+  color: var(--claude-text-secondary) !important;
+}
+
+/* Message Box */
+.el-message-box {
+  border-radius: var(--radius-very) !important;
+  border: 1px solid var(--claude-border-cream) !important;
+  background-color: var(--claude-ivory) !important;
+}
+
+/* Tags */
+.el-tag {
+  border-radius: var(--radius-highly) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.12px !important;
+}
+
+.el-tag--primary {
+  background-color: var(--primary-light) !important;
+  border-color: var(--claude-terracotta) !important;
+  color: var(--claude-terracotta) !important;
+}
+
+.el-tag--success {
+  background-color: #e8f0e4 !important;
+  border-color: #7a9a6d !important;
+  color: #7a9a6d !important;
+}
+
+.el-tag--warning {
+  background-color: var(--primary-light) !important;
+  border-color: var(--claude-coral) !important;
+  color: var(--claude-coral) !important;
+}
+
+.el-tag--danger {
+  background-color: #f5e8e6 !important;
+  border-color: var(--claude-error) !important;
+  color: var(--claude-error) !important;
+}
+
+.el-tag--info {
+  background-color: #e8f4fc !important;
+  border-color: var(--claude-focus) !important;
+  color: var(--claude-focus) !important;
+}
+
+/* Pagination */
+.el-pagination {
+  font-family: var(--font-sans) !important;
+}
+
+.el-pagination button,
+.el-pagination .el-pager li {
+  border-radius: var(--radius-subtle) !important;
+  background-color: var(--claude-ivory) !important;
+  color: var(--claude-text-primary) !important;
+}
+
+.el-pagination button:hover,
+.el-pagination .el-pager li:hover {
+  background-color: var(--claude-warm-sand) !important;
+}
+
+.el-pagination .el-pager li.is-active {
+  background-color: var(--claude-terracotta) !important;
+  color: var(--claude-ivory) !important;
+}
+
+/* Form labels */
+.el-form-item__label {
+  font-family: var(--font-sans) !important;
+  color: var(--claude-text-secondary) !important;
+  font-weight: 500 !important;
+}
+
+/* Breadcrumb */
+.el-breadcrumb {
+  font-family: var(--font-sans) !important;
+}
+
+.el-breadcrumb__inner {
+  color: var(--claude-text-secondary) !important;
+}
+
+.el-breadcrumb__inner.is-link:hover {
+  color: var(--claude-terracotta) !important;
+}
+
+.el-breadcrumb__separator {
+  color: var(--claude-text-tertiary) !important;
+}
+
+/* Switch */
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--claude-terracotta) !important;
+  border-color: var(--claude-terracotta) !important;
+}
+
+/* Checkbox */
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: var(--claude-terracotta) !important;
+  border-color: var(--claude-terracotta) !important;
+}
+
+/* Radio */
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--claude-terracotta) !important;
+  border-color: var(--claude-terracotta) !important;
+}
+
+/* Tabs */
+.el-tabs__item {
+  font-family: var(--font-sans) !important;
+  color: var(--claude-text-secondary) !important;
+}
+
+.el-tabs__item:hover {
+  color: var(--claude-terracotta) !important;
+}
+
+.el-tabs__item.is-active {
+  color: var(--claude-terracotta) !important;
+  font-weight: 500 !important;
+}
+
+.el-tabs__active-bar {
+  background-color: var(--claude-terracotta) !important;
+}
+
+/* Loading */
+.el-loading-mask {
+  background-color: rgba(245, 244, 237, 0.9) !important;
+}
+
+.el-loading-spinner .path {
+  stroke: var(--claude-terracotta) !important;
+}
+
+/* Tooltip */
+.el-tooltip__popper {
+  border-radius: var(--radius-comfortable) !important;
+  background-color: var(--claude-dark-surface) !important;
+  color: var(--claude-text-light-on-dark) !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* Progress */
+.el-progress-bar__inner {
+  background-color: var(--claude-terracotta) !important;
+}
+
+/* Empty state */
+.el-empty__description {
+  font-family: var(--font-sans) !important;
+  color: var(--claude-text-tertiary) !important;
+}
+
+/* Stat card specific styling */
+.stat-number {
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--claude-text-primary);
+}
+
+.stat-label {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--claude-text-secondary);
+}
+
+/* Page title styling */
+.page-title {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
+  margin-bottom: 24px;
+}
+
+/* Section title styling */
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--claude-text-primary);
 }

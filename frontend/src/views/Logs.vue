@@ -1,9 +1,7 @@
 <template>
-  <div class="logs-container">
-    <el-card shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span>{{ $t('logs.title') }}</span>
+  <div class="logs-page">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('logs.title') }}</h1>
           <div>
             <el-button type="success" @click="refreshLogs" :loading="loading">
               <el-icon><Refresh /></el-icon>
@@ -64,7 +62,10 @@
                     </span>
                   </div>
                 </div>
-                <el-empty v-if="filteredLogFiles.length === 0 && !loading" :description="$t('logs.noLogFiles')" />
+                <el-empty
+                  v-if="filteredLogFiles.length === 0 && !loading"
+                  :description="$t('logs.noLogFiles')"
+                />
               </div>
             </el-scrollbar>
           </el-card>
@@ -127,9 +128,7 @@
                 <span class="log-timestamp" v-if="entry.timestamp">
                   {{ formatTimestamp(entry.timestamp) }}
                 </span>
-                <span class="log-level" v-if="entry.level">
-                  [{{ entry.level }}]
-                </span>
+                <span class="log-level" v-if="entry.level">[{{ entry.level }}]</span>
                 <span class="log-message">{{ entry.message || entry.raw }}</span>
               </div>
               <el-empty v-if="logEntries.length === 0" :description="$t('logs.noLogContent')" />
@@ -167,9 +166,7 @@ const filteredLogFiles = computed(() => {
     return logFiles.value
   }
   const keyword = fileSearchKeyword.value.toLowerCase()
-  return logFiles.value.filter(file => 
-    file.name.toLowerCase().includes(keyword)
-  )
+  return logFiles.value.filter(file => file.name.toLowerCase().includes(keyword))
 })
 
 // 获取日志文件列表
@@ -231,7 +228,7 @@ const getLogs = async () => {
 }
 
 // 选择文件
-const handleFileSelect = (fileName) => {
+const handleFileSelect = fileName => {
   selectedFile.value = fileName
   getLogs()
 }
@@ -309,7 +306,7 @@ const handleClearLogs = async () => {
 }
 
 // 格式化文件大小
-const formatFileSize = (bytes) => {
+const formatFileSize = bytes => {
   if (!bytes || bytes === 0) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
@@ -318,7 +315,7 @@ const formatFileSize = (bytes) => {
 }
 
 // 格式化时间
-const formatTime = (timeStr) => {
+const formatTime = timeStr => {
   if (!timeStr) return ''
   try {
     const date = new Date(timeStr)
@@ -329,7 +326,7 @@ const formatTime = (timeStr) => {
 }
 
 // 格式化时间戳
-const formatTimestamp = (timestamp) => {
+const formatTimestamp = timestamp => {
   if (!timestamp) return ''
   try {
     const date = new Date(timestamp)
@@ -354,14 +351,34 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.logs-container {
-  padding: 20px;
+.logs-page {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.card-header {
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
 }
 
 .files-header {
@@ -375,23 +392,21 @@ onMounted(() => {
 .file-item {
   padding: 12px;
   margin-bottom: 8px;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
   cursor: pointer;
   transition: all 0.3s ease;
-  background-color: #fff;
+  background-color: var(--claude-ivory);
 }
 
 .file-item:hover {
-  border-color: #409eff;
-  background-color: #f5f7fa;
-  box-shadow: 0 2px 4px rgba(64, 158, 255, 0.1);
+  border-color: var(--claude-terracotta);
+  background-color: #f5f4ef;
 }
 
 .file-item-active {
-  border-color: #409eff;
-  background-color: #ecf5ff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+  border-color: var(--claude-terracotta);
+  background-color: var(--primary-light);
 }
 
 .file-item-header {
@@ -550,7 +565,7 @@ onMounted(() => {
     flex-wrap: wrap;
     gap: 8px;
   }
-  
+
   .log-controls .el-select,
   .log-controls .el-input,
   .log-controls .el-input-number {
@@ -563,49 +578,49 @@ onMounted(() => {
   .logs-container {
     padding: 10px;
   }
-  
+
   .el-row {
     flex-direction: column;
   }
-  
+
   .el-col {
     width: 100% !important;
     margin-bottom: 16px;
   }
-  
+
   .log-content {
     height: 400px;
   }
-  
+
   .files-header {
     display: flex;
     flex-direction: column;
   }
-  
+
   .card-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
-  
+
   .card-header > div {
     width: 100%;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
   }
-  
+
   .log-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .log-controls {
     width: 100%;
     flex-direction: column;
   }
-  
+
   .log-controls > * {
     width: 100% !important;
     margin-right: 0 !important;

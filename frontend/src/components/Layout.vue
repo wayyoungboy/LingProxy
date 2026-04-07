@@ -31,7 +31,7 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          
+
           <!-- 用户信息 -->
           <el-dropdown>
             <span class="user-info">
@@ -92,24 +92,27 @@ const currentLanguageLabel = computed(() => {
 const currentTitle = computed(() => getMenuTitle(route.path, t))
 
 // 处理语言切换
-const handleLanguageChange = (lang) => {
+const handleLanguageChange = lang => {
   locale.value = lang
   localStorage.setItem('lingproxy_locale', lang)
-  
+
   // 更新 Element Plus 的语言
   ElementPlus.locale(lang === 'en' ? en : zhCn)
-  
+
   // 更新页面标题
   const titleKey = route.meta.titleKey || 'common.home'
   document.title = `${t(titleKey)} - LingProxy`
-  
+
   ElMessage.success(t('common.languageSwitched'))
 }
 
 // 监听语言变化，更新 Element Plus 的语言
-watch(() => locale.value, (newLang) => {
-  ElementPlus.locale(newLang === 'en' ? en : zhCn)
-})
+watch(
+  () => locale.value,
+  newLang => {
+    ElementPlus.locale(newLang === 'en' ? en : zhCn)
+  }
+)
 
 // 处理退出登录
 const handleLogout = async () => {
@@ -119,7 +122,7 @@ const handleLogout = async () => {
       cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
-    
+
     localStorage.removeItem(STORAGE_KEYS.TOKEN)
     localStorage.removeItem(STORAGE_KEYS.USER_INFO)
     router.push('/login')
@@ -145,10 +148,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Claude Layout */
 .layout {
   display: flex;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--claude-parchment);
 }
 
 .layout-container {
@@ -156,93 +161,102 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
+/* Claude Header - Ivory with warm borders */
 .layout-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
-  background-color: #fff;
-  border-bottom: 1px solid #e8e8e8;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0 24px;
+  height: 72px !important;
+  background-color: var(--claude-ivory);
+  border-bottom: 1px solid var(--claude-border-warm);
+  z-index: 10;
 }
 
 .header-left {
   flex: 1;
 }
 
+/* Breadcrumb styling */
+:deep(.el-breadcrumb__item) {
+  font-size: 14px;
+  font-family: var(--font-sans);
+}
+
+:deep(.el-breadcrumb__inner.is-link:hover) {
+  color: var(--claude-terracotta);
+}
+
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
-.language-dropdown {
-  cursor: pointer;
-}
-
-.language-selector {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-  cursor: pointer;
-}
-
-.language-selector:hover {
-  background-color: #f5f5f5;
-}
-
-.language-selector .el-icon {
-  margin-right: 6px;
-}
-
-.el-dropdown-menu__item.is-active {
-  color: var(--el-color-primary);
-  font-weight: 500;
-}
-
+/* Claude interactive elements - Warm Sand hover */
+.language-selector,
 .user-info {
   display: flex;
   align-items: center;
+  padding: 8px 16px;
+  border-radius: var(--radius-generous);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
+  color: var(--claude-text-secondary);
+  font-weight: 500;
+  font-family: var(--font-sans);
+  border: 1px solid transparent;
 }
 
+.language-selector:hover,
 .user-info:hover {
-  background-color: #f5f5f5;
+  background-color: var(--claude-warm-sand);
+  color: var(--claude-text-primary);
+  border-color: var(--claude-border-cream);
+  box-shadow: var(--shadow-whisper);
 }
 
+.language-selector .el-icon,
 .user-icon {
+  font-size: 18px;
   margin-right: 8px;
 }
 
+/* Claude Main - Parchment background */
 .layout-main {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
-  background-color: #f5f5f5;
+  background-color: var(--claude-parchment);
 }
 
-/* 过渡动画 */
+/* Page transitions */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.fade-enter-from,
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
 .fade-leave-to {
   opacity: 0;
+  transform: translateY(-10px);
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
-  .layout-container {
-    margin-left: 0;
+  .layout-header {
+    padding: 0 16px;
+  }
+
+  .language-selector span,
+  .user-info span:last-child {
+    display: none;
   }
 }
 </style>

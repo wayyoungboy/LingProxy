@@ -1,36 +1,23 @@
 <template>
-  <div class="tokens-container">
-    <el-card shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span class="page-title">{{ $t('tokens.title') }}</span>
-          <el-button type="primary" @click="handleAddToken">
-            <el-icon><Plus /></el-icon>
-            {{ $t('tokens.createToken') }}
-          </el-button>
-        </div>
-      </template>
-      
-      <!-- API Key列表 -->
-      <el-table
-        v-loading="loading"
-        :data="tokens"
-        style="width: 100%"
-        border
-        stripe
-      >
+  <div class="tokens-page">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('tokens.title') }}</h1>
+      <el-button type="primary" @click="handleAddToken">
+        <el-icon><Plus /></el-icon>
+        {{ $t('tokens.createToken') }}
+      </el-button>
+    </div>
+
+    <!-- API Key Table -->
+    <el-card class="table-card">
+      <el-table v-loading="loading" :data="tokens" style="width: 100%">
         <el-table-column prop="name" :label="$t('tokens.name')" />
         <el-table-column prop="api_key" :label="$t('tokens.tokenValue')" width="280">
           <template #default="scope">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <el-tag>{{ scope.row.prefix || scope.row.api_key || 'ling-...' }}</el-tag>
-              <el-button
-                type="primary"
-                size="small"
-                text
-                @click="handleCopyToken(scope.row)"
-                :title="$t('tokens.copyFullToken')"
-              >
+            <div class="token-cell">
+              <el-tag size="small">{{ scope.row.prefix || scope.row.api_key || 'ling-...' }}</el-tag>
+              <el-button type="primary" size="small" text @click="handleCopyToken(scope.row)">
                 <el-icon><DocumentCopy /></el-icon>
               </el-button>
             </div>
@@ -38,9 +25,7 @@
         </el-table-column>
         <el-table-column prop="status" :label="$t('common.status')" width="100">
           <template #default="scope">
-            <el-tag
-              :type="scope.row.status === 'active' ? 'success' : 'danger'"
-            >
+            <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'" size="small">
               {{ scope.row.status === 'active' ? $t('tokens.active') : $t('tokens.inactive') }}
             </el-tag>
           </template>
@@ -52,7 +37,7 @@
                 v-for="(model, index) in scope.row.allowed_models.slice(0, 2)"
                 :key="index"
                 size="small"
-                style="margin-right: 4px; margin-bottom: 4px"
+                class="model-tag"
               >
                 {{ model }}
               </el-tag>
@@ -60,12 +45,12 @@
                 +{{ scope.row.allowed_models.length - 2 }}
               </el-tag>
             </div>
-            <span v-else style="color: #909399">{{ $t('tokens.allModelsAllowed') }}</span>
+            <span v-else class="text-muted">{{ $t('tokens.allModelsAllowed') }}</span>
           </template>
         </el-table-column>
         <el-table-column :label="$t('tokens.policies')" width="250">
           <template #default="scope">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="policy-tags">
               <el-tag v-if="scope.row.chat_policy_id" size="small" type="success">
                 Chat: {{ getPolicyName(scope.row.chat_policy_id) }}
               </el-tag>
@@ -75,10 +60,10 @@
               <el-tag v-if="scope.row.rerank_policy_id" size="small" type="info">
                 Rerank: {{ getPolicyName(scope.row.rerank_policy_id) }}
               </el-tag>
-              <el-tag v-if="scope.row.policy_id && !scope.row.chat_policy_id && !scope.row.embedding_policy_id && !scope.row.rerank_policy_id" size="small" type="info">
-                {{ getPolicyName(scope.row.policy_id) }}
-              </el-tag>
-              <span v-if="!scope.row.policy_id && !scope.row.chat_policy_id && !scope.row.embedding_policy_id && !scope.row.rerank_policy_id" style="color: #909399; font-size: 12px;">
+              <span
+                v-if="!scope.row.policy_id && !scope.row.chat_policy_id && !scope.row.embedding_policy_id && !scope.row.rerank_policy_id"
+                class="text-muted"
+              >
                 {{ $t('dashboard.notConfigured') }}
               </span>
             </div>
@@ -86,74 +71,44 @@
         </el-table-column>
         <el-table-column prop="last_used_at" :label="$t('tokens.lastUsedAt')" width="180">
           <template #default="scope">
-            {{ scope.row.last_used_at ? formatDate(scope.row.last_used_at) : $t('dashboard.neverUsed') }}
+            <span class="text-caption">
+              {{ scope.row.last_used_at ? formatDate(scope.row.last_used_at) : $t('dashboard.neverUsed') }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column prop="expires_at" :label="$t('tokens.expiresAt')" width="180">
           <template #default="scope">
-            {{ scope.row.expires_at ? formatDate(scope.row.expires_at) : $t('dashboard.neverExpires') }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" :label="$t('common.createdAt')" width="180">
-          <template #default="scope">
-            {{ formatDate(scope.row.created_at) }}
+            <span class="text-caption">
+              {{ scope.row.expires_at ? formatDate(scope.row.expires_at) : $t('dashboard.neverExpires') }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column :label="$t('common.actions')" width="200">
           <template #default="scope">
-            <el-button
-              type="primary"
-              size="small"
-              @click="handleEditToken(scope.row)"
-              style="margin-right: 5px"
-            >
+            <el-button type="primary" size="small" @click="handleEditToken(scope.row)">
               {{ $t('common.edit') }}
             </el-button>
-            <el-button
-              type="warning"
-              size="small"
-              @click="handleResetToken(scope.row.id)"
-              style="margin-right: 5px"
-            >
+            <el-button type="default" size="small" @click="handleResetToken(scope.row.id)">
               {{ $t('tokens.reset') }}
             </el-button>
-            <el-button
-              type="info"
-              size="small"
-              @click="handleSetPolicy(scope.row)"
-              style="margin-right: 5px"
-            >
+            <el-button type="info" size="small" @click="handleSetPolicy(scope.row)">
               {{ $t('tokens.policy') }}
             </el-button>
-            <el-button
-              type="danger"
-              size="small"
-              @click="handleDeleteToken(scope.row.id)"
-            >
+            <el-button type="danger" size="small" @click="handleDeleteToken(scope.row.id)">
               {{ $t('common.delete') }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
-    
-    <!-- 创建/编辑API Key对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="700px"
-    >
-      <el-form
-        ref="tokenFormRef"
-        :model="tokenForm"
-        :rules="tokenRules"
-        label-width="120px"
-      >
+
+    <!-- Create/Edit Dialog -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
+      <el-form ref="tokenFormRef" :model="tokenForm" :rules="tokenRules" label-width="120px">
         <el-form-item :label="$t('tokens.name')" prop="name">
           <el-input v-model="tokenForm.name" :placeholder="$t('tokens.nameRequired')"></el-input>
         </el-form-item>
-        
-        <!-- 模型许可配置 -->
+
         <el-form-item :label="$t('tokens.allowedModels')">
           <el-select
             v-model="tokenForm.allowed_models"
@@ -169,159 +124,38 @@
               :value="model.model_id || model.id"
             />
           </el-select>
-          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-            {{ $t('tokens.allowedModelsHint') }}
-          </div>
+          <div class="form-hint">{{ $t('tokens.allowedModelsHint') }}</div>
         </el-form-item>
-        
-        <!-- 按类型配置策略 -->
+
         <el-divider content-position="left">{{ $t('tokens.typeSpecificPolicies') }}</el-divider>
-        
+
         <el-form-item :label="$t('tokens.chatPolicy')">
-          <el-select
-            v-model="tokenForm.chat_policy_id"
-            :placeholder="$t('tokens.selectPolicyOptional')"
-            style="width: 100%"
-            filterable
-            clearable
-          >
-            <el-option
-              v-for="policy in policies"
-              :key="policy.id"
-              :label="policy.name"
-              :value="policy.id"
-            >
+          <el-select v-model="tokenForm.chat_policy_id" :placeholder="$t('tokens.selectPolicyOptional')" style="width: 100%" filterable clearable>
+            <el-option v-for="policy in policies" :key="policy.id" :label="policy.name" :value="policy.id">
               <span>{{ policy.name }}</span>
-              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+              <span class="option-hint">({{ policy.type }})</span>
             </el-option>
           </el-select>
         </el-form-item>
-        
+
         <el-form-item :label="$t('tokens.embeddingPolicy')">
-          <el-select
-            v-model="tokenForm.embedding_policy_id"
-            :placeholder="$t('tokens.selectPolicyOptional')"
-            style="width: 100%"
-            filterable
-            clearable
-          >
-            <el-option
-              v-for="policy in policies"
-              :key="policy.id"
-              :label="policy.name"
-              :value="policy.id"
-            >
+          <el-select v-model="tokenForm.embedding_policy_id" :placeholder="$t('tokens.selectPolicyOptional')" style="width: 100%" filterable clearable>
+            <el-option v-for="policy in policies" :key="policy.id" :label="policy.name" :value="policy.id">
               <span>{{ policy.name }}</span>
-              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+              <span class="option-hint">({{ policy.type }})</span>
             </el-option>
           </el-select>
         </el-form-item>
-        
+
         <el-form-item :label="$t('tokens.rerankPolicy')">
-          <el-select
-            v-model="tokenForm.rerank_policy_id"
-            :placeholder="$t('tokens.selectPolicyOptional')"
-            style="width: 100%"
-            filterable
-            clearable
-          >
-            <el-option
-              v-for="policy in policies"
-              :key="policy.id"
-              :label="policy.name"
-              :value="policy.id"
-            >
+          <el-select v-model="tokenForm.rerank_policy_id" :placeholder="$t('tokens.selectPolicyOptional')" style="width: 100%" filterable clearable>
+            <el-option v-for="policy in policies" :key="policy.id" :label="policy.name" :value="policy.id">
               <span>{{ policy.name }}</span>
-              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+              <span class="option-hint">({{ policy.type }})</span>
             </el-option>
           </el-select>
         </el-form-item>
-        
-        <el-form-item :label="$t('tokens.imagePolicy')">
-          <el-select
-            v-model="tokenForm.image_policy_id"
-            :placeholder="$t('tokens.selectPolicyOptional')"
-            style="width: 100%"
-            filterable
-            clearable
-          >
-            <el-option
-              v-for="policy in policies"
-              :key="policy.id"
-              :label="policy.name"
-              :value="policy.id"
-            >
-              <span>{{ policy.name }}</span>
-              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item :label="$t('tokens.audioPolicy')">
-          <el-select
-            v-model="tokenForm.audio_policy_id"
-            :placeholder="$t('tokens.selectPolicyOptional')"
-            style="width: 100%"
-            filterable
-            clearable
-          >
-            <el-option
-              v-for="policy in policies"
-              :key="policy.id"
-              :label="policy.name"
-              :value="policy.id"
-            >
-              <span>{{ policy.name }}</span>
-              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item :label="$t('tokens.videoPolicy')">
-          <el-select
-            v-model="tokenForm.video_policy_id"
-            :placeholder="$t('tokens.selectPolicyOptional')"
-            style="width: 100%"
-            filterable
-            clearable
-          >
-            <el-option
-              v-for="policy in policies"
-              :key="policy.id"
-              :label="policy.name"
-              :value="policy.id"
-            >
-              <span>{{ policy.name }}</span>
-              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        
-        <!-- 向后兼容：通用策略 -->
-        <el-divider content-position="left">{{ $t('tokens.generalPolicy') }} ({{ $t('tokens.deprecated') }})</el-divider>
-        <el-form-item :label="$t('tokens.policy')">
-          <el-select
-            v-model="tokenForm.policy_id"
-            :placeholder="$t('tokens.policyOptional')"
-            style="width: 100%"
-            filterable
-            clearable
-          >
-            <el-option
-              v-for="policy in policies"
-              :key="policy.id"
-              :label="policy.name"
-              :value="policy.id"
-            >
-              <span>{{ policy.name }}</span>
-              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
-            </el-option>
-          </el-select>
-          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-            {{ $t('tokens.generalPolicyHint') }}
-          </div>
-        </el-form-item>
-        
+
         <el-form-item :label="$t('tokens.expiresAt')" prop="expires_at">
           <el-date-picker
             v-model="tokenForm.expires_at"
@@ -347,19 +181,12 @@
       </template>
     </el-dialog>
 
-    <!-- API Key显示对话框（创建/重置后显示完整API Key） -->
-    <el-dialog
-      v-model="tokenDisplayVisible"
-      :title="$t('tokens.tokenCreated')"
-      width="600px"
-    >
-      <el-alert
-        type="warning"
-        :closable="false"
-        style="margin-bottom: 20px"
-      >
+    <!-- Token Display Dialog -->
+    <el-dialog v-model="tokenDisplayVisible" :title="$t('tokens.tokenCreated')" width="600px">
+      <el-alert type="warning" :closable="false" style="margin-bottom: 20px">
         <template #title>
-          <strong>{{ $t('tokens.importantNotice') }}：</strong>{{ $t('tokens.tokenDisplayOnce') }}
+          <strong>{{ $t('tokens.importantNotice') }}：</strong>
+          {{ $t('tokens.tokenDisplayOnce') }}
         </template>
       </el-alert>
       <el-form label-width="100px">
@@ -367,11 +194,7 @@
           <el-input :value="newToken.name" readonly></el-input>
         </el-form-item>
         <el-form-item :label="$t('tokens.token')">
-          <el-input
-            :value="newToken.api_key || newToken.token"
-            readonly
-            ref="tokenInputRef"
-          >
+          <el-input :value="newToken.api_key || newToken.token" readonly ref="tokenInputRef">
             <template #append>
               <el-button @click="copyToken">{{ $t('tokens.copyToken') }}</el-button>
             </template>
@@ -379,35 +202,23 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button type="primary" @click="tokenDisplayVisible = false">{{ $t('tokens.iHaveSaved') }}</el-button>
+        <el-button type="primary" @click="tokenDisplayVisible = false">
+          {{ $t('tokens.iHaveSaved') }}
+        </el-button>
       </template>
     </el-dialog>
 
-    <!-- 设置策略对话框 -->
-    <el-dialog
-      v-model="policyDialogVisible"
-      :title="$t('tokens.setTokenPolicy')"
-      width="500px"
-    >
+    <!-- Policy Dialog -->
+    <el-dialog v-model="policyDialogVisible" :title="$t('tokens.setTokenPolicy')" width="500px">
       <el-form label-width="100px">
         <el-form-item :label="$t('tokens.name')">
           <el-input :value="selectedToken?.name" readonly></el-input>
         </el-form-item>
         <el-form-item :label="$t('tokens.selectPolicy')">
-          <el-select
-            v-model="selectedPolicyId"
-            :placeholder="$t('tokens.selectPolicyPlaceholder')"
-            style="width: 100%"
-            filterable
-          >
-            <el-option
-              v-for="policy in policies"
-              :key="policy.id"
-              :label="policy.name"
-              :value="policy.id"
-            >
+          <el-select v-model="selectedPolicyId" :placeholder="$t('tokens.selectPolicyPlaceholder')" style="width: 100%" filterable>
+            <el-option v-for="policy in policies" :key="policy.id" :label="policy.name" :value="policy.id">
               <span>{{ policy.name }}</span>
-              <span style="color: #909399; margin-left: 10px">({{ policy.type }})</span>
+              <span class="option-hint">({{ policy.type }})</span>
             </el-option>
           </el-select>
         </el-form-item>
@@ -429,13 +240,14 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, DocumentCopy } from '@element-plus/icons-vue'
 import api from '../api'
+import { formatDate } from '../utils/index'
 
 const { t } = useI18n()
 
 const loading = ref(false)
 const tokens = ref([])
 const policies = ref([])
-const availableModels = ref([]) // 可用模型列表（用于模型许可配置）
+const availableModels = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const isAddMode = ref(false)
@@ -450,8 +262,8 @@ const selectedPolicyId = ref('')
 const tokenForm = reactive({
   id: '',
   name: '',
-  policy_id: '', // 向后兼容的通用策略
-  allowed_models: [], // 允许使用的模型ID列表
+  policy_id: '',
+  allowed_models: [],
   chat_policy_id: '',
   embedding_policy_id: '',
   rerank_policy_id: '',
@@ -463,13 +275,9 @@ const tokenForm = reactive({
 })
 
 const tokenRules = computed(() => ({
-  name: [
-    { required: true, message: t('tokens.nameRequired'), trigger: 'blur' }
-  ]
-  // policy_id 不再是必填项，因为可以使用按类型策略
+  name: [{ required: true, message: t('tokens.nameRequired'), trigger: 'blur' }]
 }))
 
-// 获取API Key列表
 const getTokenList = async () => {
   try {
     loading.value = true
@@ -485,7 +293,6 @@ const getTokenList = async () => {
   }
 }
 
-// 处理添加API Key
 const handleAddToken = () => {
   isAddMode.value = true
   dialogTitle.value = t('tokens.createToken')
@@ -503,18 +310,12 @@ const handleAddToken = () => {
     expires_at: '',
     status: 'active'
   })
-  // 确保策略列表和模型列表已加载
-  if (policies.value.length === 0) {
-    getPolicyList()
-  }
-  if (availableModels.value.length === 0) {
-    getModelList()
-  }
+  if (policies.value.length === 0) getPolicyList()
+  if (availableModels.value.length === 0) getModelList()
   dialogVisible.value = true
 }
 
-// 处理编辑API Key
-const handleEditToken = (token) => {
+const handleEditToken = token => {
   isAddMode.value = false
   dialogTitle.value = t('tokens.editToken')
   Object.assign(tokenForm, {
@@ -531,23 +332,16 @@ const handleEditToken = (token) => {
     expires_at: token.expires_at || '',
     status: token.status
   })
-  // 确保策略列表和模型列表已加载
-  if (policies.value.length === 0) {
-    getPolicyList()
-  }
-  if (availableModels.value.length === 0) {
-    getModelList()
-  }
+  if (policies.value.length === 0) getPolicyList()
+  if (availableModels.value.length === 0) getModelList()
   dialogVisible.value = true
 }
 
-// 处理保存API Key
 const handleSaveToken = async () => {
   try {
     await tokenFormRef.value.validate()
-    
+
     if (isAddMode.value) {
-      // 创建API Key（包含所有配置）
       const response = await api.createAPIKey({
         name: tokenForm.name,
         expires_at: tokenForm.expires_at || undefined,
@@ -561,43 +355,21 @@ const handleSaveToken = async () => {
       })
       if (response && response.data) {
         newToken.value = response.data
-        // 向后兼容：如果设置了通用策略，也设置它
-        if (tokenForm.policy_id) {
-          try {
-            await api.setAPIKeyPolicy(response.data.id, {
-              policy_id: tokenForm.policy_id
-            })
-          } catch (error) {
-            console.error('设置通用策略失败:', error)
-            ElMessage.warning(t('tokens.createSuccessButPolicyFailed'))
-          }
-        }
         dialogVisible.value = false
         tokenDisplayVisible.value = true
         ElMessage.success(t('tokens.createSuccess'))
         getTokenList()
       }
     } else {
-      // 更新API Key（包含所有配置）
       const updateData = {
         name: tokenForm.name,
-        status: tokenForm.status
+        status: tokenForm.status,
+        allowed_models: tokenForm.allowed_models || []
       }
-      
-      // 只有提供了值才添加到更新数据中
-      if (tokenForm.allowed_models && tokenForm.allowed_models.length > 0) {
-        updateData.allowed_models = tokenForm.allowed_models
-      } else {
-        updateData.allowed_models = []
-      }
-      
       if (tokenForm.chat_policy_id) updateData.chat_policy_id = tokenForm.chat_policy_id
       if (tokenForm.embedding_policy_id) updateData.embedding_policy_id = tokenForm.embedding_policy_id
       if (tokenForm.rerank_policy_id) updateData.rerank_policy_id = tokenForm.rerank_policy_id
-      if (tokenForm.image_policy_id) updateData.image_policy_id = tokenForm.image_policy_id
-      if (tokenForm.audio_policy_id) updateData.audio_policy_id = tokenForm.audio_policy_id
-      if (tokenForm.video_policy_id) updateData.video_policy_id = tokenForm.video_policy_id
-      
+
       await api.updateAPIKey(tokenForm.id, updateData)
       ElMessage.success(t('tokens.updateSuccess'))
       dialogVisible.value = false
@@ -609,19 +381,13 @@ const handleSaveToken = async () => {
   }
 }
 
-// 处理删除API Key
-const handleDeleteToken = async (id) => {
+const handleDeleteToken = async id => {
   try {
-    await ElMessageBox.confirm(
-      t('tokens.deleteConfirmMessage'),
-      t('tokens.deleteConfirm'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'danger'
-      }
-    )
-    
+    await ElMessageBox.confirm(t('tokens.deleteConfirmMessage'), t('tokens.deleteConfirm'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      type: 'danger'
+    })
     await api.deleteAPIKey(id)
     ElMessage.success(t('tokens.deleteSuccess'))
     getTokenList()
@@ -633,19 +399,13 @@ const handleDeleteToken = async (id) => {
   }
 }
 
-// 处理重置API Key
-const handleResetToken = async (id) => {
+const handleResetToken = async id => {
   try {
-    await ElMessageBox.confirm(
-      t('tokens.resetConfirmMessage'),
-      t('tokens.resetConfirm'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    )
-    
+    await ElMessageBox.confirm(t('tokens.resetConfirmMessage'), t('tokens.resetConfirm'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning'
+    })
     const response = await api.resetAPIKey(id)
     if (response && response.data) {
       newToken.value = response.data
@@ -661,7 +421,6 @@ const handleResetToken = async (id) => {
   }
 }
 
-// 复制Token（用于创建/重置对话框）
 const copyToken = () => {
   if (tokenInputRef.value) {
     const input = tokenInputRef.value.$el.querySelector('input')
@@ -673,10 +432,8 @@ const copyToken = () => {
   }
 }
 
-// 复制Token（用于列表）
-const handleCopyToken = async (token) => {
+const handleCopyToken = async token => {
   try {
-    // 如果列表中没有完整API Key，则从API获取
     let tokenValue = token.api_key || token.token
     if (!tokenValue || tokenValue.includes('...')) {
       const response = await api.getAPIKey(token.id)
@@ -687,13 +444,10 @@ const handleCopyToken = async (token) => {
         return
       }
     }
-    
-    // 复制到剪贴板
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(tokenValue)
       ElMessage.success(t('tokens.tokenCopied'))
     } else {
-      // 降级方案
       const textArea = document.createElement('textarea')
       textArea.value = tokenValue
       textArea.style.position = 'fixed'
@@ -710,35 +464,22 @@ const handleCopyToken = async (token) => {
   }
 }
 
-// 格式化日期
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  return date.toLocaleString('zh-CN')
-}
-
-// 获取策略名称
-const getPolicyName = (policyId) => {
+const getPolicyName = policyId => {
   const policy = policies.value.find(p => p.id === policyId)
   return policy ? policy.name : policyId
 }
 
-// 处理设置策略
-const handleSetPolicy = (token) => {
+const handleSetPolicy = token => {
   selectedToken.value = token
   selectedPolicyId.value = token.policy_id || ''
   policyDialogVisible.value = true
 }
 
-// 保存策略
 const handleSavePolicy = async () => {
   if (!selectedToken.value) return
-  
   try {
     if (selectedPolicyId.value) {
-      await api.setAPIKeyPolicy(selectedToken.value.id, {
-        policy_id: selectedPolicyId.value
-      })
+      await api.setAPIKeyPolicy(selectedToken.value.id, { policy_id: selectedPolicyId.value })
       ElMessage.success(t('tokens.policySetSuccess'))
     } else {
       await api.removeAPIKeyPolicy(selectedToken.value.id)
@@ -752,10 +493,8 @@ const handleSavePolicy = async () => {
   }
 }
 
-// 移除策略
 const handleRemovePolicy = async () => {
   if (!selectedToken.value) return
-  
   try {
     await api.removeAPIKeyPolicy(selectedToken.value.id)
     ElMessage.success(t('tokens.policyRemoved'))
@@ -767,7 +506,6 @@ const handleRemovePolicy = async () => {
   }
 }
 
-// 获取策略列表
 const getPolicyList = async () => {
   try {
     const response = await api.getPolicies()
@@ -779,25 +517,19 @@ const getPolicyList = async () => {
   }
 }
 
-// 获取模型列表（用于模型许可配置）
 const getModelList = async () => {
   try {
     const response = await api.getModels()
     if (response && response.data) {
-      // 从模型列表中提取唯一的模型ID
       const models = Array.isArray(response.data) ? response.data : []
-      // 使用 model_id 或 id 作为唯一标识
       availableModels.value = models.map(m => ({
         id: m.model_id || m.id,
         model_id: m.model_id || m.id,
         name: m.name || m.model_id || m.id
       }))
-      // 去重
       const seen = new Set()
       availableModels.value = availableModels.value.filter(m => {
-        if (seen.has(m.model_id)) {
-          return false
-        }
+        if (seen.has(m.model_id)) return false
         seen.add(m.model_id)
         return true
       })
@@ -807,7 +539,6 @@ const getModelList = async () => {
   }
 }
 
-// 组件挂载时获取数据
 onMounted(() => {
   getTokenList()
   getPolicyList()
@@ -816,25 +547,82 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.tokens-container {
-  padding: 0;
+.tokens-page {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.card-header {
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
+}
+
+.table-card {
+  margin-bottom: 24px;
+}
+
+.token-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-tag {
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.policy-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.text-muted {
+  color: var(--claude-text-tertiary);
+  font-size: 12px;
+}
+
+.text-caption {
+  font-size: 14px;
+  color: var(--claude-text-secondary);
+}
+
+.form-hint {
+  font-size: 12px;
+  color: var(--claude-text-tertiary);
+  margin-top: 4px;
+}
+
+.option-hint {
+  color: var(--claude-text-tertiary);
+  margin-left: 10px;
 }
 
 .dialog-footer {
   width: 100%;
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
 }
 </style>

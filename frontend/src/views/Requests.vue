@@ -1,12 +1,11 @@
 <template>
-  <div class="requests-container">
-    <el-card shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span class="page-title">{{ $t('requests.title') }}</span>
-        </div>
-      </template>
-      
+  <div class="requests-page">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('requests.title') }}</h1>
+    </div>
+
+    <el-card class="filter-card">
+
       <el-form :inline="true" :model="searchForm" class="search-form mb-4">
         <el-form-item :label="$t('requests.path')">
           <el-input v-model="searchForm.path" :placeholder="$t('requests.pathPlaceholder')" />
@@ -32,14 +31,8 @@
           <el-button @click="resetForm">{{ $t('common.reset') }}</el-button>
         </el-form-item>
       </el-form>
-      
-      <el-table 
-        :data="requestsList" 
-        style="width: 100%" 
-        v-loading="loading"
-        border
-        stripe
-      >
+
+      <el-table :data="requestsList" style="width: 100%" v-loading="loading" border stripe>
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="endpoint" :label="$t('requests.path')" />
         <el-table-column prop="method" :label="$t('requests.method')" width="100" />
@@ -65,7 +58,7 @@
           </template>
         </el-table-column>
       </el-table>
-      
+
       <div class="pagination-container mt-4">
         <el-pagination
           v-model:current-page="pagination.current"
@@ -78,27 +71,39 @@
         />
       </div>
     </el-card>
-    
+
     <!-- 请求详情对话框 -->
-    <el-dialog
-      v-model="detailDialogVisible"
-      :title="$t('requests.detailTitle')"
-      width="800px"
-    >
+    <el-dialog v-model="detailDialogVisible" :title="$t('requests.detailTitle')" width="800px">
       <div v-if="currentRequest" class="request-detail">
         <el-descriptions :column="1" border>
-          <el-descriptions-item :label="$t('requests.requestId')">{{ currentRequest.id }}</el-descriptions-item>
-          <el-descriptions-item :label="$t('dashboard.userId')">{{ currentRequest.user_id || '-' }}</el-descriptions-item>
-          <el-descriptions-item :label="$t('requests.path')">{{ currentRequest.endpoint }}</el-descriptions-item>
-          <el-descriptions-item :label="$t('requests.method')">{{ currentRequest.method }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.requestId')">
+            {{ currentRequest.id }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="$t('dashboard.userId')">
+            {{ currentRequest.user_id || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.path')">
+            {{ currentRequest.endpoint }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.method')">
+            {{ currentRequest.method }}
+          </el-descriptions-item>
           <el-descriptions-item :label="$t('common.status')">
             <el-tag :type="currentRequest.status === 'success' ? 'success' : 'danger'">
-              {{ currentRequest.status === 'success' ? $t('requests.success') : $t('requests.failed') }}
+              {{
+                currentRequest.status === 'success' ? $t('requests.success') : $t('requests.failed')
+              }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item :label="$t('requests.duration')">{{ currentRequest.duration }}ms</el-descriptions-item>
-          <el-descriptions-item :label="$t('requests.tokens')">{{ currentRequest.tokens || 0 }}</el-descriptions-item>
-          <el-descriptions-item :label="$t('requests.requestTime')">{{ formatDate(currentRequest.created_at) }}</el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.duration')">
+            {{ currentRequest.duration }}ms
+          </el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.tokens')">
+            {{ currentRequest.tokens || 0 }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="$t('requests.requestTime')">
+            {{ formatDate(currentRequest.created_at) }}
+          </el-descriptions-item>
         </el-descriptions>
       </div>
       <template #footer>
@@ -142,16 +147,16 @@ const getRequests = async () => {
     const params = {
       limit: 1000
     }
-    
+
     // 添加搜索参数
     if (searchForm.path) {
       params.endpoint = searchForm.path
     }
-    
+
     if (searchForm.status) {
       params.status = searchForm.status
     }
-    
+
     // 时间范围参数
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
       const start = new Date(searchForm.dateRange[0])
@@ -160,7 +165,7 @@ const getRequests = async () => {
       params.start_time = start.toISOString()
       params.end_time = end.toISOString()
     }
-    
+
     const response = await api.getRequests(params)
     if (response && response.data) {
       const allRequests = response.data
@@ -183,7 +188,7 @@ const getRequests = async () => {
   }
 }
 
-const viewRequestDetail = async (request) => {
+const viewRequestDetail = async request => {
   try {
     const response = await api.getRequestDetail(request.id)
     currentRequest.value = response.data
@@ -202,17 +207,17 @@ const resetForm = () => {
   getRequests()
 }
 
-const handleSizeChange = (size) => {
+const handleSizeChange = size => {
   pagination.size = size
   getRequests()
 }
 
-const handleCurrentChange = (current) => {
+const handleCurrentChange = current => {
   pagination.current = current
   getRequests()
 }
 
-const formatDate = (dateString) => {
+const formatDate = dateString => {
   if (!dateString) return '-'
   const date = new Date(dateString)
   return date.toLocaleString('zh-CN')
@@ -224,27 +229,46 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.requests-container {
-  padding: 20px;
+.requests-page {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.card-header {
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
+}
+
+.filter-card {
+  margin-bottom: 16px;
 }
 
 .search-form {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
-.pagination-container {
+.pagination {
+  margin-top: 16px;
   display: flex;
   justify-content: flex-end;
 }
@@ -252,6 +276,7 @@ onMounted(() => {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
 }
 
 .request-detail {
@@ -261,8 +286,13 @@ onMounted(() => {
 
 pre {
   margin: 0;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.text-caption {
+  font-size: 14px;
+  color: var(--claude-text-secondary);
 }
 </style>

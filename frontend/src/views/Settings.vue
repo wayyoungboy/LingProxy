@@ -1,22 +1,24 @@
 <template>
-  <div class="settings-container">
-    <el-card shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span class="page-title">{{ $t('settings.title') }}</span>
-          <el-button type="primary" @click="saveSettings">
-            <el-icon><Check /></el-icon>
-            {{ $t('settings.saveSettings') }}
-          </el-button>
-        </div>
-      </template>
-      
+  <div class="settings-page">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('settings.title') }}</h1>
+      <el-button type="primary" @click="saveSettings">
+        <el-icon><Check /></el-icon>
+        {{ $t('settings.saveSettings') }}
+      </el-button>
+    </div>
+
+    <el-card>
+
       <el-tabs v-model="activeTab" class="mt-4">
         <!-- 基本设置 -->
         <el-tab-pane :label="$t('settings.basicSettings')" name="basic">
           <el-form :model="settingsForm.basic" label-width="150px">
             <el-form-item :label="$t('settings.systemName')">
-              <el-input v-model="settingsForm.basic.system_name" :placeholder="$t('settings.systemNamePlaceholder')" />
+              <el-input
+                v-model="settingsForm.basic.system_name"
+                :placeholder="$t('settings.systemNamePlaceholder')"
+              />
             </el-form-item>
             <el-form-item :label="$t('settings.systemVersion')">
               <el-input v-model="settingsForm.basic.system_version" disabled />
@@ -25,7 +27,10 @@
               <el-input v-model="settingsForm.basic.environment" disabled />
             </el-form-item>
             <el-form-item :label="$t('settings.apiUrl')">
-              <el-input v-model="settingsForm.basic.api_url" :placeholder="$t('settings.apiUrlPlaceholder')" />
+              <el-input
+                v-model="settingsForm.basic.api_url"
+                :placeholder="$t('settings.apiUrlPlaceholder')"
+              />
             </el-form-item>
             <el-form-item :label="$t('settings.port')">
               <el-input-number v-model="settingsForm.basic.port" :min="1" :max="65535" />
@@ -34,7 +39,10 @@
               </el-alert>
             </el-form-item>
             <el-form-item :label="$t('settings.host')">
-              <el-input v-model="settingsForm.basic.host" :placeholder="$t('settings.hostPlaceholder')" />
+              <el-input
+                v-model="settingsForm.basic.host"
+                :placeholder="$t('settings.hostPlaceholder')"
+              />
               <el-alert type="warning" :closable="false" style="margin-top: 10px">
                 {{ $t('settings.hostChangeWarning') }}
               </el-alert>
@@ -44,7 +52,7 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        
+
         <!-- 缓存设置 -->
         <el-tab-pane :label="$t('settings.cacheSettings')" name="cache">
           <el-form :model="settingsForm.cache" label-width="150px">
@@ -52,7 +60,11 @@
               <el-switch v-model="settingsForm.cache.enabled" />
             </el-form-item>
             <el-form-item :label="$t('settings.cacheType')">
-              <el-select v-model="settingsForm.cache.type" :placeholder="$t('settings.selectCacheType')" disabled>
+              <el-select
+                v-model="settingsForm.cache.type"
+                :placeholder="$t('settings.selectCacheType')"
+                disabled
+              >
                 <el-option :label="$t('settings.memoryCache')" value="memory" />
               </el-select>
             </el-form-item>
@@ -64,7 +76,7 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        
+
         <!-- 限流设置 -->
         <el-tab-pane :label="$t('settings.rateLimitSettings')" name="rateLimit">
           <el-form :model="settingsForm.rate_limit" label-width="150px">
@@ -72,14 +84,18 @@
               <el-switch v-model="settingsForm.rate_limit.enabled" />
             </el-form-item>
             <el-form-item :label="$t('settings.requestsPerMinute')">
-              <el-input-number v-model="settingsForm.rate_limit.requests_per_minute" :min="1" :max="10000" />
+              <el-input-number
+                v-model="settingsForm.rate_limit.requests_per_minute"
+                :min="1"
+                :max="10000"
+              />
             </el-form-item>
             <el-form-item :label="$t('settings.concurrencyLimit')">
               <el-input-number v-model="settingsForm.rate_limit.concurrency" :min="1" :max="1000" />
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        
+
         <!-- 安全设置 -->
         <el-tab-pane :label="$t('settings.securitySettings')" name="security">
           <el-form :model="settingsForm.security" label-width="150px">
@@ -91,9 +107,9 @@
             </el-form-item>
             <el-divider />
             <el-form-item :label="$t('settings.jwtSecret')">
-              <el-input 
-                v-model="settingsForm.security.jwt_secret" 
-                type="password" 
+              <el-input
+                v-model="settingsForm.security.jwt_secret"
+                type="password"
                 :placeholder="$t('settings.jwtSecretPlaceholder')"
                 show-password
               />
@@ -102,11 +118,17 @@
               </el-alert>
             </el-form-item>
             <el-form-item :label="$t('settings.tokenExpiration')">
-              <el-input-number v-model="settingsForm.security.token_expiration" :min="1" :max="720" />
+              <el-input-number
+                v-model="settingsForm.security.token_expiration"
+                :min="1"
+                :max="720"
+              />
             </el-form-item>
             <el-form-item :label="$t('settings.enableHTTPS')">
               <el-switch v-model="settingsForm.security.https_enabled" disabled />
-              <span style="color: #909399; margin-left: 10px">{{ $t('settings.notImplemented') }}</span>
+              <span style="color: #909399; margin-left: 10px">
+                {{ $t('settings.notImplemented') }}
+              </span>
             </el-form-item>
             <el-divider>{{ $t('settings.adminPassword') }}</el-divider>
             <el-form-item :label="$t('settings.currentPassword')">
@@ -147,9 +169,9 @@
               <el-switch v-model="settingsForm.security.cors.enabled" />
             </el-form-item>
             <el-form-item :label="$t('settings.allowedOrigins')">
-              <el-select 
-                v-model="settingsForm.security.cors.allow_origins" 
-                multiple 
+              <el-select
+                v-model="settingsForm.security.cors.allow_origins"
+                multiple
                 :placeholder="$t('settings.selectAllowedOrigins')"
                 style="width: 100%"
               >
@@ -157,9 +179,9 @@
               </el-select>
             </el-form-item>
             <el-form-item :label="$t('settings.allowedMethods')">
-              <el-select 
-                v-model="settingsForm.security.cors.allow_methods" 
-                multiple 
+              <el-select
+                v-model="settingsForm.security.cors.allow_methods"
+                multiple
                 :placeholder="$t('settings.selectAllowedMethods')"
                 style="width: 100%"
               >
@@ -171,9 +193,9 @@
               </el-select>
             </el-form-item>
             <el-form-item :label="$t('settings.allowedHeaders')">
-              <el-select 
-                v-model="settingsForm.security.cors.allow_headers" 
-                multiple 
+              <el-select
+                v-model="settingsForm.security.cors.allow_headers"
+                multiple
                 :placeholder="$t('settings.selectAllowedHeaders')"
                 style="width: 100%"
               >
@@ -182,12 +204,15 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        
+
         <!-- 日志设置 -->
         <el-tab-pane :label="$t('settings.logSettings')" name="log">
           <el-form :model="settingsForm.log" label-width="150px">
             <el-form-item :label="$t('settings.logLevel')">
-              <el-select v-model="settingsForm.log.level" :placeholder="$t('settings.selectLogLevel')">
+              <el-select
+                v-model="settingsForm.log.level"
+                :placeholder="$t('settings.selectLogLevel')"
+              >
                 <el-option label="DEBUG" value="debug" />
                 <el-option label="INFO" value="info" />
                 <el-option label="WARN" value="warn" />
@@ -195,20 +220,32 @@
               </el-select>
             </el-form-item>
             <el-form-item :label="$t('settings.logFormat')">
-              <el-select v-model="settingsForm.log.format" :placeholder="$t('settings.selectLogFormat')">
+              <el-select
+                v-model="settingsForm.log.format"
+                :placeholder="$t('settings.selectLogFormat')"
+              >
                 <el-option :label="$t('settings.json')" value="json" />
                 <el-option :label="$t('settings.text')" value="text" />
               </el-select>
             </el-form-item>
             <el-form-item :label="$t('settings.logOutput')">
-              <el-select v-model="settingsForm.log.output" :placeholder="$t('settings.selectLogOutput')">
+              <el-select
+                v-model="settingsForm.log.output"
+                :placeholder="$t('settings.selectLogOutput')"
+              >
                 <el-option :label="$t('settings.stdout')" value="stdout" />
                 <el-option :label="$t('settings.file')" value="file" />
                 <el-option :label="$t('settings.both')" value="both" />
               </el-select>
             </el-form-item>
-            <el-form-item :label="$t('settings.logFilePath')" v-if="settingsForm.log.output === 'file' || settingsForm.log.output === 'both'">
-              <el-input v-model="settingsForm.log.file_path" :placeholder="$t('settings.logFilePathPlaceholder')" />
+            <el-form-item
+              :label="$t('settings.logFilePath')"
+              v-if="settingsForm.log.output === 'file' || settingsForm.log.output === 'both'"
+            >
+              <el-input
+                v-model="settingsForm.log.file_path"
+                :placeholder="$t('settings.logFilePathPlaceholder')"
+              />
             </el-form-item>
             <el-form-item :label="$t('settings.maxFileSize')">
               <el-input-number v-model="settingsForm.log.max_size" :min="1" :max="1024" />
@@ -224,12 +261,15 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        
+
         <!-- 负载均衡设置 -->
         <el-tab-pane :label="$t('settings.loadBalancerSettings')" name="loadBalancer">
           <el-form :model="settingsForm.load_balancer" label-width="150px">
             <el-form-item :label="$t('settings.defaultStrategy')">
-              <el-select v-model="settingsForm.load_balancer.default_strategy" :placeholder="$t('settings.selectDefaultStrategy')">
+              <el-select
+                v-model="settingsForm.load_balancer.default_strategy"
+                :placeholder="$t('settings.selectDefaultStrategy')"
+              >
                 <el-option :label="$t('settings.roundRobin')" value="round_robin" />
                 <el-option :label="$t('settings.leastConnections')" value="least_connections" />
                 <el-option :label="$t('settings.weighted')" value="weighted" />
@@ -240,17 +280,29 @@
               <el-switch v-model="settingsForm.load_balancer.health_check.enabled" />
             </el-form-item>
             <el-form-item :label="$t('settings.checkInterval')">
-              <el-input-number v-model="settingsForm.load_balancer.health_check.interval" :min="5" :max="300" />
+              <el-input-number
+                v-model="settingsForm.load_balancer.health_check.interval"
+                :min="5"
+                :max="300"
+              />
             </el-form-item>
             <el-form-item :label="$t('settings.timeout')">
-              <el-input-number v-model="settingsForm.load_balancer.health_check.timeout" :min="1" :max="60" />
+              <el-input-number
+                v-model="settingsForm.load_balancer.health_check.timeout"
+                :min="1"
+                :max="60"
+              />
             </el-form-item>
             <el-form-item :label="$t('settings.maxFailures')">
-              <el-input-number v-model="settingsForm.load_balancer.health_check.max_failures" :min="1" :max="10" />
+              <el-input-number
+                v-model="settingsForm.load_balancer.health_check.max_failures"
+                :min="1"
+                :max="10"
+              />
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        
+
         <!-- Provider设置 -->
         <el-tab-pane :label="$t('settings.providerSettings')" name="provider">
           <el-form :model="settingsForm.provider" label-width="150px">
@@ -273,33 +325,61 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        
+
         <!-- 系统信息 -->
         <el-tab-pane :label="$t('settings.systemInfo')" name="info">
           <el-descriptions :column="2" border class="mt-4">
-            <el-descriptions-item :label="$t('settings.systemInfoName')">{{ systemInfo.system_name }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.systemInfoVersion')">{{ systemInfo.system_version }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.systemInfoEnvironment')">{{ systemInfo.environment }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.goVersion')">{{ systemInfo.go_version }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.os')">{{ systemInfo.os }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.arch')">{{ systemInfo.arch }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.startTime')">{{ formatTime(systemInfo.start_time) }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.currentTime')">{{ formatTime(systemInfo.current_time) }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.uptime')">{{ systemInfo.uptime }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.cpuCores')">{{ systemInfo.cpu_cores }}</el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.memoryUsage')">
-              {{ formatBytes(systemInfo.memory_used) }} / {{ formatBytes(systemInfo.memory_total) }} 
-              ({{ formatPercentage(systemInfo.memory_usage) }})
+            <el-descriptions-item :label="$t('settings.systemInfoName')">
+              {{ systemInfo.system_name }}
             </el-descriptions-item>
-            <el-descriptions-item :label="$t('settings.diskUsage')" v-if="systemInfo.disk_total > 0">
-              {{ formatBytes(systemInfo.disk_used) }} / {{ formatBytes(systemInfo.disk_total) }} 
-              ({{ formatPercentage(systemInfo.disk_usage) }})
+            <el-descriptions-item :label="$t('settings.systemInfoVersion')">
+              {{ systemInfo.system_version }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.systemInfoEnvironment')">
+              {{ systemInfo.environment }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.goVersion')">
+              {{ systemInfo.go_version }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.os')">
+              {{ systemInfo.os }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.arch')">
+              {{ systemInfo.arch }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.startTime')">
+              {{ formatTime(systemInfo.start_time) }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.currentTime')">
+              {{ formatTime(systemInfo.current_time) }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.uptime')">
+              {{ systemInfo.uptime }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.cpuCores')">
+              {{ systemInfo.cpu_cores }}
+            </el-descriptions-item>
+            <el-descriptions-item :label="$t('settings.memoryUsage')">
+              {{ formatBytes(systemInfo.memory_used) }} /
+              {{ formatBytes(systemInfo.memory_total) }} ({{
+                formatPercentage(systemInfo.memory_usage)
+              }})
+            </el-descriptions-item>
+            <el-descriptions-item
+              :label="$t('settings.diskUsage')"
+              v-if="systemInfo.disk_total > 0"
+            >
+              {{ formatBytes(systemInfo.disk_used) }} / {{ formatBytes(systemInfo.disk_total) }} ({{
+                formatPercentage(systemInfo.disk_usage)
+              }})
             </el-descriptions-item>
           </el-descriptions>
-          <el-button type="primary" class="mt-4" @click="refreshSystemInfo">{{ $t('settings.refreshSystemInfo') }}</el-button>
+          <el-button type="primary" class="mt-4" @click="refreshSystemInfo">
+            {{ $t('settings.refreshSystemInfo') }}
+          </el-button>
         </el-tab-pane>
       </el-tabs>
-      
+
       <!-- 重启提示对话框 -->
       <el-dialog
         v-model="restartDialogVisible"
@@ -394,7 +474,7 @@ const settingsForm = reactive({
     timeout: 30,
     max_retries: 3,
     retry_delay: 1
-  },
+  }
 })
 
 const systemInfo = reactive({
@@ -473,7 +553,7 @@ const saveSettings = async () => {
   try {
     // 准备更新请求（只发送需要更新的字段）
     const updateData = {}
-    
+
     if (settingsForm.basic.system_name) {
       updateData.basic = {
         system_name: settingsForm.basic.system_name,
@@ -482,7 +562,7 @@ const saveSettings = async () => {
         debug_mode: settingsForm.basic.debug_mode
       }
     }
-    
+
     if (settingsForm.cache) {
       updateData.cache = {
         enabled: settingsForm.cache.enabled,
@@ -490,7 +570,7 @@ const saveSettings = async () => {
         size_limit: settingsForm.cache.size_limit
       }
     }
-    
+
     if (settingsForm.rate_limit) {
       updateData.rate_limit = {
         enabled: settingsForm.rate_limit.enabled,
@@ -498,7 +578,7 @@ const saveSettings = async () => {
         concurrency: settingsForm.rate_limit.concurrency
       }
     }
-    
+
     if (settingsForm.security) {
       updateData.security = {
         auth_enabled: settingsForm.security.auth_enabled,
@@ -510,15 +590,15 @@ const saveSettings = async () => {
         updateData.security.jwt_secret = settingsForm.security.jwt_secret
       }
     }
-    
+
     if (settingsForm.log) {
       updateData.log = settingsForm.log
     }
-    
+
     if (settingsForm.load_balancer) {
       updateData.load_balancer = settingsForm.load_balancer
     }
-    
+
     if (settingsForm.provider) {
       updateData.provider = {
         timeout: settingsForm.provider.timeout,
@@ -526,14 +606,14 @@ const saveSettings = async () => {
         retry_delay: settingsForm.provider.retry_delay
       }
     }
-    
+
     const response = await api.updateSettings(updateData)
-    
+
     if (response && response.requires_restart) {
       restartRequiredFields.value = response.restart_required_fields || []
       restartDialogVisible.value = true
     }
-    
+
     ElMessage.success(t('settings.saveSettingsSuccess'))
   } catch (error) {
     console.error('保存设置失败:', error)
@@ -556,7 +636,7 @@ const refreshSystemInfo = async () => {
 }
 
 // 格式化时间
-const formatTime = (timeStr) => {
+const formatTime = timeStr => {
   if (!timeStr) return ''
   try {
     const date = new Date(timeStr)
@@ -567,16 +647,16 @@ const formatTime = (timeStr) => {
 }
 
 // 格式化字节
-const formatBytes = (bytes) => {
+const formatBytes = bytes => {
   if (!bytes || bytes === 0) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
 // 格式化百分比
-const formatPercentage = (value) => {
+const formatPercentage = value => {
   if (typeof value !== 'number' || isNaN(value)) return '0.00%'
   return value.toFixed(2) + '%'
 }
@@ -595,35 +675,35 @@ const updateAdminPassword = async () => {
     ElMessage.warning(t('settings.currentPasswordRequired'))
     return
   }
-  
+
   if (!passwordForm.newPassword) {
     ElMessage.warning(t('settings.newPasswordRequired'))
     return
   }
-  
+
   if (passwordForm.newPassword.length < 6) {
     ElMessage.warning(t('settings.newPasswordMinLength'))
     return
   }
-  
+
   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
     ElMessage.warning(t('settings.passwordMismatch'))
     return
   }
-  
+
   if (passwordForm.oldPassword === passwordForm.newPassword) {
     ElMessage.warning(t('settings.passwordSameAsOld'))
     return
   }
-  
+
   try {
     passwordUpdating.value = true
-    
+
     await api.updateAdminPassword({
       old_password: passwordForm.oldPassword,
       new_password: passwordForm.newPassword
     })
-    
+
     ElMessage.success(t('settings.passwordUpdateSuccess'))
     resetPasswordForm()
   } catch (error) {

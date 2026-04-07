@@ -75,36 +75,70 @@
       </el-form>
 
       <!-- Token使用统计表格 -->
-      <el-table 
-        :data="usageList" 
-        style="width: 100%" 
+      <el-table
+        :data="usageList"
+        style="width: 100%"
         v-loading="loading"
         :default-sort="{ prop: 'total_tokens', order: 'descending' }"
         stripe
       >
-        <el-table-column prop="resource_name" :label="$t('llmResourceUsage.resourceName')" width="200" show-overflow-tooltip />
-        <el-table-column prop="resource_type" :label="$t('llmResourceUsage.resourceType')" width="120">
+        <el-table-column
+          prop="resource_name"
+          :label="$t('llmResourceUsage.resourceName')"
+          width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          prop="resource_type"
+          :label="$t('llmResourceUsage.resourceType')"
+          width="120"
+        >
           <template #default="scope">
             <el-tag type="info">{{ getTypeLabel(scope.row.resource_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="model" :label="$t('llmResourceUsage.modelId')" width="180" show-overflow-tooltip />
-        <el-table-column prop="total_tokens" :label="$t('llmResourceUsage.tokenUsage')" width="150" sortable>
+        <el-table-column
+          prop="model"
+          :label="$t('llmResourceUsage.modelId')"
+          width="180"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          prop="total_tokens"
+          :label="$t('llmResourceUsage.tokenUsage')"
+          width="150"
+          sortable
+        >
           <template #default="scope">
             <span class="token-value">{{ formatNumber(scope.row.total_tokens || 0) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="total_requests" :label="$t('llmResourceUsage.requestCount')" width="120" sortable>
+        <el-table-column
+          prop="total_requests"
+          :label="$t('llmResourceUsage.requestCount')"
+          width="120"
+          sortable
+        >
           <template #default="scope">
             {{ formatNumber(scope.row.total_requests || 0) }}
           </template>
         </el-table-column>
-        <el-table-column prop="success_requests" :label="$t('llmResourceUsage.successCount')" width="120">
+        <el-table-column
+          prop="success_requests"
+          :label="$t('llmResourceUsage.successCount')"
+          width="120"
+        >
           <template #default="scope">
-            <el-tag type="success" size="small">{{ formatNumber(scope.row.success_requests || 0) }}</el-tag>
+            <el-tag type="success" size="small">
+              {{ formatNumber(scope.row.success_requests || 0) }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="failed_requests" :label="$t('llmResourceUsage.failedCount')" width="120">
+        <el-table-column
+          prop="failed_requests"
+          :label="$t('llmResourceUsage.failedCount')"
+          width="120"
+        >
           <template #default="scope">
             <el-tag type="danger" size="small" v-if="scope.row.failed_requests > 0">
               {{ formatNumber(scope.row.failed_requests || 0) }}
@@ -112,19 +146,34 @@
             <span v-else>0</span>
           </template>
         </el-table-column>
-        <el-table-column prop="success_rate" :label="$t('llmResourceUsage.successRate')" width="120" sortable>
+        <el-table-column
+          prop="success_rate"
+          :label="$t('llmResourceUsage.successRate')"
+          width="120"
+          sortable
+        >
           <template #default="scope">
             <el-tag :type="getSuccessRateType(scope.row.success_rate)" size="small">
               {{ (scope.row.success_rate || 0).toFixed(2) }}%
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="avg_tokens_per_request" :label="$t('llmResourceUsage.avgTokensPerRequest')" width="150" sortable>
+        <el-table-column
+          prop="avg_tokens_per_request"
+          :label="$t('llmResourceUsage.avgTokensPerRequest')"
+          width="150"
+          sortable
+        >
           <template #default="scope">
             {{ formatNumber(Math.round(scope.row.avg_tokens_per_request || 0)) }}
           </template>
         </el-table-column>
-        <el-table-column prop="last_request_time" :label="$t('llmResourceUsage.lastRequestTime')" width="180" sortable>
+        <el-table-column
+          prop="last_request_time"
+          :label="$t('llmResourceUsage.lastRequestTime')"
+          width="180"
+          sortable
+        >
           <template #default="scope">
             {{ scope.row.last_request_time ? formatDate(scope.row.last_request_time) : '-' }}
           </template>
@@ -184,47 +233,48 @@ const avgTokensPerRequest = computed(() => {
 const loadUsageData = async () => {
   try {
     loading.value = true
-    
+
     // 调用后端API获取按资源分组的统计
     // 注意：apiClient的响应拦截器已经返回了response.data，所以这里直接使用response.data
     const response = await api.getLLMResourceUsageStats()
     const usageArray = response?.data || []
-    
+
     // 应用筛选
     let filtered = usageArray
     if (searchForm.value.resourceName) {
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter(item =>
         item.resource_name.toLowerCase().includes(searchForm.value.resourceName.toLowerCase())
       )
     }
-    
+
     // 应用时间范围筛选
     if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
       const startDate = new Date(searchForm.value.dateRange[0])
       const endDate = new Date(searchForm.value.dateRange[1])
       endDate.setHours(23, 59, 59, 999) // 设置为当天的最后一刻
-      
+
       filtered = filtered.filter(item => {
         if (!item.last_request_time) return false
         const requestTime = new Date(item.last_request_time)
         return requestTime >= startDate && requestTime <= endDate
       })
     }
-    
+
     // 计算总计
     totalTokens.value = filtered.reduce((sum, item) => sum + (item.total_tokens || 0), 0)
     totalRequests.value = filtered.reduce((sum, item) => sum + (item.total_requests || 0), 0)
     successRequests.value = filtered.reduce((sum, item) => sum + (item.success_requests || 0), 0)
-    
+
     // 分页
     const startIndex = (pagination.value.current - 1) * pagination.value.size
     const endIndex = startIndex + pagination.value.size
     usageList.value = filtered.slice(startIndex, endIndex)
     pagination.value.total = filtered.length
-    
   } catch (error) {
     console.error('加载使用量数据失败:', error)
-    ElMessage.error(t('llmResourceUsage.loadFailed') + ': ' + (error.response?.data?.error || error.message))
+    ElMessage.error(
+      t('llmResourceUsage.loadFailed') + ': ' + (error.response?.data?.error || error.message)
+    )
   } finally {
     loading.value = false
   }
@@ -251,25 +301,25 @@ const resetForm = () => {
 }
 
 // 分页处理
-const handleSizeChange = (size) => {
+const handleSizeChange = size => {
   pagination.value.size = size
   pagination.value.current = 1
   loadUsageData()
 }
 
-const handleCurrentChange = (current) => {
+const handleCurrentChange = current => {
   pagination.value.current = current
   loadUsageData()
 }
 
 // 格式化数字
-const formatNumber = (num) => {
+const formatNumber = num => {
   if (num === null || num === undefined) return '0'
   return num.toLocaleString('zh-CN')
 }
 
 // 格式化日期
-const formatDate = (dateString) => {
+const formatDate = dateString => {
   if (!dateString) return '-'
   const date = new Date(dateString)
   return date.toLocaleString('zh-CN', {
@@ -283,7 +333,7 @@ const formatDate = (dateString) => {
 }
 
 // 获取类型标签
-const getTypeLabel = (type) => {
+const getTypeLabel = type => {
   const labels = {
     chat: t('llmResources.typeChat'),
     image: t('llmResources.typeImage'),
@@ -296,7 +346,7 @@ const getTypeLabel = (type) => {
 }
 
 // 获取成功率标签类型
-const getSuccessRateType = (rate) => {
+const getSuccessRateType = rate => {
   if (rate >= 95) return 'success'
   if (rate >= 80) return 'warning'
   return 'danger'

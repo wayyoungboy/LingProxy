@@ -1,28 +1,23 @@
 <template>
-  <div class="policies-container">
-    <el-card shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span class="page-title">{{ $t('policies.title') }}</span>
-          <el-button type="primary" @click="handleAddPolicy">
-            <el-icon><Plus /></el-icon>
-            {{ $t('policies.addPolicy') }}
-          </el-button>
-        </div>
-      </template>
-      
+  <div class="policies-page">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('policies.title') }}</h1>
+      <el-button type="primary" @click="handleAddPolicy">
+        <el-icon><Plus /></el-icon>
+        {{ $t('policies.addPolicy') }}
+      </el-button>
+    </div>
+
+    <el-card class="table-card">
+
       <!-- 策略列表 -->
-      <el-table
-        v-loading="loading"
-        :data="policies"
-        style="width: 100%"
-        border
-        stripe
-      >
+      <el-table v-loading="loading" :data="policies" style="width: 100%" border stripe>
         <el-table-column prop="name" :label="$t('policies.name')" width="200">
           <template #default="scope">
             <span>{{ scope.row.name }}</span>
-            <el-tag v-if="scope.row.builtin" type="info" size="small" style="margin-left: 8px">{{ $t('policies.builtin') }}</el-tag>
+            <el-tag v-if="scope.row.builtin" type="info" size="small" style="margin-left: 8px">
+              {{ $t('policies.builtin') }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="type" :label="$t('policies.type')" width="150">
@@ -32,9 +27,7 @@
         </el-table-column>
         <el-table-column prop="enabled" :label="$t('common.status')" width="100">
           <template #default="scope">
-            <el-tag
-              :type="scope.row.enabled ? 'success' : 'danger'"
-            >
+            <el-tag :type="scope.row.enabled ? 'success' : 'danger'">
               {{ scope.row.enabled ? $t('policies.enabled') : $t('policies.disabled') }}
             </el-tag>
           </template>
@@ -66,19 +59,10 @@
         </el-table-column>
       </el-table>
     </el-card>
-    
+
     <!-- 创建/编辑策略对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="700px"
-    >
-      <el-form
-        ref="policyFormRef"
-        :model="policyForm"
-        :rules="policyRules"
-        label-width="120px"
-      >
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
+      <el-form ref="policyFormRef" :model="policyForm" :rules="policyRules" label-width="120px">
         <el-form-item :label="$t('policies.name')" prop="name">
           <el-input v-model="policyForm.name" :placeholder="$t('policies.nameRequired')"></el-input>
         </el-form-item>
@@ -111,7 +95,11 @@
             <el-form-item :label="$t('policies.resourcePool')">
               <div class="resource-pool-info">
                 <el-alert
-                  v-if="!policyForm.parameters.resources || !Array.isArray(policyForm.parameters.resources) || policyForm.parameters.resources.length === 0"
+                  v-if="
+                    !policyForm.parameters.resources ||
+                    !Array.isArray(policyForm.parameters.resources) ||
+                    policyForm.parameters.resources.length === 0
+                  "
                   type="info"
                   :closable="false"
                   show-icon
@@ -157,12 +145,18 @@
                       size="small"
                       style="margin-left: 8px"
                     >
-                      {{ resource.status === 'active' ? $t('llmResources.active') : $t('llmResources.inactive') }}
+                      {{
+                        resource.status === 'active'
+                          ? $t('llmResources.active')
+                          : $t('llmResources.inactive')
+                      }}
                     </el-tag>
                   </el-option>
                 </el-select>
                 <el-button
-                  v-if="policyForm.parameters.resources && policyForm.parameters.resources.length > 0"
+                  v-if="
+                    policyForm.parameters.resources && policyForm.parameters.resources.length > 0
+                  "
                   type="danger"
                   size="small"
                   @click="clearRandomResources"
@@ -178,7 +172,7 @@
               </span>
             </el-form-item>
           </div>
-          
+
           <div v-else-if="selectedTemplate.type === 'round_robin'" class="policy-params">
             <el-form-item :label="$t('policies.resourceList')" required>
               <el-select
@@ -199,7 +193,7 @@
               <el-switch v-model="policyForm.parameters.filter_by_status" />
             </el-form-item>
           </div>
-          
+
           <div v-else-if="selectedTemplate.type === 'weighted'" class="policy-params">
             <el-form-item :label="$t('policies.weightedConfig')" required>
               <div
@@ -240,7 +234,7 @@
               </el-button>
             </el-form-item>
           </div>
-          
+
           <div v-else-if="selectedTemplate.type === 'model_match'" class="policy-params">
             <el-form-item :label="$t('policies.modelMatchRules')" required>
               <div
@@ -265,11 +259,7 @@
                     :value="resource.id"
                   />
                 </el-select>
-                <el-button
-                  type="danger"
-                  size="small"
-                  @click="removeModelMapping(index)"
-                >
+                <el-button type="danger" size="small" @click="removeModelMapping(index)">
                   {{ $t('common.delete') }}
                 </el-button>
               </div>
@@ -292,7 +282,7 @@
               </el-select>
             </el-form-item>
           </div>
-          
+
           <div v-else-if="selectedTemplate.type === 'regex_match'" class="policy-params">
             <el-form-item :label="$t('policies.regexMatchRules')" required>
               <div
@@ -317,11 +307,7 @@
                     :value="resource.id"
                   />
                 </el-select>
-                <el-button
-                  type="danger"
-                  size="small"
-                  @click="removeRegexRule(index)"
-                >
+                <el-button type="danger" size="small" @click="removeRegexRule(index)">
                   {{ $t('common.delete') }}
                 </el-button>
               </div>
@@ -344,12 +330,16 @@
               </el-select>
             </el-form-item>
           </div>
-          
+
           <div v-else-if="selectedTemplate.type === 'regex_model_match'" class="policy-params">
             <el-form-item :label="$t('policies.resourcePool')">
               <div class="resource-pool-info">
                 <el-alert
-                  v-if="!policyForm.parameters.resources || !Array.isArray(policyForm.parameters.resources) || policyForm.parameters.resources.length === 0"
+                  v-if="
+                    !policyForm.parameters.resources ||
+                    !Array.isArray(policyForm.parameters.resources) ||
+                    policyForm.parameters.resources.length === 0
+                  "
                   type="info"
                   :closable="false"
                   show-icon
@@ -395,12 +385,18 @@
                       size="small"
                       style="margin-left: 8px"
                     >
-                      {{ resource.status === 'active' ? $t('llmResources.active') : $t('llmResources.inactive') }}
+                      {{
+                        resource.status === 'active'
+                          ? $t('llmResources.active')
+                          : $t('llmResources.inactive')
+                      }}
                     </el-tag>
                   </el-option>
                 </el-select>
                 <el-button
-                  v-if="policyForm.parameters.resources && policyForm.parameters.resources.length > 0"
+                  v-if="
+                    policyForm.parameters.resources && policyForm.parameters.resources.length > 0
+                  "
                   type="danger"
                   size="small"
                   @click="clearRandomResources"
@@ -410,9 +406,7 @@
               </div>
             </el-form-item>
             <el-form-item :label="$t('policies.filterByStatus')">
-              <el-switch
-                v-model="policyForm.parameters.filter_by_status"
-              />
+              <el-switch v-model="policyForm.parameters.filter_by_status" />
             </el-form-item>
             <el-alert
               :title="$t('policies.regexModelMatchHint')"
@@ -422,7 +416,7 @@
               style="margin-top: 10px"
             />
           </div>
-          
+
           <div v-else-if="selectedTemplate.type === 'priority'" class="policy-params">
             <el-form-item :label="$t('policies.priorityConfig')" required>
               <div
@@ -465,7 +459,7 @@
               <el-switch v-model="policyForm.parameters.fallback_enabled" />
             </el-form-item>
           </div>
-          
+
           <div v-else-if="selectedTemplate.type === 'failover'" class="policy-params">
             <el-form-item :label="$t('policies.primaryResource')" required>
               <el-select
@@ -551,16 +545,12 @@ const policyForm = reactive({
 })
 
 const policyRules = computed(() => ({
-  name: [
-    { required: true, message: t('policies.nameRequired'), trigger: 'blur' }
-  ],
-  template_id: [
-    { required: true, message: t('policies.templateRequired'), trigger: 'change' }
-  ]
+  name: [{ required: true, message: t('policies.nameRequired'), trigger: 'blur' }],
+  template_id: [{ required: true, message: t('policies.templateRequired'), trigger: 'change' }]
 }))
 
 // 获取策略类型标签
-const getTypeLabel = (type) => {
+const getTypeLabel = type => {
   const labels = {
     random: t('policies.randomSelect'),
     round_robin: t('policies.roundRobinLB'),
@@ -581,16 +571,16 @@ const availableRandomResources = computed(() => {
     resourcesPool: policyForm.parameters.resources,
     isArray: Array.isArray(policyForm.parameters.resources)
   })
-  
+
   if (!llmResources.value || llmResources.value.length === 0) {
     console.warn('No LLM resources available')
     return []
   }
-  
+
   if (!policyForm.parameters.resources || !Array.isArray(policyForm.parameters.resources)) {
     return llmResources.value
   }
-  
+
   const resourcePoolIds = new Set(policyForm.parameters.resources)
   const available = llmResources.value.filter(resource => !resourcePoolIds.has(resource.id))
   console.log('Available resources after filtering:', available.length, available)
@@ -617,8 +607,12 @@ const addRandomResource = () => {
   console.log('Resource added to pool:', policyForm.parameters.resources)
 }
 
-const removeRandomResource = (index) => {
-  if (policyForm.parameters.resources && Array.isArray(policyForm.parameters.resources) && policyForm.parameters.resources.length > index) {
+const removeRandomResource = index => {
+  if (
+    policyForm.parameters.resources &&
+    Array.isArray(policyForm.parameters.resources) &&
+    policyForm.parameters.resources.length > index
+  ) {
     // 使用扩展运算符创建新数组以确保响应式更新
     policyForm.parameters.resources = policyForm.parameters.resources.filter((_, i) => i !== index)
     console.log('Resource removed from pool:', policyForm.parameters.resources)
@@ -630,18 +624,20 @@ const clearRandomResources = () => {
     confirmButtonText: t('common.confirm'),
     cancelButtonText: t('common.cancel'),
     type: 'warning'
-  }).then(() => {
-    policyForm.parameters.resources = []
-    ElMessage.success(t('policies.resourcePoolCleared'))
-  }).catch(() => {})
+  })
+    .then(() => {
+      policyForm.parameters.resources = []
+      ElMessage.success(t('policies.resourcePoolCleared'))
+    })
+    .catch(() => {})
 }
 
-const getResourceName = (resourceId) => {
+const getResourceName = resourceId => {
   const resource = llmResources.value.find(r => r.id === resourceId)
   return resource ? resource.name : resourceId
 }
 
-const getResourceStatusType = (resourceId) => {
+const getResourceStatusType = resourceId => {
   const resource = llmResources.value.find(r => r.id === resourceId)
   if (!resource) {
     return 'info'
@@ -682,7 +678,7 @@ const getLLMResourceList = async () => {
   try {
     const response = await api.getLLMResources({ page: 1, page_size: 100 })
     console.log('LLM Resources API response:', response)
-    
+
     // API响应拦截器已经返回了 response.data，后端返回的是 {data: resources}
     // 所以这里 response 就是 {data: resources}，其中 resources 是数组
     if (response && response.data) {
@@ -697,20 +693,27 @@ const getLLMResourceList = async () => {
         llmResources.value = []
         console.warn('Unexpected response format:', response)
       }
-      console.log('LLM Resources loaded:', llmResources.value.length, 'resources:', llmResources.value.map(r => ({id: r.id, name: r.name})))
+      console.log(
+        'LLM Resources loaded:',
+        llmResources.value.length,
+        'resources:',
+        llmResources.value.map(r => ({ id: r.id, name: r.name }))
+      )
     } else {
       llmResources.value = []
       console.warn('No response from LLM Resources API or no data field')
     }
   } catch (error) {
     console.error('获取LLM资源列表失败:', error)
-    ElMessage.error(t('llmResources.getListFailed') + ': ' + (error.response?.data?.error || error.message))
+    ElMessage.error(
+      t('llmResources.getListFailed') + ': ' + (error.response?.data?.error || error.message)
+    )
     llmResources.value = []
   }
 }
 
 // 处理模板变化
-const handleTemplateChange = (templateId) => {
+const handleTemplateChange = templateId => {
   const template = templates.value.find(t => t.id === templateId)
   if (template) {
     selectedTemplate.value = template
@@ -720,9 +723,9 @@ const handleTemplateChange = (templateId) => {
 }
 
 // 初始化参数
-const initParameters = (template) => {
+const initParameters = template => {
   const defaultParams = template.default_parameters ? JSON.parse(template.default_parameters) : {}
-  
+
   switch (template.type) {
     case 'random':
       policyForm.parameters = {
@@ -794,32 +797,34 @@ const handleAddPolicy = async () => {
   })
   selectedTemplate.value = null
   newRandomResourceId.value = ''
-  
+
   // 确保资源列表已加载
   if (!llmResources.value || llmResources.value.length === 0) {
     await getLLMResourceList()
   }
-  
+
   dialogVisible.value = true
 }
 
 // 处理编辑策略
-const handleEditPolicy = async (policy) => {
+const handleEditPolicy = async policy => {
   isAddMode.value = false
   dialogTitle.value = t('policies.editPolicy')
-  
+
   // 确保资源列表已加载
   if (!llmResources.value || llmResources.value.length === 0) {
     await getLLMResourceList()
   }
-  
+
   // 获取策略详情
   try {
     const response = await api.getPolicy(policy.id)
     if (response && response.data) {
       // 深度复制 parameters 以确保响应式
-      const parameters = response.data.parameters ? JSON.parse(JSON.stringify(response.data.parameters)) : {}
-      
+      const parameters = response.data.parameters
+        ? JSON.parse(JSON.stringify(response.data.parameters))
+        : {}
+
       Object.assign(policyForm, {
         id: response.data.id,
         name: response.data.name,
@@ -827,7 +832,7 @@ const handleEditPolicy = async (policy) => {
         parameters: parameters,
         enabled: response.data.enabled
       })
-      
+
       // 设置选中的模板
       const template = templates.value.find(t => t.id === response.data.template_id)
       if (template) {
@@ -845,7 +850,7 @@ const handleEditPolicy = async (policy) => {
         }
         newRandomResourceId.value = ''
       }
-      
+
       dialogVisible.value = true
     }
   } catch (error) {
@@ -858,7 +863,7 @@ const handleEditPolicy = async (policy) => {
 const handleSavePolicy = async () => {
   try {
     await policyFormRef.value.validate()
-    
+
     if (isAddMode.value) {
       // 创建策略
       await api.createPolicy({
@@ -876,7 +881,7 @@ const handleSavePolicy = async () => {
       })
       ElMessage.success(t('policies.updateSuccess'))
     }
-    
+
     dialogVisible.value = false
     getPolicyList()
   } catch (error) {
@@ -886,7 +891,7 @@ const handleSavePolicy = async () => {
 }
 
 // 处理删除策略
-const handleDeletePolicy = async (id) => {
+const handleDeletePolicy = async id => {
   try {
     // 检查是否为内置策略
     const policy = policies.value.find(p => p.id === id)
@@ -895,16 +900,12 @@ const handleDeletePolicy = async (id) => {
       return
     }
 
-    await ElMessageBox.confirm(
-      t('policies.deleteConfirmMessage'),
-      t('policies.deleteConfirm'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'danger'
-      }
-    )
-    
+    await ElMessageBox.confirm(t('policies.deleteConfirmMessage'), t('policies.deleteConfirm'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      type: 'danger'
+    })
+
     await api.deletePolicy(id)
     ElMessage.success(t('policies.deleteSuccess'))
     getPolicyList()
@@ -925,7 +926,7 @@ const addWeightedResource = () => {
   policyForm.parameters.resources.push({ id: '', weight: 1 })
 }
 
-const removeWeightedResource = (index) => {
+const removeWeightedResource = index => {
   policyForm.parameters.resources.splice(index, 1)
 }
 
@@ -937,7 +938,7 @@ const addModelMapping = () => {
   policyForm.parameters.mappings.push({ model_pattern: '', resource_id: '' })
 }
 
-const removeModelMapping = (index) => {
+const removeModelMapping = index => {
   policyForm.parameters.mappings.splice(index, 1)
 }
 
@@ -949,7 +950,7 @@ const addRegexRule = () => {
   policyForm.parameters.rules.push({ pattern: '', resource_id: '' })
 }
 
-const removeRegexRule = (index) => {
+const removeRegexRule = index => {
   policyForm.parameters.rules.splice(index, 1)
 }
 
@@ -963,12 +964,12 @@ const addPriorityResource = () => {
   policyForm.parameters.resources.push({ id: '', priority: 1 })
 }
 
-const removePriorityResource = (index) => {
+const removePriorityResource = index => {
   policyForm.parameters.resources.splice(index, 1)
 }
 
 // 格式化日期
-const formatDate = (dateString) => {
+const formatDate = dateString => {
   if (!dateString) return ''
   const date = new Date(dateString)
   return date.toLocaleString('zh-CN')
@@ -983,33 +984,48 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.policies-container {
-  padding: 0;
+.policies-page {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.card-header {
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
 }
 
 .dialog-footer {
   width: 100%;
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
 }
 
 .policy-params {
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  padding: 15px;
-  background-color: #f5f7fa;
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 16px;
+  background-color: #f8f7f3;
 }
 
 .resource-pool-info {
@@ -1021,8 +1037,8 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 8px;
   padding: 10px;
-  background-color: #fff;
-  border-radius: 4px;
+  background-color: var(--claude-ivory);
+  border-radius: var(--radius-comfortable);
   min-height: 40px;
 }
 

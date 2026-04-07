@@ -1,155 +1,123 @@
 <template>
   <div class="dashboard">
-    <el-card class="dashboard-card">
+    <div class="dashboard-header">
+      <h1 class="page-title">{{ $t('dashboard.systemDashboard') }}</h1>
+      <el-button type="primary" @click="handleRefresh" :loading="refreshing">
+        <el-icon><Refresh /></el-icon>
+        {{ $t('dashboard.refreshData') }}
+      </el-button>
+    </div>
+
+    <!-- 统计卡片 - Claude style -->
+    <div class="stats-cards">
+      <div class="stat-card">
+        <div class="stat-card-content">
+          <div class="stat-icon stat-icon-terracotta">
+            <el-icon><User /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ formatNumber(stats.total_users) }}</div>
+            <div class="stat-label">{{ $t('dashboard.totalUsers') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-content">
+          <div class="stat-icon stat-icon-green">
+            <el-icon><Cpu /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ formatNumber(stats.total_llm_resources) }}</div>
+            <div class="stat-label">{{ $t('dashboard.totalLLMResources') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-content">
+          <div class="stat-icon stat-icon-coral">
+            <el-icon><Message /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ formatNumber(stats.total_requests) }}</div>
+            <div class="stat-label">{{ $t('dashboard.totalRequests') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-content">
+          <div class="stat-icon stat-icon-success">
+            <el-icon><Check /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ (stats.success_rate || 0).toFixed(2) }}%</div>
+            <div class="stat-label">{{ $t('dashboard.successRate') }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 性能指标 - Claude style -->
+    <el-card class="performance-card">
       <template #header>
-        <div class="card-header">
-          <span class="page-title">{{ $t('dashboard.systemDashboard') }}</span>
-          <el-button
-            type="primary"
-            size="small"
-            @click="handleRefresh"
-            :loading="refreshing"
-          >
-            <el-icon><Refresh /></el-icon>
-            {{ $t('dashboard.refreshData') }}
+        <span class="section-title">{{ $t('dashboard.systemPerformance') }}</span>
+      </template>
+      <div class="performance-metrics">
+        <div class="metric-card">
+          <div class="metric-label">{{ $t('dashboard.avgResponseTime') }}</div>
+          <div class="metric-value">{{ (stats.avg_response_time || 0).toFixed(2) }}ms</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">{{ $t('dashboard.todayRequests') }}</div>
+          <div class="metric-value metric-value-serif">{{ formatNumber(todayRequests) }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">{{ $t('dashboard.systemStatus') }}</div>
+          <div class="metric-value metric-status">
+            <span class="status-dot"></span>
+            {{ $t('dashboard.running') }}
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">{{ $t('dashboard.runningTime') }}</div>
+          <div class="metric-value">{{ uptime || '--' }}</div>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 最近请求 - Claude style -->
+    <el-card class="requests-card">
+      <template #header>
+        <div class="card-header-row">
+          <span class="section-title">{{ $t('dashboard.recentRequests') }}</span>
+          <el-button type="primary" size="small" @click="navigateToRequests">
+            {{ $t('dashboard.viewAll') }}
           </el-button>
         </div>
       </template>
-      
-      <!-- 统计卡片 -->
-      <div class="stats-cards">
-        <el-card class="stat-card stat-card-primary" shadow="hover">
-          <div class="stat-card-content">
-            <div class="stat-card-icon">
-              <el-icon><User /></el-icon>
-            </div>
-            <div class="stat-card-info">
-              <div class="stat-card-value">{{ formatNumber(stats.total_users) }}</div>
-              <div class="stat-card-label">{{ $t('dashboard.totalUsers') }}</div>
-            </div>
-          </div>
-        </el-card>
-        
-        <el-card class="stat-card stat-card-success" shadow="hover">
-          <div class="stat-card-content">
-            <div class="stat-card-icon">
-              <el-icon><Cpu /></el-icon>
-            </div>
-            <div class="stat-card-info">
-              <div class="stat-card-value">{{ formatNumber(stats.total_llm_resources) }}</div>
-              <div class="stat-card-label">{{ $t('dashboard.totalLLMResources') }}</div>
-            </div>
-          </div>
-        </el-card>
-        
-        <el-card class="stat-card stat-card-warning" shadow="hover">
-          <div class="stat-card-content">
-            <div class="stat-card-icon">
-              <el-icon><Message /></el-icon>
-            </div>
-            <div class="stat-card-info">
-              <div class="stat-card-value">{{ formatNumber(stats.total_requests) }}</div>
-              <div class="stat-card-label">{{ $t('dashboard.totalRequests') }}</div>
-            </div>
-          </div>
-        </el-card>
-        
-        <el-card class="stat-card stat-card-danger" shadow="hover">
-          <div class="stat-card-content">
-            <div class="stat-card-icon">
-              <el-icon><Check /></el-icon>
-            </div>
-            <div class="stat-card-info">
-              <div class="stat-card-value">{{ (stats.success_rate || 0).toFixed(2) }}%</div>
-              <div class="stat-card-label">{{ $t('dashboard.successRate') }}</div>
-            </div>
-          </div>
-        </el-card>
-      </div>
-      
-      <!-- 图表区域 -->
-      <div class="charts-section">
-        <el-card class="chart-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span class="page-title">{{ $t('dashboard.systemPerformance') }}</span>
-            </div>
+
+      <el-table v-if="recentRequests.length > 0" :data="recentRequests" style="width: 100%">
+        <el-table-column prop="id" :label="$t('requests.requestId')" width="180" />
+        <el-table-column prop="user_id" :label="$t('dashboard.userId')" width="180" />
+        <el-table-column prop="endpoint" :label="$t('llmResources.endpoint')" />
+        <el-table-column prop="status" :label="$t('common.status')" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.status === 'success' ? 'success' : 'danger'" size="small">
+              {{ scope.row.status === 'success' ? $t('requests.success') : $t('requests.failed') }}
+            </el-tag>
           </template>
-          <div class="chart-content">
-            <div class="performance-metrics">
-              <div class="metric-item">
-                <div class="metric-label">{{ $t('dashboard.avgResponseTime') }}</div>
-                <div class="metric-value">{{ (stats.avg_response_time || 0).toFixed(2) }}ms</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-label">{{ $t('dashboard.todayRequests') }}</div>
-                <div class="metric-value">{{ formatNumber(todayRequests) }}</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-label">{{ $t('dashboard.systemStatus') }}</div>
-                <div class="metric-value status-online">{{ $t('dashboard.running') }}</div>
-              </div>
-              <div class="metric-item">
-                <div class="metric-label">{{ $t('dashboard.runningTime') }}</div>
-                <div class="metric-value">{{ uptime || '--' }}</div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </div>
-      
-      <!-- 最近请求 -->
-      <div class="recent-requests-section">
-        <el-card class="requests-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span class="page-title">{{ $t('dashboard.recentRequests') }}</span>
-              <el-button
-                type="primary"
-                size="small"
-                @click="navigateToRequests"
-              >
-                {{ $t('dashboard.viewAll') }}
-              </el-button>
-            </div>
-          </template>
-          
-          <el-table
-            :data="recentRequests"
-            style="width: 100%"
-            border
-            stripe
-            size="small"
-          >
-            <el-table-column prop="id" :label="$t('requests.requestId')" width="180" />
-            <el-table-column prop="user_id" :label="$t('dashboard.userId')" width="180" />
-            <el-table-column prop="endpoint" :label="$t('llmResources.endpoint')" />
-            <el-table-column prop="status" :label="$t('common.status')" width="100">
-              <template #default="scope">
-                <el-tag
-                  :type="scope.row.status === 'success' ? 'success' : 'danger'"
-                >
-                  {{ scope.row.status === 'success' ? $t('requests.success') : $t('requests.failed') }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="duration" :label="$t('requests.duration')" width="120">
-              <template #default="scope">
-                {{ scope.row.duration }}ms
-              </template>
-            </el-table-column>
-            <el-table-column prop="created_at" :label="$t('common.createdAt')" width="180">
-              <template #default="scope">
-                {{ formatDate(scope.row.created_at) }}
-              </template>
-            </el-table-column>
-          </el-table>
-          
-          <div v-if="recentRequests.length === 0" class="no-data">
-            <el-empty :description="$t('dashboard.noRequests')" />
-          </div>
-        </el-card>
-      </div>
+        </el-table-column>
+        <el-table-column prop="duration" :label="$t('requests.duration')" width="120">
+          <template #default="scope">{{ scope.row.duration }}ms</template>
+        </el-table-column>
+        <el-table-column prop="created_at" :label="$t('common.createdAt')" width="180">
+          <template #default="scope">{{ formatDate(scope.row.created_at) }}</template>
+        </el-table-column>
+      </el-table>
+
+      <el-empty v-else :description="$t('dashboard.noRequests')" />
     </el-card>
   </div>
 </template>
@@ -159,13 +127,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import {
-  Refresh,
-  User,
-  Cpu,
-  Message,
-  Check
-} from '@element-plus/icons-vue'
+import { Refresh, User, Cpu, Message, Check } from '@element-plus/icons-vue'
 import api from '../api'
 import { formatDate, formatNumber } from '../utils/index'
 
@@ -184,7 +146,6 @@ const systemInfo = ref(null)
 
 // 计算属性
 const todayRequests = computed(() => {
-  // 从最近请求中计算今日请求数
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   return recentRequests.value.filter(req => {
@@ -194,7 +155,6 @@ const todayRequests = computed(() => {
 })
 
 const uptime = computed(() => {
-  // 从系统信息中获取运行时间
   return systemInfo.value?.uptime || '--'
 })
 
@@ -202,15 +162,13 @@ const uptime = computed(() => {
 const getSystemStats = async () => {
   try {
     refreshing.value = true
-    
-    // 并行请求多个接口以提高性能
+
     const [statsResponse, systemInfoResponse, requestsResponse] = await Promise.allSettled([
       api.getSystemStats(),
       api.getSystemInfo(),
       api.getRequests({ limit: 10 })
     ])
-    
-    // 处理统计信息
+
     if (statsResponse.status === 'fulfilled' && statsResponse.value) {
       const data = statsResponse.value.data || statsResponse.value
       Object.assign(stats, {
@@ -221,22 +179,21 @@ const getSystemStats = async () => {
         avg_response_time: data.avg_response_time || 0
       })
     }
-    
-    // 处理系统信息
+
     if (systemInfoResponse.status === 'fulfilled' && systemInfoResponse.value) {
       systemInfo.value = systemInfoResponse.value.data || systemInfoResponse.value
     }
-    
-    // 处理请求记录
+
     if (requestsResponse.status === 'fulfilled' && requestsResponse.value) {
       const requestsData = requestsResponse.value.data || requestsResponse.value
-      recentRequests.value = Array.isArray(requestsData) ? requestsData : 
-                           (Array.isArray(requestsData?.items) ? requestsData.items : [])
+      recentRequests.value = Array.isArray(requestsData)
+        ? requestsData
+        : Array.isArray(requestsData?.items)
+          ? requestsData.items
+          : []
     }
-    
   } catch (error) {
     console.error('获取系统统计信息失败:', error)
-    // 错误信息已在API拦截器中处理，这里只重置数据
     Object.assign(stats, {
       total_users: 0,
       total_llm_resources: 0,
@@ -251,19 +208,14 @@ const getSystemStats = async () => {
   }
 }
 
-
-
-// 处理刷新数据
 const handleRefresh = () => {
   getSystemStats()
 }
 
-// 跳转到请求管理页面
 const navigateToRequests = () => {
   router.push('/requests')
 }
 
-// 组件挂载时获取数据
 onMounted(() => {
   getSystemStats()
 })
@@ -271,200 +223,203 @@ onMounted(() => {
 
 <style scoped>
 .dashboard {
-  padding: 0;
+  animation: fadeIn 0.4s ease-out;
 }
 
-.dashboard-card {
-  margin-bottom: 20px;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.card-header {
+.dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
 }
 
-/* 统计卡片 */
+/* Claude Style Stats Cards */
 .stats-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
 
 .stat-card {
-  border-radius: 8px;
-  overflow: hidden;
-  transition: all 0.3s ease;
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-whisper);
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-}
-
-.stat-card-primary {
-  border-left: 4px solid #409EFF;
-}
-
-.stat-card-success {
-  border-left: 4px solid #67C23A;
-}
-
-.stat-card-warning {
-  border-left: 4px solid #E6A23C;
-}
-
-.stat-card-danger {
-  border-left: 4px solid #F56C6C;
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 8px 32px;
+  border-color: var(--claude-border-warm);
 }
 
 .stat-card-content {
   display: flex;
   align-items: center;
-  padding: 20px;
+  gap: 16px;
 }
 
-.stat-card-icon {
+.stat-icon {
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  border-radius: var(--radius-comfortable);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16px;
-  font-size: 24px;
+  font-size: 22px;
 }
 
-.stat-card-primary .stat-card-icon {
-  background-color: rgba(64, 158, 255, 0.1);
-  color: #409EFF;
+.stat-icon-terracotta {
+  background: #f5e6df;
+  color: var(--claude-terracotta);
 }
 
-.stat-card-success .stat-card-icon {
-  background-color: rgba(103, 194, 58, 0.1);
-  color: #67C23A;
+.stat-icon-green {
+  background: #e8f0e4;
+  color: #7a9a6d;
 }
 
-.stat-card-warning .stat-card-icon {
-  background-color: rgba(230, 162, 60, 0.1);
-  color: #E6A23C;
+.stat-icon-coral {
+  background: #f5e8e6;
+  color: var(--claude-coral);
 }
 
-.stat-card-danger .stat-card-icon {
-  background-color: rgba(245, 108, 108, 0.1);
-  color: #F56C6C;
+.stat-icon-success {
+  background: #e8f4e8;
+  color: #6d9a7a;
 }
 
-.stat-card-info {
+.stat-info {
   flex: 1;
 }
 
-.stat-card-value {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #303133;
+.stat-number {
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--claude-text-primary);
 }
 
-.stat-card-label {
+.stat-label {
+  font-family: var(--font-sans);
   font-size: 14px;
-  color: #606266;
+  color: var(--claude-text-secondary);
 }
 
-/* 图表区域 */
-.charts-section {
+/* Claude Style Performance Card */
+.performance-card {
   margin-bottom: 24px;
-}
-
-.chart-card {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-
-.chart-content {
-  padding: 20px;
 }
 
 .performance-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
 }
 
-.metric-item {
-  text-align: center;
+.metric-card {
+  background: #f8f7f3;
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
   padding: 16px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+  background: var(--claude-ivory);
+  border-color: var(--claude-terracotta);
 }
 
 .metric-label {
+  font-family: var(--font-sans);
   font-size: 14px;
-  color: #606266;
+  color: var(--claude-text-secondary);
   margin-bottom: 8px;
 }
 
 .metric-value {
+  font-family: var(--font-sans);
   font-size: 20px;
-  font-weight: 600;
-  color: #303133;
+  font-weight: 500;
+  color: var(--claude-text-primary);
 }
 
-.status-online {
-  color: #67C23A;
+.metric-value-serif {
+  font-family: var(--font-serif);
+  font-size: 24px;
 }
 
-/* 最近请求 */
-.recent-requests-section {
-  margin-bottom: 20px;
+.metric-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #7a9a6d;
 }
 
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #7a9a6d;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(122, 154, 109, 0.2);
+}
+
+/* Claude Style Requests Card */
 .requests-card {
-  border-radius: 8px;
-  overflow: hidden;
+  margin-bottom: 24px;
 }
 
-
-.no-data {
-  padding: 40px 0;
-  text-align: center;
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* 响应式设计 */
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--claude-text-primary);
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   .stats-cards {
     grid-template-columns: 1fr;
   }
-  
+
   .performance-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
-  
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-}
 
-@media (max-width: 480px) {
-  .performance-metrics {
-    grid-template-columns: 1fr;
-  }
-  
-  .stat-card-content {
-    padding: 16px;
-  }
-  
-  .stat-card-value {
-    font-size: 20px;
+  .dashboard-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
   }
 }
 </style>

@@ -1,24 +1,26 @@
 <template>
   <div class="login-container">
     <div class="login-form-wrapper">
+      <!-- Claude style logo -->
       <div class="login-logo">
-        <img src="@/assets/lingproxy-logo.svg" alt="LingProxy Logo" class="logo-img">
+        <div class="logo-icon-wrapper">
+          <img src="@/assets/lingproxy-logo.svg" alt="LingProxy Logo" class="logo-img" />
+        </div>
         <h1 class="logo-text">LingProxy</h1>
         <p class="logo-desc">{{ $t('login.subtitle') }}</p>
       </div>
-      
+
+      <!-- Claude style login card -->
       <el-card class="login-form-card">
         <template #header>
-          <div class="login-form-header">
-            <h2>{{ $t('login.title') }}</h2>
-          </div>
+          <h2 class="login-title">{{ $t('login.title') }}</h2>
         </template>
-        
+
         <el-form
           ref="loginFormRef"
           :model="loginForm"
           :rules="loginRules"
-          label-width="80px"
+          label-position="top"
           class="login-form"
         >
           <el-form-item :label="$t('login.username')" prop="username">
@@ -31,7 +33,7 @@
               clearable
             ></el-input>
           </el-form-item>
-          
+
           <el-form-item :label="$t('login.password')" prop="password">
             <el-input
               v-model="loginForm.password"
@@ -44,7 +46,7 @@
               clearable
             ></el-input>
           </el-form-item>
-          
+
           <el-form-item>
             <el-button
               type="primary"
@@ -58,10 +60,18 @@
           </el-form-item>
         </el-form>
       </el-card>
-      
+
+      <!-- Footer -->
       <div class="login-footer">
         <p>&copy; 2026 LingProxy. 保留所有权利。</p>
       </div>
+    </div>
+
+    <!-- Claude style decorative illustration -->
+    <div class="login-decoration">
+      <div class="decoration-circle decoration-1"></div>
+      <div class="decoration-circle decoration-2"></div>
+      <div class="decoration-circle decoration-3"></div>
     </div>
   </div>
 </template>
@@ -98,39 +108,31 @@ const loginRules = computed(() => ({
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return
-  
+
   try {
-    // 验证表单
     await loginFormRef.value.validate()
-    
     loading.value = true
-    
-    // 调用登录API
+
     const response = await api.login({
       username: loginForm.username.trim(),
       password: loginForm.password
     })
-    
-    // 处理响应数据（根据实际API响应格式调整）
+
     const token = response?.token || response?.data?.token
     const userInfo = response?.user || response?.data?.user
-    
+
     if (token) {
-      // 存储token和用户信息
       localStorage.setItem(STORAGE_KEYS.TOKEN, token)
       if (userInfo) {
         localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo))
       }
-      
       ElMessage.success(t('login.loginSuccess'))
-      // 跳转到首页
       router.push('/')
     } else {
       ElMessage.error(t('login.loginFailed') + ': ' + t('login.noToken'))
     }
   } catch (error) {
     console.error('登录失败:', error)
-    // 错误信息已在API拦截器中处理，这里不需要再次显示
     if (!error.response) {
       ElMessage.error(t('api.networkError'))
     }
@@ -138,126 +140,176 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
-
-// 支持回车键登录
-const handleKeyPress = (event) => {
-  if (event.key === 'Enter') {
-    handleLogin()
-  }
-}
 </script>
 
 <style scoped>
+/* Claude Style Login Container */
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  min-height: 100vh;
+  background: var(--claude-parchment);
+  padding: 40px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Claude style decorative circles */
+.login-decoration {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.decoration-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.3;
+}
+
+.decoration-1 {
+  width: 300px;
+  height: 300px;
+  background: var(--claude-terracotta);
+  top: -150px;
+  right: -100px;
+}
+
+.decoration-2 {
+  width: 200px;
+  height: 200px;
+  background: var(--claude-coral);
+  bottom: -100px;
+  left: -50px;
+}
+
+.decoration-3 {
+  width: 150px;
+  height: 150px;
+  background: #7a9a6d;
+  top: 50%;
+  left: 10%;
 }
 
 .login-form-wrapper {
   width: 100%;
-  max-width: 450px;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  z-index: 1;
 }
 
+/* Claude Style Logo */
 .login-logo {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
+}
+
+.logo-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  background: var(--claude-ivory);
+  border-radius: var(--radius-very);
+  padding: 16px;
+  box-shadow: var(--shadow-whisper);
+  border: 1px solid var(--claude-border-cream);
+  transition: all 0.3s ease;
+}
+
+.logo-icon-wrapper:hover {
+  transform: scale(1.05);
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 8px 32px;
 }
 
 .logo-img {
-  width: 80px;
-  height: 80px;
-  margin-bottom: 20px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-}
-
-.logo-img:hover {
-  transform: scale(1.05);
+  width: 40px;
+  height: 40px;
 }
 
 .logo-text {
-  font-size: 32px;
-  font-weight: 700;
-  color: #fff;
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
   margin: 0 0 8px 0;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  letter-spacing: -0.5px;
 }
 
 .logo-desc {
+  font-family: var(--font-sans);
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--claude-text-secondary);
   margin: 0;
+  line-height: 1.6;
 }
 
+/* Claude Style Login Card */
 .login-form-card {
   width: 100%;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-very) !important;
+  background: var(--claude-ivory) !important;
+  border: 1px solid var(--claude-border-cream) !important;
+  box-shadow: var(--shadow-whisper) !important;
 }
 
-.login-form-header {
+.login-title {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--claude-text-primary);
+  margin: 0;
   text-align: center;
 }
 
-.login-form-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-  color: #333;
-}
-
 .login-form {
-  padding: 0 30px 30px;
+  padding: 0;
 }
 
+/* Claude Style Login Button */
 .login-button {
   width: 100%;
-  height: 48px;
-  font-size: 16px;
-  font-weight: 500;
-  margin-top: 10px;
+  height: 48px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  font-family: var(--font-sans) !important;
+  border-radius: var(--radius-generous) !important;
+  margin-top: 16px;
 }
 
+/* Claude Style Form Labels */
+:deep(.el-form-item__label) {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: var(--claude-text-secondary);
+  padding-bottom: 8px;
+}
+
+/* Footer */
 .login-footer {
-  margin-top: 20px;
+  margin-top: 24px;
   text-align: center;
 }
 
 .login-footer p {
-  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-sans);
+  color: var(--claude-text-tertiary);
   font-size: 14px;
   margin: 0;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
+/* Responsive */
+@media (max-width: 480px) {
   .login-form-wrapper {
     max-width: 100%;
   }
-  
-  .login-form {
-    padding: 0 20px 20px;
-  }
-  
+
   .logo-text {
-    font-size: 24px;
-  }
-  
-  .logo-desc {
-    font-size: 14px;
+    font-size: 28px;
   }
 }
 </style>
