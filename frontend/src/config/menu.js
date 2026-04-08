@@ -10,7 +10,10 @@ import {
   Operation,
   Setting,
   Document,
-  DataAnalysis
+  DataAnalysis,
+  Collection,
+  User,
+  Connection
 } from '@element-plus/icons-vue'
 
 /**
@@ -88,6 +91,30 @@ export const menuItems = [
     icon: Document,
     meta: {
       titleKey: 'menu.logs'
+    }
+  },
+  {
+    index: '/models',
+    titleKey: 'menu.models',
+    icon: Collection,
+    meta: {
+      titleKey: 'menu.models'
+    }
+  },
+  {
+    index: '/users',
+    titleKey: 'menu.users',
+    icon: User,
+    meta: {
+      titleKey: 'menu.users'
+    }
+  },
+  {
+    index: '/endpoints',
+    titleKey: 'menu.endpoints',
+    icon: Connection,
+    meta: {
+      titleKey: 'menu.endpoints'
     }
   }
 ]

@@ -44,7 +44,10 @@ export default {
     requests: '请求管理',
     policies: '策略管理',
     settings: '系统设置',
-    logs: '日志管理'
+    logs: '日志管理',
+    models: '模型管理',
+    users: '用户管理',
+    endpoints: '端点管理'
   },
   login: {
     title: '登录',

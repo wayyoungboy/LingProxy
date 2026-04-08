@@ -66,6 +66,24 @@ const routes = [
         name: 'Logs',
         component: () => import('../views/Logs.vue'),
         meta: { titleKey: 'menu.logs' }
+      },
+      {
+        path: 'models',
+        name: 'Models',
+        component: () => import('../views/Models.vue'),
+        meta: { titleKey: 'menu.models' }
+      },
+      {
+        path: 'users',
+        name: 'Users',
+        component: () => import('../views/Users.vue'),
+        meta: { titleKey: 'menu.users' }
+      },
+      {
+        path: 'endpoints',
+        name: 'Endpoints',
+        component: () => import('../views/Endpoints.vue'),
+        meta: { titleKey: 'menu.endpoints' }
       }
     ]
   },

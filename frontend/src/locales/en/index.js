@@ -44,7 +44,10 @@ export default {
     requests: 'Request Management',
     policies: 'Policy Management',
     settings: 'Settings',
-    logs: 'Logs'
+    logs: 'Logs',
+    models: 'Model Management',
+    users: 'User Management',
+    endpoints: 'Endpoint Management'
   },
   login: {
     title: 'Login',

@@ -152,6 +152,16 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 			auth.Any("/proxy/*path", func(c *gin.Context) {
 				c.JSON(200, gin.H{"message": "proxy endpoint", "path": c.Param("path")})
 			})
+
+			// 用户管理路由
+			logger.Debug("Adding user management routes")
+			auth.GET("/users", userHandler.ListUsers)
+			auth.GET("/users/:id", userHandler.GetUser)
+			auth.POST("/users", userHandler.CreateUser)
+			auth.PUT("/users/:id", userHandler.UpdateUser)
+			auth.DELETE("/users/:id", userHandler.DeleteUser)
+			auth.POST("/users/:id/reset-api-key", userHandler.ResetAPIKey)
+			auth.PUT("/users/:id/password", userHandler.UpdatePassword)
 		}
 
 		// LLM资源路由（根据认证开关决定是否需要认证）

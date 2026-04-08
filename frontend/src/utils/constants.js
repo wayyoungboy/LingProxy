@@ -26,7 +26,8 @@ export const ROUTE_PATHS = {
   POLICIES: '/policies',
   SETTINGS: '/settings',
   LOGS: '/logs',
-  USERS: '/users'
+  USERS: '/users',
+  ENDPOINTS: '/endpoints'
 }
 
 // 模型类型

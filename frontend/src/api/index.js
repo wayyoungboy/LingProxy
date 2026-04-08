@@ -343,6 +343,23 @@ const api = {
   },
   clearLogs(fileName) {
     return apiClient.post('/logs/clear', null, { params: { file: fileName } })
+  },
+
+  // 端点管理
+  getEndpoints(params) {
+    return apiClient.get('/endpoints', { params })
+  },
+  getEndpoint(id) {
+    return apiClient.get(`/endpoints/${id}`)
+  },
+  createEndpoint(endpoint) {
+    return apiClient.post('/endpoints', endpoint)
+  },
+  updateEndpoint(id, endpoint) {
+    return apiClient.put(`/endpoints/${id}`, endpoint)
+  },
+  deleteEndpoint(id) {
+    return apiClient.delete(`/endpoints/${id}`)
   }
 }
 

@@ -280,7 +280,7 @@ const handleResetAPIKey = async userId => {
       type: 'warning'
     })
 
-    const response = await api.resetAPIKey(userId)
+    const response = await api.resetUserAPIKey(userId)
     if (response && response.data) {
       userForm.api_key = response.data.api_key
       ElMessage.success(t('users.resetKeySuccess'))
