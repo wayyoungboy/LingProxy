@@ -17,7 +17,11 @@
           prefix-icon="Search"
           style="width: 240px"
         ></el-input>
-        <el-select v-model="statusFilter" :placeholder="$t('users.filterStatus')" style="width: 140px">
+        <el-select
+          v-model="statusFilter"
+          :placeholder="$t('users.filterStatus')"
+          style="width: 140px"
+        >
           <el-option :label="$t('users.all')" value=""></el-option>
           <el-option :label="$t('users.active')" value="active"></el-option>
           <el-option :label="$t('users.inactive')" value="inactive"></el-option>
@@ -49,7 +53,13 @@
         <el-table-column prop="status" :label="$t('users.status')" width="100">
           <template #default="scope">
             <el-tag
-              :type="scope.row.status === 'active' ? 'success' : scope.row.status === 'suspended' ? 'warning' : 'danger'"
+              :type="
+                scope.row.status === 'active'
+                  ? 'success'
+                  : scope.row.status === 'suspended'
+                    ? 'warning'
+                    : 'danger'
+              "
               size="small"
             >
               {{
@@ -99,10 +109,18 @@
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form ref="userFormRef" :model="userForm" :rules="userRules" label-width="80px">
         <el-form-item :label="$t('users.username')" prop="username">
-          <el-input v-model="userForm.username" :placeholder="$t('users.usernamePlaceholder')"></el-input>
+          <el-input
+            v-model="userForm.username"
+            :placeholder="$t('users.usernamePlaceholder')"
+          ></el-input>
         </el-form-item>
         <el-form-item :label="$t('users.password')" prop="password" v-if="isAddMode">
-          <el-input v-model="userForm.password" type="password" :placeholder="$t('users.passwordPlaceholder')" show-password></el-input>
+          <el-input
+            v-model="userForm.password"
+            type="password"
+            :placeholder="$t('users.passwordPlaceholder')"
+            show-password
+          ></el-input>
         </el-form-item>
         <el-form-item :label="$t('users.role')" prop="role">
           <el-select v-model="userForm.role" :placeholder="$t('users.selectRole')">
@@ -111,7 +129,11 @@
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('users.apiKey')" prop="api_key">
-          <el-input v-model="userForm.api_key" :placeholder="$t('users.apiKeyPlaceholder')" :disabled="true">
+          <el-input
+            v-model="userForm.api_key"
+            :placeholder="$t('users.apiKeyPlaceholder')"
+            :disabled="true"
+          >
             <template #append>
               <el-button @click="handleResetAPIKey(userForm.id)" type="text" :disabled="isAddMode">
                 {{ $t('users.reset') }}

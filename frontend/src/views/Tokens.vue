@@ -16,7 +16,9 @@
         <el-table-column prop="api_key" :label="$t('tokens.tokenValue')" width="280">
           <template #default="scope">
             <div class="token-cell">
-              <el-tag size="small">{{ scope.row.prefix || scope.row.api_key || 'ling-...' }}</el-tag>
+              <el-tag size="small">
+                {{ scope.row.prefix || scope.row.api_key || 'ling-...' }}
+              </el-tag>
               <el-button type="primary" size="small" text @click="handleCopyToken(scope.row)">
                 <el-icon><DocumentCopy /></el-icon>
               </el-button>
@@ -61,7 +63,12 @@
                 Rerank: {{ getPolicyName(scope.row.rerank_policy_id) }}
               </el-tag>
               <span
-                v-if="!scope.row.policy_id && !scope.row.chat_policy_id && !scope.row.embedding_policy_id && !scope.row.rerank_policy_id"
+                v-if="
+                  !scope.row.policy_id &&
+                  !scope.row.chat_policy_id &&
+                  !scope.row.embedding_policy_id &&
+                  !scope.row.rerank_policy_id
+                "
                 class="text-muted"
               >
                 {{ $t('dashboard.notConfigured') }}
@@ -72,14 +79,22 @@
         <el-table-column prop="last_used_at" :label="$t('tokens.lastUsedAt')" width="180">
           <template #default="scope">
             <span class="text-caption">
-              {{ scope.row.last_used_at ? formatDate(scope.row.last_used_at) : $t('dashboard.neverUsed') }}
+              {{
+                scope.row.last_used_at
+                  ? formatDate(scope.row.last_used_at)
+                  : $t('dashboard.neverUsed')
+              }}
             </span>
           </template>
         </el-table-column>
         <el-table-column prop="expires_at" :label="$t('tokens.expiresAt')" width="180">
           <template #default="scope">
             <span class="text-caption">
-              {{ scope.row.expires_at ? formatDate(scope.row.expires_at) : $t('dashboard.neverExpires') }}
+              {{
+                scope.row.expires_at
+                  ? formatDate(scope.row.expires_at)
+                  : $t('dashboard.neverExpires')
+              }}
             </span>
           </template>
         </el-table-column>
@@ -130,8 +145,19 @@
         <el-divider content-position="left">{{ $t('tokens.typeSpecificPolicies') }}</el-divider>
 
         <el-form-item :label="$t('tokens.chatPolicy')">
-          <el-select v-model="tokenForm.chat_policy_id" :placeholder="$t('tokens.selectPolicyOptional')" style="width: 100%" filterable clearable>
-            <el-option v-for="policy in policies" :key="policy.id" :label="policy.name" :value="policy.id">
+          <el-select
+            v-model="tokenForm.chat_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
               <span>{{ policy.name }}</span>
               <span class="option-hint">({{ policy.type }})</span>
             </el-option>
@@ -139,8 +165,19 @@
         </el-form-item>
 
         <el-form-item :label="$t('tokens.embeddingPolicy')">
-          <el-select v-model="tokenForm.embedding_policy_id" :placeholder="$t('tokens.selectPolicyOptional')" style="width: 100%" filterable clearable>
-            <el-option v-for="policy in policies" :key="policy.id" :label="policy.name" :value="policy.id">
+          <el-select
+            v-model="tokenForm.embedding_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
               <span>{{ policy.name }}</span>
               <span class="option-hint">({{ policy.type }})</span>
             </el-option>
@@ -148,8 +185,19 @@
         </el-form-item>
 
         <el-form-item :label="$t('tokens.rerankPolicy')">
-          <el-select v-model="tokenForm.rerank_policy_id" :placeholder="$t('tokens.selectPolicyOptional')" style="width: 100%" filterable clearable>
-            <el-option v-for="policy in policies" :key="policy.id" :label="policy.name" :value="policy.id">
+          <el-select
+            v-model="tokenForm.rerank_policy_id"
+            :placeholder="$t('tokens.selectPolicyOptional')"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
               <span>{{ policy.name }}</span>
               <span class="option-hint">({{ policy.type }})</span>
             </el-option>
@@ -215,8 +263,18 @@
           <el-input :value="selectedToken?.name" readonly></el-input>
         </el-form-item>
         <el-form-item :label="$t('tokens.selectPolicy')">
-          <el-select v-model="selectedPolicyId" :placeholder="$t('tokens.selectPolicyPlaceholder')" style="width: 100%" filterable>
-            <el-option v-for="policy in policies" :key="policy.id" :label="policy.name" :value="policy.id">
+          <el-select
+            v-model="selectedPolicyId"
+            :placeholder="$t('tokens.selectPolicyPlaceholder')"
+            style="width: 100%"
+            filterable
+          >
+            <el-option
+              v-for="policy in policies"
+              :key="policy.id"
+              :label="policy.name"
+              :value="policy.id"
+            >
               <span>{{ policy.name }}</span>
               <span class="option-hint">({{ policy.type }})</span>
             </el-option>
@@ -367,7 +425,8 @@ const handleSaveToken = async () => {
         allowed_models: tokenForm.allowed_models || []
       }
       if (tokenForm.chat_policy_id) updateData.chat_policy_id = tokenForm.chat_policy_id
-      if (tokenForm.embedding_policy_id) updateData.embedding_policy_id = tokenForm.embedding_policy_id
+      if (tokenForm.embedding_policy_id)
+        updateData.embedding_policy_id = tokenForm.embedding_policy_id
       if (tokenForm.rerank_policy_id) updateData.rerank_policy_id = tokenForm.rerank_policy_id
 
       await api.updateAPIKey(tokenForm.id, updateData)

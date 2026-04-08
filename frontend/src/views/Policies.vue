@@ -9,7 +9,6 @@
     </div>
 
     <el-card class="table-card">
-
       <!-- 策略列表 -->
       <el-table v-loading="loading" :data="policies" style="width: 100%" border stripe>
         <el-table-column prop="name" :label="$t('policies.name')" width="200">

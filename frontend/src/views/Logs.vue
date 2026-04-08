@@ -2,141 +2,139 @@
   <div class="logs-page">
     <div class="page-header">
       <h1 class="page-title">{{ $t('logs.title') }}</h1>
-          <div>
-            <el-button type="success" @click="refreshLogs" :loading="loading">
-              <el-icon><Refresh /></el-icon>
-              {{ $t('logs.refresh') }}
-            </el-button>
-            <el-button type="danger" @click="handleClearLogs" :disabled="!selectedFile">
-              <el-icon><Delete /></el-icon>
-              {{ $t('logs.clearLogs') }}
-            </el-button>
-            <el-button type="primary" @click="handleDownloadLog" :disabled="!selectedFile">
-              <el-icon><Download /></el-icon>
-              {{ $t('logs.downloadLog') }}
-            </el-button>
-          </div>
-        </div>
-      </template>
+      <div>
+        <el-button type="success" @click="refreshLogs" :loading="loading">
+          <el-icon><Refresh /></el-icon>
+          {{ $t('logs.refresh') }}
+        </el-button>
+        <el-button type="danger" @click="handleClearLogs" :disabled="!selectedFile">
+          <el-icon><Delete /></el-icon>
+          {{ $t('logs.clearLogs') }}
+        </el-button>
+        <el-button type="primary" @click="handleDownloadLog" :disabled="!selectedFile">
+          <el-icon><Download /></el-icon>
+          {{ $t('logs.downloadLog') }}
+        </el-button>
+      </div>
+    </div>
 
-      <el-row :gutter="20">
-        <!-- 左侧：日志文件列表 -->
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <template #header>
-              <div class="files-header">
-                <span>{{ $t('logs.logFiles') }}</span>
+    <el-row :gutter="20">
+      <!-- 左侧：日志文件列表 -->
+      <el-col :span="6">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="files-header">
+              <span>{{ $t('logs.logFiles') }}</span>
+              <el-input
+                v-model="fileSearchKeyword"
+                :placeholder="$t('logs.searchFiles')"
+                size="small"
+                clearable
+                style="width: 100%; margin-top: 8px"
+              >
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+              </el-input>
+            </div>
+          </template>
+          <el-scrollbar height="600px" v-loading="loading">
+            <div class="log-files-list">
+              <div
+                v-for="file in filteredLogFiles"
+                :key="file.name"
+                :class="['file-item', { 'file-item-active': selectedFile === file.name }]"
+                @click="handleFileSelect(file.name)"
+              >
+                <div class="file-item-header">
+                  <el-icon class="file-icon"><Document /></el-icon>
+                  <div class="file-name" :title="file.name">{{ file.name }}</div>
+                </div>
+                <div class="file-info">
+                  <span class="file-size">
+                    <el-icon><Folder /></el-icon>
+                    {{ formatFileSize(file.size) }}
+                  </span>
+                  <span class="file-time">
+                    <el-icon><Clock /></el-icon>
+                    {{ formatTime(file.mod_time) }}
+                  </span>
+                </div>
+              </div>
+              <el-empty
+                v-if="filteredLogFiles.length === 0 && !loading"
+                :description="$t('logs.noLogFiles')"
+              />
+            </div>
+          </el-scrollbar>
+        </el-card>
+      </el-col>
+
+      <!-- 右侧：日志内容 -->
+      <el-col :span="18">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="log-header">
+              <span>{{ $t('logs.logContent') }}</span>
+              <div class="log-controls">
+                <el-select
+                  v-model="logLevel"
+                  :placeholder="$t('logs.logLevel')"
+                  style="width: 120px; margin-right: 10px"
+                  @change="handleFilterChange"
+                >
+                  <el-option :label="$t('logs.all')" value="" />
+                  <el-option label="DEBUG" value="DEBUG" />
+                  <el-option label="INFO" value="INFO" />
+                  <el-option label="WARN" value="WARN" />
+                  <el-option label="ERROR" value="ERROR" />
+                  <el-option label="FATAL" value="FATAL" />
+                </el-select>
                 <el-input
-                  v-model="fileSearchKeyword"
-                  :placeholder="$t('logs.searchFiles')"
-                  size="small"
+                  v-model="keyword"
+                  :placeholder="$t('logs.searchKeyword')"
+                  style="width: 200px; margin-right: 10px"
                   clearable
-                  style="width: 100%; margin-top: 8px"
+                  @clear="handleFilterChange"
+                  @keyup.enter="handleFilterChange"
                 >
                   <template #prefix>
                     <el-icon><Search /></el-icon>
                   </template>
                 </el-input>
-              </div>
-            </template>
-            <el-scrollbar height="600px" v-loading="loading">
-              <div class="log-files-list">
-                <div
-                  v-for="file in filteredLogFiles"
-                  :key="file.name"
-                  :class="['file-item', { 'file-item-active': selectedFile === file.name }]"
-                  @click="handleFileSelect(file.name)"
-                >
-                  <div class="file-item-header">
-                    <el-icon class="file-icon"><Document /></el-icon>
-                    <div class="file-name" :title="file.name">{{ file.name }}</div>
-                  </div>
-                  <div class="file-info">
-                    <span class="file-size">
-                      <el-icon><Folder /></el-icon>
-                      {{ formatFileSize(file.size) }}
-                    </span>
-                    <span class="file-time">
-                      <el-icon><Clock /></el-icon>
-                      {{ formatTime(file.mod_time) }}
-                    </span>
-                  </div>
-                </div>
-                <el-empty
-                  v-if="filteredLogFiles.length === 0 && !loading"
-                  :description="$t('logs.noLogFiles')"
+                <el-input-number
+                  v-model="lines"
+                  :min="10"
+                  :max="1000"
+                  :step="10"
+                  style="width: 120px; margin-right: 10px"
+                  @change="handleFilterChange"
                 />
+                <el-checkbox v-model="tail" @change="handleFilterChange">
+                  {{ $t('logs.readFromTail') }}
+                </el-checkbox>
               </div>
-            </el-scrollbar>
-          </el-card>
-        </el-col>
-
-        <!-- 右侧：日志内容 -->
-        <el-col :span="18">
-          <el-card shadow="hover">
-            <template #header>
-              <div class="log-header">
-                <span>{{ $t('logs.logContent') }}</span>
-                <div class="log-controls">
-                  <el-select
-                    v-model="logLevel"
-                    :placeholder="$t('logs.logLevel')"
-                    style="width: 120px; margin-right: 10px"
-                    @change="handleFilterChange"
-                  >
-                    <el-option :label="$t('logs.all')" value="" />
-                    <el-option label="DEBUG" value="DEBUG" />
-                    <el-option label="INFO" value="INFO" />
-                    <el-option label="WARN" value="WARN" />
-                    <el-option label="ERROR" value="ERROR" />
-                    <el-option label="FATAL" value="FATAL" />
-                  </el-select>
-                  <el-input
-                    v-model="keyword"
-                    :placeholder="$t('logs.searchKeyword')"
-                    style="width: 200px; margin-right: 10px"
-                    clearable
-                    @clear="handleFilterChange"
-                    @keyup.enter="handleFilterChange"
-                  >
-                    <template #prefix>
-                      <el-icon><Search /></el-icon>
-                    </template>
-                  </el-input>
-                  <el-input-number
-                    v-model="lines"
-                    :min="10"
-                    :max="1000"
-                    :step="10"
-                    style="width: 120px; margin-right: 10px"
-                    @change="handleFilterChange"
-                  />
-                  <el-checkbox v-model="tail" @change="handleFilterChange">
-                    {{ $t('logs.readFromTail') }}
-                  </el-checkbox>
-                </div>
-              </div>
-            </template>
-
-            <div class="log-content" ref="logContentRef">
-              <div
-                v-for="entry in logEntries"
-                :key="entry.line"
-                :class="['log-entry', `log-level-${entry.level?.toLowerCase()}`]"
-              >
-                <span class="log-line">{{ entry.line }}</span>
-                <span class="log-timestamp" v-if="entry.timestamp">
-                  {{ formatTimestamp(entry.timestamp) }}
-                </span>
-                <span class="log-level" v-if="entry.level">[{{ entry.level }}]</span>
-                <span class="log-message">{{ entry.message || entry.raw }}</span>
-              </div>
-              <el-empty v-if="logEntries.length === 0" :description="$t('logs.noLogContent')" />
             </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </el-card>
+          </template>
+
+          <div class="log-content" ref="logContentRef">
+            <div
+              v-for="entry in logEntries"
+              :key="entry.line"
+              :class="['log-entry', `log-level-${entry.level?.toLowerCase()}`]"
+            >
+              <span class="log-line">{{ entry.line }}</span>
+              <span class="log-timestamp" v-if="entry.timestamp">
+                {{ formatTimestamp(entry.timestamp) }}
+              </span>
+              <span class="log-level" v-if="entry.level">[{{ entry.level }}]</span>
+              <span class="log-message">{{ entry.message || entry.raw }}</span>
+            </div>
+            <el-empty v-if="logEntries.length === 0" :description="$t('logs.noLogContent')" />
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 

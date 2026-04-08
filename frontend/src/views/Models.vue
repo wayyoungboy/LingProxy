@@ -25,7 +25,11 @@
           <el-option :label="$t('models.embedding')" value="embedding"></el-option>
           <el-option :label="$t('models.image')" value="image"></el-option>
         </el-select>
-        <el-select v-model="statusFilter" :placeholder="$t('models.filterStatus')" style="width: 140px">
+        <el-select
+          v-model="statusFilter"
+          :placeholder="$t('models.filterStatus')"
+          style="width: 140px"
+        >
           <el-option :label="$t('models.all')" value=""></el-option>
           <el-option :label="$t('models.active')" value="active"></el-option>
           <el-option :label="$t('models.inactive')" value="inactive"></el-option>
@@ -144,7 +148,10 @@
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('models.llmResource')" prop="llm_resource_id">
-          <el-select v-model="modelForm.llm_resource_id" :placeholder="$t('models.selectLLMResource')">
+          <el-select
+            v-model="modelForm.llm_resource_id"
+            :placeholder="$t('models.selectLLMResource')"
+          >
             <el-option
               v-for="resource in llmResources"
               :key="resource.id"
@@ -181,10 +188,16 @@
     <el-dialog v-model="pricingVisible" :title="$t('models.pricingInfo')" width="500px">
       <el-card v-if="modelPricing" class="pricing-card">
         <el-descriptions :column="1" border>
-          <el-descriptions-item :label="$t('models.inputPrice')" v-if="modelPricing.input_token_price">
+          <el-descriptions-item
+            :label="$t('models.inputPrice')"
+            v-if="modelPricing.input_token_price"
+          >
             <span class="price-value">${{ modelPricing.input_token_price }} / 1K tokens</span>
           </el-descriptions-item>
-          <el-descriptions-item :label="$t('models.outputPrice')" v-if="modelPricing.output_token_price">
+          <el-descriptions-item
+            :label="$t('models.outputPrice')"
+            v-if="modelPricing.output_token_price"
+          >
             <span class="price-value">${{ modelPricing.output_token_price }} / 1K tokens</span>
           </el-descriptions-item>
           <el-descriptions-item :label="$t('models.imagePrice')" v-if="modelPricing.image_price">
@@ -251,7 +264,9 @@ const modelRules = computed(() => ({
   name: [{ required: true, message: t('models.nameRequired'), trigger: 'blur' }],
   model_id: [{ required: true, message: t('models.modelIdRequired'), trigger: 'blur' }],
   type: [{ required: true, message: t('models.typeRequired'), trigger: 'change' }],
-  llm_resource_id: [{ required: true, message: t('models.llmResourceRequired'), trigger: 'change' }],
+  llm_resource_id: [
+    { required: true, message: t('models.llmResourceRequired'), trigger: 'change' }
+  ],
   status: [{ required: true, message: t('models.statusRequired'), trigger: 'change' }]
 }))
 

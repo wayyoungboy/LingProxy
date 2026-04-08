@@ -5,7 +5,6 @@
     </div>
 
     <el-card class="filter-card">
-
       <el-form :inline="true" :model="searchForm" class="search-form mb-4">
         <el-form-item :label="$t('requests.path')">
           <el-input v-model="searchForm.path" :placeholder="$t('requests.pathPlaceholder')" />

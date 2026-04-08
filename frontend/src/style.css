@@ -293,7 +293,9 @@ body {
 .el-button--primary:focus {
   background-color: #b85a3b !important;
   border-color: #b85a3b !important;
-  box-shadow: 0px 0px 0px 1px #b85a3b, rgba(0, 0, 0, 0.1) 0px 2px 8px !important;
+  box-shadow:
+    0px 0px 0px 1px #b85a3b,
+    rgba(0, 0, 0, 0.1) 0px 2px 8px !important;
 }
 
 /* Default button - Warm Sand */

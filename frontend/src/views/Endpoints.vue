@@ -39,7 +39,9 @@
         <el-table-column prop="status" :label="$t('endpoints.status')" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.status === 'enabled' ? 'success' : 'danger'" size="small">
-              {{ scope.row.status === 'enabled' ? $t('endpoints.enabled') : $t('endpoints.disabled') }}
+              {{
+                scope.row.status === 'enabled' ? $t('endpoints.enabled') : $t('endpoints.disabled')
+              }}
             </el-tag>
           </template>
         </el-table-column>
@@ -74,7 +76,11 @@
     </el-card>
 
     <!-- Dialog -->
-    <el-dialog v-model="dialogVisible" :title="dialogType === 'add' ? $t('endpoints.addEndpoint') : $t('endpoints.editEndpoint')" width="600px">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogType === 'add' ? $t('endpoints.addEndpoint') : $t('endpoints.editEndpoint')"
+      width="600px"
+    >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item :label="$t('endpoints.endpointName')" prop="name">
           <el-input v-model="form.name" :placeholder="$t('endpoints.namePlaceholder')" />
@@ -84,7 +90,12 @@
         </el-form-item>
         <el-form-item :label="$t('endpoints.model')" prop="model">
           <el-select v-model="form.model" :placeholder="$t('endpoints.selectModel')">
-            <el-option v-for="model in models" :key="model.id" :label="model.name" :value="model.name" />
+            <el-option
+              v-for="model in models"
+              :key="model.id"
+              :label="model.name"
+              :value="model.name"
+            />
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('endpoints.method')" prop="method">
@@ -102,7 +113,12 @@
           </el-select>
         </el-form-item>
         <el-form-item :label="$t('endpoints.description')">
-          <el-input v-model="form.description" type="textarea" rows="3" :placeholder="$t('endpoints.descriptionPlaceholder')" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            rows="3"
+            :placeholder="$t('endpoints.descriptionPlaceholder')"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -222,7 +238,9 @@ const submitForm = async () => {
         dialogVisible.value = false
         getEndpoints()
       } catch (error) {
-        ElMessage.error(dialogType.value === 'add' ? t('endpoints.addFailed') : t('endpoints.updateFailed'))
+        ElMessage.error(
+          dialogType.value === 'add' ? t('endpoints.addFailed') : t('endpoints.updateFailed')
+        )
       }
     }
   })

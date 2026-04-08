@@ -9,7 +9,6 @@
     </div>
 
     <el-card>
-
       <el-tabs v-model="activeTab" class="mt-4">
         <!-- 基本设置 -->
         <el-tab-pane :label="$t('settings.basicSettings')" name="basic">
