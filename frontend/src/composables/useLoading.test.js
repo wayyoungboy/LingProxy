@@ -10,7 +10,7 @@ describe('useLoading', () => {
 
   it('should return loading state functions', async () => {
     // Import the composable
-    const { useLoading } = await import('../src/composables/useLoading')
+    const { useLoading } = await import('./useLoading')
 
     const { loading, withLoading } = useLoading()
 
@@ -18,7 +18,7 @@ describe('useLoading', () => {
   })
 
   it('should set loading to true during async operation', async () => {
-    const { useLoading } = await import('../src/composables/useLoading')
+    const { useLoading } = await import('./useLoading')
 
     const { loading, withLoading } = useLoading()
 
