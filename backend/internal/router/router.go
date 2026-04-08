@@ -167,6 +167,7 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		llmResourceRoutes.DELETE("/:id", llmResourceHandler.DeleteLLMResource)
 		llmResourceRoutes.POST("/:id/test", llmResourceHandler.TestLLMResource)
 		llmResourceRoutes.POST("/import", llmResourceHandler.ImportLLMResources)
+		llmResourceRoutes.POST("/import/bailian", llmResourceHandler.ImportLLMResourcesFromBailian)
 		llmResourceRoutes.GET("/import/template", llmResourceHandler.DownloadImportTemplate)
 
 		// 模型路由（根据认证开关决定是否需要认证）

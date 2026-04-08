@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { STORAGE_KEYS, ROUTE_PATHS } from '../utils/constants'
-import { getMenuTitle } from '../config/menu'
 import i18n from '../locales'
 
 const routes = [
@@ -8,7 +7,7 @@ const routes = [
     path: ROUTE_PATHS.LOGIN,
     name: 'Login',
     component: () => import('../views/Login.vue'),
-    meta: { 
+    meta: {
       requiresAuth: false,
       titleKey: 'login.title'
     }

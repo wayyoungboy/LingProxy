@@ -257,15 +257,19 @@ export default {
     importSuccess: '导入成功',
     importFailed: '导入失败，请检查文件格式',
     jsonImportTitle: 'JSON 批量导入 LLM 资源',
-    jsonImportNotice: '请按示例格式提供 JSON 数组，每一项为一个 LLM 资源对象。必填字段：name、type、model、base_url、api_key。',
+    jsonImportNotice:
+      '支持两种格式：数组格式（每项一个资源）或 Coding Plan 格式（一个服务商配置多个模型）。',
     jsonExample: 'JSON 格式示例',
     fillExample: '一键填充到编辑区',
     jsonDataLabel: '要导入的 JSON 数据',
-    jsonDataPlaceholder: '在此粘贴或编辑要导入的 JSON 数组，例如上方示例',
+    jsonDataPlaceholder: '在此粘贴或编辑要导入的 JSON 数据',
     startImport: '开始导入',
     jsonDataRequired: '请先粘贴要导入的 JSON 数据',
     jsonFormatError: 'JSON 格式错误，请检查后重试',
-    jsonMustBeArray: 'JSON 数据必须是非空数组'
+    jsonMustBeArray: 'JSON 数据必须是非空数组',
+    jsonInvalidFormat: '无效的 JSON 格式。请使用数组格式或 Coding Plan 格式。',
+    arrayFormat: '数组格式',
+    codingPlanFormat: 'Coding Plan 格式'
   },
   llmResourceUsage: {
     title: '用量统计',
@@ -372,7 +376,8 @@ export default {
     regexMatchRules: '正则匹配规则',
     regexPatternPlaceholder: '正则表达式（如 ^gpt-）',
     regexModelMatchPatterns: '正则表达式模式列表',
-    regexModelMatchHint: '此策略将请求端输入的模型名作为正则表达式，匹配资源池中资源的模型名，匹配成功后从匹配的资源中随机选择一个。',
+    regexModelMatchHint:
+      '此策略将请求端输入的模型名作为正则表达式，匹配资源池中资源的模型名，匹配成功后从匹配的资源中随机选择一个。',
     addPattern: '添加模式',
     priorityConfig: '资源优先级配置',
     priorityPlaceholder: '优先级（数字越小优先级越高）',
@@ -428,7 +433,8 @@ export default {
     concurrencyLimit: '并发请求限制',
     securitySettings: '安全设置',
     enableAuth: '启用认证',
-    authDisabledWarning: '关闭认证后，所有API（除登录外）都不需要认证即可访问。修改此设置需要重启服务。',
+    authDisabledWarning:
+      '关闭认证后，所有API（除登录外）都不需要认证即可访问。修改此设置需要重启服务。',
     jwtSecret: 'JWT密钥',
     jwtSecretPlaceholder: '留空则不修改（显示为******）',
     jwtSecretChangeWarning: '修改JWT密钥需要重启服务，且会导致所有现有Token失效',

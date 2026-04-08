@@ -989,6 +989,165 @@ func (h *LLMResourceHandler) DownloadImportTemplate(c *gin.Context) {
 	logger.Info("Excel模板下载成功")
 }
 
+// BailianImportRequest 百炼平台导入请求格式
+// 一个 provider (base_url + api_key) + 多个模型
+type BailianImportRequest struct {
+	BaseURL string                `json:"base_url"`
+	APIKey  string                `json:"api_key"`
+	Models  []BailianModelConfig  `json:"models"`
+}
+
+// BailianModelConfig 百炼平台模型配置
+type BailianModelConfig struct {
+	Name        string `json:"name"`        // 模型标识，如 qwen-turbo
+	Type        string `json:"type"`        // 模型类型: chat, embedding, rerank 等
+	DisplayName string `json:"display_name"` // 显示名称（可选）
+}
+
+// ImportLLMResourcesFromBailian 从百炼平台格式导入LLM资源
+// @Summary Import LLM resources from Bailian format
+// @Description Import LLM resources using Bailian platform format (one provider with multiple models)
+// @Tags llm-resources
+// @Accept json
+// @Produce json
+// @Param request body BailianImportRequest true "Bailian import request"
+// @Success 200 {object} map[string]interface{} "Import result"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/llm-resources/import/bailian [post]
+func (h *LLMResourceHandler) ImportLLMResourcesFromBailian(c *gin.Context) {
+	var req BailianImportRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Warn("百炼格式导入失败：JSON解析失败", logger.F("error", err.Error()))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON解析失败: " + err.Error()})
+		return
+	}
+
+	// 验证必填字段
+	if req.BaseURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "base_url 是必填项"})
+		return
+	}
+	if req.APIKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "api_key 是必填项"})
+		return
+	}
+	if len(req.Models) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "models 列表不能为空"})
+		return
+	}
+
+	// 获取所有现有资源，用于重复检查
+	existingResources, err := h.storage.ListLLMResources()
+	if err != nil {
+		logger.Error("百炼格式导入失败：获取现有资源列表失败", logger.F("error", err.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取现有资源列表失败: " + err.Error()})
+		return
+	}
+
+	successCount := 0
+	failCount := 0
+	duplicateCount := 0
+	errors := []string{}
+	duplicates := []map[string]interface{}{}
+
+	validTypes := map[string]bool{
+		"chat":       true,
+		"completion": true,
+		"embedding":  true,
+		"image":      true,
+		"audio":      true,
+		"moderation": true,
+		"rerank":     true,
+	}
+
+	for i, modelConfig := range req.Models {
+		itemNum := i + 1
+
+		// 验证模型配置
+		modelName := strings.TrimSpace(modelConfig.Name)
+		modelType := strings.ToLower(strings.TrimSpace(modelConfig.Type))
+		displayName := strings.TrimSpace(modelConfig.DisplayName)
+
+		if modelName == "" {
+			failCount++
+			errors = append(errors, fmt.Sprintf("第%d个模型: 模型名称不能为空", itemNum))
+			continue
+		}
+
+		if modelType == "" {
+			modelType = "chat" // 默认为 chat 类型
+		}
+
+		if !validTypes[modelType] {
+			failCount++
+			errors = append(errors, fmt.Sprintf("第%d个模型: 不支持的模型类型 '%s'", itemNum, modelConfig.Type))
+			continue
+		}
+
+		// 生成资源名称
+		resourceName := displayName
+		if resourceName == "" {
+			resourceName = modelName
+		}
+
+		// 创建资源对象（用于重复检查）
+		resourceToCheck := &storage.LLMResource{
+			Type:       modelType,
+			Model:      modelName,
+			BaseURL:    req.BaseURL,
+			APIKey:     req.APIKey,
+			TestStatus: "untested",
+		}
+
+		// 检查是否重复
+		if h.isDuplicateResource(resourceToCheck, existingResources) {
+			duplicateCount++
+			duplicates = append(duplicates, map[string]interface{}{
+				"item":     itemNum,
+				"name":     resourceName,
+				"type":     modelType,
+				"model":    modelName,
+				"base_url": req.BaseURL,
+			})
+			continue
+		}
+
+		// 创建资源
+		resource := &storage.LLMResource{
+			Name:       resourceName,
+			Type:       modelType,
+			Driver:     "openai",
+			Model:      modelName,
+			BaseURL:    req.BaseURL,
+			APIKey:     req.APIKey,
+			Status:     "active",
+			TestStatus: "untested",
+		}
+
+		if err := h.storage.CreateLLMResource(resource); err != nil {
+			failCount++
+			errors = append(errors, fmt.Sprintf("第%d个模型: %s", itemNum, err.Error()))
+			continue
+		}
+
+		// 将新创建的资源添加到现有资源列表
+		existingResources = append(existingResources, resource)
+		successCount++
+	}
+
+	logger.Info("百炼格式导入LLM资源完成", logger.F("success", successCount), logger.F("fail", failCount), logger.F("duplicate", duplicateCount))
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "导入完成",
+		"success":    successCount,
+		"fail":       failCount,
+		"duplicate":  duplicateCount,
+		"errors":     errors,
+		"duplicates": duplicates,
+		"total":      successCount + failCount + duplicateCount,
+	})
+}
+
 // isDuplicateResource 检查资源是否重复
 // 重复的定义：type、model、base_url、api_key 都一样
 func (h *LLMResourceHandler) isDuplicateResource(resource *storage.LLMResource, existingResources []*storage.LLMResource) bool {

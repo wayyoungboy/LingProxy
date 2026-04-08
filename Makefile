@@ -216,7 +216,7 @@ start-backend:
 			rm -f $(RUN_DIR)/backend.pid; \
 		fi; \
 	fi
-	@cd backend && $(GO_CMD) run ./cmd/main.go > $(LOGS_DIR)/backend.log 2>&1 &
+	@cd backend && $(GO_CMD) run ./cmd/main.go > ../$(LOGS_DIR)/backend.log 2>&1 &
 	@sleep 2
 	@BACKEND_PID=$$(pgrep -f "go run.*cmd/main.go" | head -1); \
 	if [ -z "$$BACKEND_PID" ]; then \

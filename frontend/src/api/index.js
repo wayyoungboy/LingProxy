@@ -85,7 +85,8 @@ apiClient.interceptors.response.use(
         errorMessage = i18n.global.t('api.gatewayTimeout')
         break
       default:
-        errorMessage = data?.error || data?.message || `${i18n.global.t('api.requestFailed')} (${status})`
+        errorMessage =
+          data?.error || data?.message || `${i18n.global.t('api.requestFailed')} (${status})`
     }
 
     // 显示错误消息（401错误不显示，因为会跳转登录页）
@@ -134,7 +135,7 @@ const api = {
   deleteUser(id) {
     return apiClient.delete(`/users/${id}`)
   },
-  resetAPIKey(id) {
+  resetUserAPIKey(id) {
     return apiClient.post(`/users/${id}/reset-api-key`)
   },
   updatePassword(id, passwordData) {
@@ -172,6 +173,11 @@ const api = {
   importLLMResourcesByJSON(resources) {
     // 通过 JSON 数组批量导入 LLM 资源
     return apiClient.post('/llm-resources/import', resources)
+  },
+  importLLMResourcesFromBailian(data) {
+    // 从百炼平台格式导入 LLM 资源
+    // 格式: { base_url, api_key, models: [{ name, type, display_name }] }
+    return apiClient.post('/llm-resources/import/bailian', data)
   },
   downloadLLMResourcesTemplate() {
     return apiClient.get('/llm-resources/import/template', {

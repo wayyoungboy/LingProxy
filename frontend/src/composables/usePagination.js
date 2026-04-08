@@ -16,16 +16,16 @@ export function usePagination(initialPageSize = PAGINATION.DEFAULT_PAGE_SIZE) {
     pagination.total = 0
   }
 
-  const setTotal = (total) => {
+  const setTotal = total => {
     pagination.total = total
   }
 
-  const setPageSize = (size) => {
+  const setPageSize = size => {
     pagination.pageSize = size
     pagination.currentPage = 1
   }
 
-  const setCurrentPage = (page) => {
+  const setCurrentPage = page => {
     pagination.currentPage = page
   }
 

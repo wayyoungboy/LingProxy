@@ -122,15 +122,18 @@ export default {
     iHaveSaved: 'I Have Saved',
     setTokenPolicy: 'Set Token Policy',
     createSuccess: 'Token created successfully',
-    createSuccessButPolicyFailed: 'Token created successfully, but policy setting failed, please set it manually later',
+    createSuccessButPolicyFailed:
+      'Token created successfully, but policy setting failed, please set it manually later',
     updateSuccess: 'Token updated successfully',
     saveFailed: 'Failed to save token',
     deleteConfirm: 'Delete Confirmation',
-    deleteConfirmMessage: 'Are you sure you want to delete this token? The token will be unusable after deletion.',
+    deleteConfirmMessage:
+      'Are you sure you want to delete this token? The token will be unusable after deletion.',
     deleteSuccess: 'Token deleted successfully',
     deleteFailed: 'Failed to delete token',
     resetConfirm: 'Reset Confirmation',
-    resetConfirmMessage: 'Are you sure you want to reset this token? The original token will become invalid immediately.',
+    resetConfirmMessage:
+      'Are you sure you want to reset this token? The original token will become invalid immediately.',
     resetSuccess: 'Token reset successfully',
     resetFailed: 'Failed to reset token',
     getTokenFailed: 'Failed to get token',
@@ -143,7 +146,8 @@ export default {
     // New fields
     allowedModels: 'Allowed Models',
     allowedModelsPlaceholder: 'Select allowed models (leave empty to allow all models)',
-    allowedModelsHint: 'Leave empty to allow all models, or select specific models to restrict access',
+    allowedModelsHint:
+      'Leave empty to allow all models, or select specific models to restrict access',
     allModelsAllowed: 'All models allowed',
     typeSpecificPolicies: 'Type-Specific Policies',
     chatPolicy: 'Chat Policy',
@@ -221,7 +225,8 @@ export default {
     maxFileSize: 'Max File Size',
     language: 'Language',
     // Configuration hints
-    supportedDimensionsPlaceholder: 'Enter supported dimensions separated by commas, e.g.: 512,1024,1536',
+    supportedDimensionsPlaceholder:
+      'Enter supported dimensions separated by commas, e.g.: 512,1024,1536',
     defaultDimensionPlaceholder: 'Enter default dimension',
     defaultTopNPlaceholder: 'Enter default Top N value',
     nameRequired: 'Please enter resource name',
@@ -234,7 +239,8 @@ export default {
     selectType: 'Please select model type',
     selectDriver: 'Please select driver',
     selectStatus: 'Please select status',
-    modelIdPlaceholder: 'Please enter model ID, e.g., gpt-4, gpt-3.5-turbo (model identifier for this resource)',
+    modelIdPlaceholder:
+      'Please enter model ID, e.g., gpt-4, gpt-3.5-turbo (model identifier for this resource)',
     baseUrlPlaceholder: 'Will be auto-filled after selecting driver',
     createSuccess: 'LLM resource created successfully',
     updateSuccess: 'LLM resource updated successfully',
@@ -257,15 +263,19 @@ export default {
     importSuccess: 'Import successful',
     importFailed: 'Import failed, please check file format',
     jsonImportTitle: 'JSON Batch Import LLM Resources',
-    jsonImportNotice: 'Please provide a JSON array in the example format, each item is an LLM resource object. Required fields: name, type, model, base_url, api_key.',
+    jsonImportNotice:
+      'Supports two formats: Array format (each item is a resource) or Coding Plan format (one provider with multiple models).',
     jsonExample: 'JSON Format Example',
     fillExample: 'Fill to Editor',
     jsonDataLabel: 'JSON Data to Import',
-    jsonDataPlaceholder: 'Paste or edit the JSON array to import here, e.g., the example above',
+    jsonDataPlaceholder: 'Paste or edit the JSON to import here',
     startImport: 'Start Import',
     jsonDataRequired: 'Please paste the JSON data to import first',
     jsonFormatError: 'JSON format error, please check and try again',
-    jsonMustBeArray: 'JSON data must be a non-empty array'
+    jsonMustBeArray: 'JSON data must be a non-empty array',
+    jsonInvalidFormat: 'Invalid JSON format. Use array format or Coding Plan format.',
+    arrayFormat: 'Array Format',
+    codingPlanFormat: 'Coding Plan Format'
   },
   llmResourceUsage: {
     title: 'Usage Statistics',
@@ -353,11 +363,13 @@ export default {
     resourcePoolNotConfigured: 'Resource pool not configured, all available resources will be used',
     selectResourceToAdd: 'Select resource to add to pool',
     clearResourcePool: 'Clear Resource Pool',
-    clearResourcePoolConfirm: 'Are you sure you want to clear the resource pool? All available resources will be used after clearing.',
+    clearResourcePoolConfirm:
+      'Are you sure you want to clear the resource pool? All available resources will be used after clearing.',
     resourcePoolCleared: 'Resource pool cleared',
     resourceAlreadyInPool: 'This resource is already in the pool',
     filterActiveOnly: 'Filter Active Resources Only',
-    filterActiveOnlyDesc: 'When enabled, even if inactive resources are included in the pool, only active resources will be selected',
+    filterActiveOnlyDesc:
+      'When enabled, even if inactive resources are included in the pool, only active resources will be selected',
     resourceList: 'Resource List',
     selectResourcesOrder: 'Select resources (in order)',
     weightedConfig: 'Resource Weight Configuration',
@@ -372,7 +384,8 @@ export default {
     regexMatchRules: 'Regex Match Rules',
     regexPatternPlaceholder: 'Regular expression (e.g., ^gpt-)',
     regexModelMatchPatterns: 'Regular Expression Patterns',
-    regexModelMatchHint: 'This policy uses the model name from the request as a regular expression to match resource model names in the pool, then randomly selects from matched resources.',
+    regexModelMatchHint:
+      'This policy uses the model name from the request as a regular expression to match resource model names in the pool, then randomly selects from matched resources.',
     addPattern: 'Add Pattern',
     priorityConfig: 'Resource Priority Configuration',
     priorityPlaceholder: 'Priority (smaller number = higher priority)',
@@ -387,7 +400,8 @@ export default {
     updateSuccess: 'Policy updated successfully',
     saveFailed: 'Failed to save policy',
     deleteConfirm: 'Delete Confirmation',
-    deleteConfirmMessage: 'Are you sure you want to delete this policy? Tokens using this policy will use the default policy after deletion.',
+    deleteConfirmMessage:
+      'Are you sure you want to delete this policy? Tokens using this policy will use the default policy after deletion.',
     deleteSuccess: 'Policy deleted successfully',
     deleteFailed: 'Failed to delete policy',
     getListFailed: 'Failed to get policy list',
@@ -411,7 +425,8 @@ export default {
     hostPlaceholder: 'Please enter host address',
     debugMode: 'Debug Mode',
     restartRequired: 'Restart Required',
-    restartRequiredMessage: 'The following configuration items have been modified and require a service restart to take effect:',
+    restartRequiredMessage:
+      'The following configuration items have been modified and require a service restart to take effect:',
     portChangeWarning: 'Port changes require a service restart to take effect',
     hostChangeWarning: 'Host changes require a service restart to take effect',
     gotIt: 'Got It',
@@ -428,10 +443,12 @@ export default {
     concurrencyLimit: 'Concurrency Limit',
     securitySettings: 'Security Settings',
     enableAuth: 'Enable Authentication',
-    authDisabledWarning: 'After disabling authentication, all APIs (except login) can be accessed without authentication. This setting requires a service restart.',
+    authDisabledWarning:
+      'After disabling authentication, all APIs (except login) can be accessed without authentication. This setting requires a service restart.',
     jwtSecret: 'JWT Secret',
     jwtSecretPlaceholder: 'Leave empty to keep unchanged (displayed as ******)',
-    jwtSecretChangeWarning: 'Changing JWT secret requires a service restart and will invalidate all existing tokens',
+    jwtSecretChangeWarning:
+      'Changing JWT secret requires a service restart and will invalidate all existing tokens',
     tokenExpiration: 'Token Expiration (hours)',
     enableHTTPS: 'Enable HTTPS',
     notImplemented: 'Not implemented',
@@ -494,7 +511,8 @@ export default {
     maxRetries: 'Max Retries',
     maxRetriesDescription: 'Maximum number of retry attempts for failed requests (0 = disabled)',
     retryDelay: 'Retry Delay',
-    retryDelayDescription: 'Delay between retry attempts (seconds). Actual delay increases exponentially with each retry.',
+    retryDelayDescription:
+      'Delay between retry attempts (seconds). Actual delay increases exponentially with each retry.',
     seconds: 'seconds',
     systemInfo: 'System Information',
     systemInfoName: 'System Name',
@@ -535,7 +553,8 @@ export default {
     downloadFailed: 'Failed to download log file',
     selectFileToClear: 'Please select a log file to clear',
     clearConfirm: 'Clear Confirmation',
-    clearConfirmMessage: 'Are you sure you want to clear the log file "{file}"? This operation cannot be undone.',
+    clearConfirmMessage:
+      'Are you sure you want to clear the log file "{file}"? This operation cannot be undone.',
     clearSuccess: 'Log file cleared',
     clearFailed: 'Failed to clear log file',
     getFilesFailed: 'Failed to get log files list',
@@ -656,7 +675,8 @@ export default {
     deleteFailed: 'Failed to delete user',
     getListFailed: 'Failed to get user list',
     resetKeyConfirm: 'Reset Confirmation',
-    resetKeyConfirmMessage: 'Are you sure you want to reset this user\'s API Key? The old API Key will be invalidated after reset.',
+    resetKeyConfirmMessage:
+      "Are you sure you want to reset this user's API Key? The old API Key will be invalidated after reset.",
     resetKeySuccess: 'API Key reset successfully',
     resetKeyFailed: 'Failed to reset API Key',
     saveUserFirst: 'Please save user first',
