@@ -14,8 +14,8 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
-      <!-- 搜索和筛选 -->
+    <!-- 搜索和筛选 -->
+    <div class="filter-section">
       <div class="search-filter">
         <el-input
           v-model="searchQuery"
@@ -46,15 +46,14 @@
           <el-option :label="$t('llmResources.inactive')" value="inactive"></el-option>
         </el-select>
       </div>
+    </div>
 
-      <!-- LLM资源列表 -->
-      <el-table
-        v-loading="loading"
-        :data="filteredResources"
-        style="width: 100%; margin-top: 20px"
-        border
-        stripe
-      >
+    <!-- LLM资源列表 -->
+    <el-table
+      v-loading="loading"
+      :data="filteredResources"
+      style="width: 100%"
+    >
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="name" :label="$t('llmResources.name')" />
         <el-table-column prop="type" :label="$t('llmResources.modelType')" width="120">
@@ -149,7 +148,6 @@
           @current-change="handleCurrentChange"
         />
       </div>
-    </el-card>
 
     <!-- 添加/编辑LLM资源对话框 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
@@ -1125,20 +1123,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.llm-resources {
-  padding: 0;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
 }
 
 .header-actions {
@@ -1147,8 +1137,16 @@ onMounted(() => {
   gap: 10px;
 }
 
-.search-filter {
+.filter-section {
+  margin-top: 20px;
   margin-bottom: 20px;
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
+}
+
+.search-filter {
   display: flex;
   align-items: center;
 }
@@ -1180,27 +1178,15 @@ onMounted(() => {
 }
 
 .json-example-block {
-  background-color: #f5f5f5;
-  border-radius: 4px;
+  background-color: var(--claude-parchment);
+  border-radius: var(--radius-subtle);
   padding: 10px 12px;
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 260px;
   overflow: auto;
-}
-
-.model-item {
-  margin-bottom: 12px;
-}
-
-.model-card {
-  background-color: #fafafa;
-}
-
-.model-card :deep(.el-card__body) {
-  padding: 16px;
 }
 
 .json-import-tabs {

@@ -1,54 +1,36 @@
 <template>
-  <div class="usage-container">
-    <el-card shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span class="page-title">{{ $t('llmResourceUsage.title') }}</span>
-          <el-button type="primary" @click="refreshData">
-            <el-icon><Refresh /></el-icon>
-            {{ $t('dashboard.refreshData') }}
-          </el-button>
-        </div>
-      </template>
+  <div class="llm-resource-usage-page">
+    <div class="page-header">
+      <h1 class="page-title">{{ $t('llmResourceUsage.title') }}</h1>
+      <el-button type="primary" @click="refreshData">
+        <el-icon><Refresh /></el-icon>
+        {{ $t('dashboard.refreshData') }}
+      </el-button>
+    </div>
 
-      <!-- 统计卡片 -->
-      <el-row :gutter="20" class="mb-4">
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-content">
-              <div class="stat-label">{{ $t('llmResourceUsage.totalTokens') }}</div>
-              <div class="stat-value">{{ formatNumber(totalTokens) }}</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-content">
-              <div class="stat-label">{{ $t('llmResourceUsage.totalRequests') }}</div>
-              <div class="stat-value">{{ formatNumber(totalRequests) }}</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-content">
-              <div class="stat-label">{{ $t('llmResourceUsage.successRequests') }}</div>
-              <div class="stat-value">{{ formatNumber(successRequests) }}</div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-content">
-              <div class="stat-label">{{ $t('llmResourceUsage.averageTokens') }}</div>
-              <div class="stat-value">{{ formatNumber(avgTokensPerRequest) }}</div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
+    <!-- 统计卡片 -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">{{ $t('llmResourceUsage.totalTokens') }}</div>
+        <div class="stat-value">{{ formatNumber(totalTokens) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">{{ $t('llmResourceUsage.totalRequests') }}</div>
+        <div class="stat-value">{{ formatNumber(totalRequests) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">{{ $t('llmResourceUsage.successRequests') }}</div>
+        <div class="stat-value">{{ formatNumber(successRequests) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">{{ $t('llmResourceUsage.averageTokens') }}</div>
+        <div class="stat-value">{{ formatNumber(avgTokensPerRequest) }}</div>
+      </div>
+    </div>
 
-      <!-- 筛选表单 -->
-      <el-form :inline="true" :model="searchForm" class="mb-4">
+    <!-- 筛选表单 -->
+    <div class="filter-section">
+      <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item :label="$t('llmResourceUsage.timeRange')">
           <el-date-picker
             v-model="searchForm.dateRange"
@@ -73,14 +55,15 @@
           <el-button @click="resetForm">{{ $t('common.reset') }}</el-button>
         </el-form-item>
       </el-form>
+    </div>
 
-      <!-- Token使用统计表格 -->
+    <!-- Token使用统计表格 -->
+    <div class="table-section">
       <el-table
         :data="usageList"
         style="width: 100%"
         v-loading="loading"
         :default-sort="{ prop: 'total_tokens', order: 'descending' }"
-        stripe
       >
         <el-table-column
           prop="resource_name"
@@ -181,7 +164,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container mt-4">
+      <div class="pagination-container">
         <el-pagination
           v-model:current-page="pagination.current"
           v-model:page-size="pagination.size"
@@ -192,7 +175,7 @@
           @current-change="handleCurrentChange"
         />
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -359,57 +342,119 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.usage-container {
-  padding: 0;
+.llm-resource-usage-page {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.card-header {
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
+}
+
+/* 统计卡片网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .stat-card {
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
   text-align: center;
+  transition: all 0.3s ease;
 }
 
-.stat-content {
-  padding: 10px 0;
+.stat-card:hover {
+  box-shadow: 0 0 0 4px var(--claude-shadow-terracotta-subtle);
+  border-color: var(--claude-terracotta);
 }
 
 .stat-label {
-  font-size: 14px;
-  color: #666;
+  font-size: 13px;
+  color: var(--claude-text-secondary);
   margin-bottom: 8px;
+  font-family: var(--font-serif);
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #2563eb;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--claude-terracotta);
+  font-family: var(--font-serif);
 }
 
-.token-value {
-  font-weight: 600;
-  color: #2563eb;
+/* 筛选区域 */
+.filter-section {
+  margin-bottom: 20px;
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
+}
+
+.search-form {
+  margin-bottom: 0;
+}
+
+/* 表格区域 */
+.table-section {
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
 }
 
 .pagination-container {
   display: flex;
   justify-content: flex-end;
-}
-
-.mb-4 {
-  margin-bottom: 16px;
-}
-
-.mt-4 {
   margin-top: 16px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .search-form {
+    flex-direction: column;
+  }
 }
 </style>

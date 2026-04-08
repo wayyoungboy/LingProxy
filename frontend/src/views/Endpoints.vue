@@ -8,7 +8,7 @@
     </div>
 
     <!-- Search -->
-    <el-card class="filter-card">
+    <div class="filter-section">
       <div class="search-filter">
         <el-form :inline="true" :model="searchForm">
           <el-form-item :label="$t('endpoints.name')">
@@ -26,10 +26,10 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-card>
+    </div>
 
     <!-- Table -->
-    <el-card class="table-card">
+    <div class="table-section">
       <el-table :data="endpointsList" style="width: 100%" v-loading="loading">
         <el-table-column prop="id" :label="$t('endpoints.id')" width="80" />
         <el-table-column prop="name" :label="$t('endpoints.endpointName')" />
@@ -73,7 +73,7 @@
           @current-change="handleCurrentChange"
         />
       </div>
-    </el-card>
+    </div>
 
     <!-- Dialog -->
     <el-dialog
@@ -319,8 +319,12 @@ onMounted(() => {
   color: var(--claude-text-primary);
 }
 
-.filter-card {
-  margin-bottom: 16px;
+.filter-section {
+  margin-bottom: 20px;
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
 }
 
 .search-filter {
@@ -329,8 +333,8 @@ onMounted(() => {
   align-items: center;
 }
 
-.table-card {
-  margin-bottom: 24px;
+.table-section {
+  margin-top: 20px;
 }
 
 .pagination {

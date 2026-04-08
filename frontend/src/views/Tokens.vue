@@ -10,7 +10,7 @@
     </div>
 
     <!-- API Key Table -->
-    <el-card class="table-card">
+    <div class="table-section">
       <el-table v-loading="loading" :data="tokens" style="width: 100%">
         <el-table-column prop="name" :label="$t('tokens.name')" />
         <el-table-column prop="api_key" :label="$t('tokens.tokenValue')" width="280">
@@ -115,7 +115,7 @@
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- Create/Edit Dialog -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
@@ -636,8 +636,8 @@ onMounted(() => {
   color: var(--claude-text-primary);
 }
 
-.table-card {
-  margin-bottom: 24px;
+.table-section {
+  margin-top: 20px;
 }
 
 .token-cell {

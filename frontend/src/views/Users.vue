@@ -9,7 +9,7 @@
     </div>
 
     <!-- Search -->
-    <el-card class="filter-card">
+    <div class="filter-section">
       <div class="search-filter">
         <el-input
           v-model="searchQuery"
@@ -27,10 +27,10 @@
           <el-option :label="$t('users.inactive')" value="inactive"></el-option>
         </el-select>
       </div>
-    </el-card>
+    </div>
 
     <!-- Users Table -->
-    <el-card class="table-card">
+    <div class="table-section">
       <el-table v-loading="loading" :data="filteredUsers" style="width: 100%">
         <el-table-column prop="id" :label="$t('users.id')" width="180" />
         <el-table-column prop="username" :label="$t('users.username')" />
@@ -103,7 +103,7 @@
           @current-change="handleCurrentChange"
         />
       </div>
-    </el-card>
+    </div>
 
     <!-- Add/Edit Dialog -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
@@ -377,8 +377,16 @@ onMounted(() => {
   color: var(--claude-text-primary);
 }
 
-.filter-card {
-  margin-bottom: 16px;
+.filter-section {
+  margin-bottom: 20px;
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
+}
+
+.table-section {
+  margin-top: 20px;
 }
 
 .search-filter {
@@ -387,8 +395,8 @@ onMounted(() => {
   align-items: center;
 }
 
-.table-card {
-  margin-bottom: 24px;
+.table-section {
+  margin-top: 20px;
 }
 
 .pagination {

@@ -8,8 +8,8 @@
       </el-button>
     </div>
 
-    <el-card>
-      <el-tabs v-model="activeTab" class="mt-4">
+    <div class="settings-card">
+      <el-tabs v-model="activeTab">
         <!-- 基本设置 -->
         <el-tab-pane :label="$t('settings.basicSettings')" name="basic">
           <el-form :model="settingsForm.basic" label-width="150px">
@@ -393,7 +393,7 @@
           <el-button @click="restartDialogVisible = false">{{ $t('settings.gotIt') }}</el-button>
         </template>
       </el-dialog>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -721,20 +721,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.settings-container {
+.settings-card {
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
   padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-top: 20px;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--claude-text-primary);
 }
 
 .el-tabs {

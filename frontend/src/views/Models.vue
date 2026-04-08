@@ -10,7 +10,7 @@
     </div>
 
     <!-- Search and Filter - Claude style -->
-    <el-card class="filter-card">
+    <div class="filter-section">
       <div class="search-filter">
         <el-input
           v-model="searchQuery"
@@ -35,10 +35,10 @@
           <el-option :label="$t('models.inactive')" value="inactive"></el-option>
         </el-select>
       </div>
-    </el-card>
+    </div>
 
     <!-- Models Table - Claude style -->
-    <el-card class="table-card">
+    <div class="table-section">
       <el-table v-loading="loading" :data="filteredModels" style="width: 100%">
         <el-table-column prop="id" :label="$t('models.id')" width="180" />
         <el-table-column prop="name" :label="$t('models.name')" />
@@ -119,7 +119,7 @@
           @current-change="handleCurrentChange"
         />
       </div>
-    </el-card>
+    </div>
 
     <!-- Add/Edit Dialog - Claude style -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
@@ -464,9 +464,13 @@ onMounted(() => {
   color: var(--claude-text-primary);
 }
 
-/* Claude Style Filter Card */
-.filter-card {
-  margin-bottom: 16px;
+/* Claude Style Filter Section */
+.filter-section {
+  margin-bottom: 20px;
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
 }
 
 .search-filter {
@@ -475,9 +479,9 @@ onMounted(() => {
   align-items: center;
 }
 
-/* Claude Style Table Card */
-.table-card {
-  margin-bottom: 24px;
+/* Claude Style Table Section */
+.table-section {
+  margin-top: 20px;
 }
 
 .pagination {

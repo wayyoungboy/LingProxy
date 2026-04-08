@@ -8,9 +8,9 @@
       </el-button>
     </div>
 
-    <el-card class="table-card">
-      <!-- 策略列表 -->
-      <el-table v-loading="loading" :data="policies" style="width: 100%" border stripe>
+    <!-- 策略列表 -->
+    <div class="table-section">
+      <el-table v-loading="loading" :data="policies" style="width: 100%">
         <el-table-column prop="name" :label="$t('policies.name')" width="200">
           <template #default="scope">
             <span>{{ scope.row.name }}</span>
@@ -57,7 +57,7 @@
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- 创建/编辑策略对话框 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
@@ -1018,6 +1018,10 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.table-section {
+  margin-top: 20px;
 }
 
 .policy-params {

@@ -4,7 +4,7 @@
       <h1 class="page-title">{{ $t('requests.title') }}</h1>
     </div>
 
-    <el-card class="filter-card">
+    <div class="filter-section">
       <el-form :inline="true" :model="searchForm" class="search-form mb-4">
         <el-form-item :label="$t('requests.path')">
           <el-input v-model="searchForm.path" :placeholder="$t('requests.pathPlaceholder')" />
@@ -31,7 +31,7 @@
         </el-form-item>
       </el-form>
 
-      <el-table :data="requestsList" style="width: 100%" v-loading="loading" border stripe>
+      <el-table :data="requestsList" style="width: 100%" v-loading="loading">
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="endpoint" :label="$t('requests.path')" />
         <el-table-column prop="method" :label="$t('requests.method')" width="100" />
@@ -69,7 +69,7 @@
           @current-change="handleCurrentChange"
         />
       </div>
-    </el-card>
+    </div>
 
     <!-- 请求详情对话框 -->
     <el-dialog v-model="detailDialogVisible" :title="$t('requests.detailTitle')" width="800px">
@@ -258,8 +258,12 @@ onMounted(() => {
   color: var(--claude-text-primary);
 }
 
-.filter-card {
-  margin-bottom: 16px;
+.filter-section {
+  margin-bottom: 20px;
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
 }
 
 .search-form {

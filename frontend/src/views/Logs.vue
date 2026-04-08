@@ -21,23 +21,21 @@
     <el-row :gutter="20">
       <!-- 左侧：日志文件列表 -->
       <el-col :span="6">
-        <el-card shadow="hover">
-          <template #header>
-            <div class="files-header">
-              <span>{{ $t('logs.logFiles') }}</span>
-              <el-input
-                v-model="fileSearchKeyword"
-                :placeholder="$t('logs.searchFiles')"
-                size="small"
-                clearable
-                style="width: 100%; margin-top: 8px"
-              >
-                <template #prefix>
-                  <el-icon><Search /></el-icon>
-                </template>
-              </el-input>
-            </div>
-          </template>
+        <div class="card-panel">
+          <div class="panel-header">
+            <span>{{ $t('logs.logFiles') }}</span>
+            <el-input
+              v-model="fileSearchKeyword"
+              :placeholder="$t('logs.searchFiles')"
+              size="small"
+              clearable
+              style="width: 100%; margin-top: 8px"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </div>
           <el-scrollbar height="600px" v-loading="loading">
             <div class="log-files-list">
               <div
@@ -67,16 +65,15 @@
               />
             </div>
           </el-scrollbar>
-        </el-card>
+        </div>
       </el-col>
 
       <!-- 右侧：日志内容 -->
       <el-col :span="18">
-        <el-card shadow="hover">
-          <template #header>
-            <div class="log-header">
-              <span>{{ $t('logs.logContent') }}</span>
-              <div class="log-controls">
+        <div class="card-panel">
+          <div class="panel-header">
+            <span>{{ $t('logs.logContent') }}</span>
+            <div class="log-controls">
                 <el-select
                   v-model="logLevel"
                   :placeholder="$t('logs.logLevel')"
@@ -115,7 +112,6 @@
                 </el-checkbox>
               </div>
             </div>
-          </template>
 
           <div class="log-content" ref="logContentRef">
             <div
@@ -132,7 +128,7 @@
             </div>
             <el-empty v-if="logEntries.length === 0" :description="$t('logs.noLogContent')" />
           </div>
-        </el-card>
+        </div>
       </el-col>
     </el-row>
   </div>
@@ -379,6 +375,26 @@ onMounted(() => {
   color: var(--claude-text-primary);
 }
 
+.card-panel {
+  background: var(--claude-ivory);
+  border: 1px solid var(--claude-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: 20px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--claude-text-primary);
+  margin-bottom: 16px;
+}
+
 .files-header {
   width: 100%;
 }
@@ -458,6 +474,18 @@ onMounted(() => {
 
 .file-time {
   justify-content: flex-end;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .log-header {
