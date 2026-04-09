@@ -1,25 +1,36 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
 import { ref } from 'vue'
+import { useLoading } from './useLoading'
 
-// Simple composable test
 describe('useLoading', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
+  it('should initialize with false by default', () => {
+    const { loading } = useLoading()
+    expect(loading.value).toBe(false)
   })
 
-  it('should return loading state functions', async () => {
-    // Import the composable
-    const { useLoading } = await import('./useLoading')
+  it('should initialize with custom value', () => {
+    const { loading } = useLoading(true)
+    expect(loading.value).toBe(true)
+  })
 
-    const { loading, withLoading } = useLoading()
+  it('should set loading via setLoading', () => {
+    const { loading, setLoading } = useLoading()
+    setLoading(true)
+    expect(loading.value).toBe(true)
+    setLoading(false)
+    expect(loading.value).toBe(false)
+  })
 
+  it('should start and stop loading', () => {
+    const { loading, startLoading, stopLoading } = useLoading()
+    expect(loading.value).toBe(false)
+    startLoading()
+    expect(loading.value).toBe(true)
+    stopLoading()
     expect(loading.value).toBe(false)
   })
 
   it('should set loading to true during async operation', async () => {
-    const { useLoading } = await import('./useLoading')
-
     const { loading, withLoading } = useLoading()
 
     let resolved = false
@@ -34,5 +45,17 @@ describe('useLoading', () => {
     expect(loading.value).toBe(false)
     expect(result).toBe('result')
     expect(resolved).toBe(true)
+  })
+
+  it('should reset loading even if async operation throws', async () => {
+    const { loading, withLoading } = useLoading()
+
+    await expect(
+      withLoading(async () => {
+        throw new Error('test error')
+      })
+    ).rejects.toThrow('test error')
+
+    expect(loading.value).toBe(false)
   })
 })

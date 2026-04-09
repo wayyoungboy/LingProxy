@@ -91,6 +91,7 @@ type CORSConfig struct {
 type RateLimitConfig struct {
 	Enabled           bool `mapstructure:"enabled"`
 	RequestsPerMinute int  `mapstructure:"requests_per_minute"`
+	Concurrency       int  `mapstructure:"concurrency"`
 }
 
 // LoadBalancerConfig 负载均衡配置
@@ -208,6 +209,7 @@ func setDefaults() {
 	viper.SetDefault("security.cors.allow_headers", []string{"*"})
 	viper.SetDefault("security.rate_limit.enabled", true)
 	viper.SetDefault("security.rate_limit.requests_per_minute", 1000)
+	viper.SetDefault("security.rate_limit.concurrency", 50)
 
 	// 负载均衡默认配置
 	viper.SetDefault("load_balancer.default_strategy", "round_robin")

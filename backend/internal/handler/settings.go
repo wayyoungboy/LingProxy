@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lingproxy/lingproxy/internal/config"
+	"github.com/lingproxy/lingproxy/internal/middleware"
 	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/service"
 )
@@ -51,7 +52,7 @@ func (h *SettingsHandler) GetSettings(c *gin.Context) {
 		"rate_limit": gin.H{
 			"enabled":             cfg.Security.RateLimit.Enabled,
 			"requests_per_minute": cfg.Security.RateLimit.RequestsPerMinute,
-			"concurrency":         50, // 默认值
+			"concurrency":         cfg.Security.RateLimit.Concurrency,
 		},
 		"security": gin.H{
 			"auth_enabled":     cfg.Security.Auth.Enabled,
@@ -119,6 +120,23 @@ func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 		logger.Error("更新设置失败", logger.F("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// 动态更新限流器配置（无需重启）
+	if req.RateLimit != nil && middleware.GlobalRateLimiter != nil {
+		cfg := config.C
+		rpm := cfg.Security.RateLimit.RequestsPerMinute
+		concurrency := cfg.Security.RateLimit.Concurrency
+		if concurrency <= 0 {
+			concurrency = 50
+		}
+		middleware.GlobalRateLimiter.UpdateConfig(float64(rpm), float64(rpm)/60.0, cfg.Security.RateLimit.Enabled)
+		middleware.GlobalRateLimiter.UpdateConcurrency(concurrency)
+		logger.Info("Rate limiter config updated dynamically",
+			logger.F("enabled", cfg.Security.RateLimit.Enabled),
+			logger.F("rpm", rpm),
+			logger.F("concurrency", concurrency),
+		)
 	}
 
 	requiresRestart := len(restartRequiredFields) > 0

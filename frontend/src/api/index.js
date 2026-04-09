@@ -232,6 +232,9 @@ const api = {
   getUserStats(id) {
     return apiClient.get(`/stats/users/${id}`)
   },
+  getMonitorStats(period) {
+    return apiClient.get('/stats/monitor', { params: { period } })
+  },
 
   // API Key管理
   getAPIKeys() {

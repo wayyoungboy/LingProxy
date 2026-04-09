@@ -84,6 +84,12 @@ const routes = [
         name: 'Endpoints',
         component: () => import('../views/Endpoints.vue'),
         meta: { titleKey: 'menu.endpoints' }
+      },
+      {
+        path: 'monitoring',
+        name: 'Monitoring',
+        component: () => import('../views/Monitoring.vue'),
+        meta: { titleKey: 'menu.monitoring' }
       }
     ]
   },

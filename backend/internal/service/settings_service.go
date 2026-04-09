@@ -159,6 +159,10 @@ func (s *SettingsService) UpdateSettings(req *UpdateSettingsRequest, restartRequ
 			cfg.Security.RateLimit.RequestsPerMinute = *req.RateLimit.RequestsPerMinute
 			viper.Set("security.rate_limit.requests_per_minute", *req.RateLimit.RequestsPerMinute)
 		}
+		if req.RateLimit.Concurrency != nil {
+			cfg.Security.RateLimit.Concurrency = *req.RateLimit.Concurrency
+			viper.Set("security.rate_limit.concurrency", *req.RateLimit.Concurrency)
+		}
 	}
 
 	// 更新安全设置

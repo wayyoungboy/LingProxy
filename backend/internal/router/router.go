@@ -18,10 +18,25 @@ import (
 func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *service.UserService, policyService *service.PolicyService, cfg *config.Config) {
 	logger.Info("Starting route setup")
 
-	// 添加全局中间件：RequestID、RequestLogger 和 CORS（必须在最前面）
+	// 初始化限流器
+	rlCfg := cfg.Security.RateLimit
+	refillRate := float64(rlCfg.RequestsPerMinute) / 60.0 // tokens per second
+	if rlCfg.Concurrency <= 0 {
+		rlCfg.Concurrency = 50
+	}
+	middleware.InitGlobalRateLimiter(float64(rlCfg.RequestsPerMinute), refillRate, rlCfg.Enabled, rlCfg.Concurrency)
+	logger.Info("Rate limiter initialized",
+		logger.F("enabled", rlCfg.Enabled),
+		logger.F("requests_per_minute", rlCfg.RequestsPerMinute),
+		logger.F("refill_rate_per_second", refillRate),
+	)
+
+	// 添加全局中间件：RequestID、RequestLogger、CORS、并发限制和RateLimit（必须在最前面）
 	r.Use(middleware.RequestID())
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.CORS())
+	r.Use(middleware.ConcurrencyLimit())
+	r.Use(middleware.RateLimit())
 
 	// 创建处理器
 	logger.Info("Initializing handlers")
@@ -220,6 +235,7 @@ func SetupRoutes(r *gin.Engine, storage *storage.StorageFacade, userService *ser
 		statsRoutes.GET("/llm-resources/:id", statsHandler.GetLLMResourceStats)
 		statsRoutes.GET("/llm-resources/usage", statsHandler.GetLLMResourceUsageStats)
 		statsRoutes.GET("/users/:id", statsHandler.GetUserStats)
+		statsRoutes.GET("/monitor", statsHandler.GetMonitorStats)
 	}
 
 	logger.Info("Route setup completed successfully")

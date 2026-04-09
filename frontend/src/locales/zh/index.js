@@ -47,7 +47,8 @@ export default {
     logs: '日志管理',
     models: '模型管理',
     users: '用户管理',
-    endpoints: '端点管理'
+    endpoints: '端点管理',
+    monitoring: '监控面板'
   },
   login: {
     title: '登录',
@@ -727,5 +728,32 @@ export default {
     badGateway: '网关错误',
     serviceUnavailable: '服务不可用',
     gatewayTimeout: '网关超时'
+  },
+  monitoring: {
+    title: '监控面板',
+    timeRange: '时间范围',
+    oneHour: '1小时',
+    sixHours: '6小时',
+    twentyFourHours: '24小时',
+    sevenDays: '7天',
+    requestsOverTime: '请求量趋势',
+    successRateOverTime: '成功率趋势',
+    avgDurationOverTime: '平均响应时间趋势',
+    tokensOverTime: 'Token 消耗趋势',
+    rateLimiterStatus: '限流器状态',
+    enabled: '已启用',
+    disabled: '已禁用',
+    rpmLimit: 'RPM 限制',
+    refillRate: '补充速率',
+    concurrency: '并发数',
+    activeClients: '活跃客户端',
+    totalRequests: '总请求数',
+    totalDataPoints: '数据点数',
+    successRequests: '成功请求',
+    failedRequests: '失败请求',
+    successRate: '成功率',
+    avgResponseTime: '平均响应时间',
+    totalTokens: '总 Token 数',
+    noData: '暂无监控数据'
   }
 }

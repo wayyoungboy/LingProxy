@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lingproxy/lingproxy/internal/middleware"
 	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/storage"
 )
@@ -207,4 +208,188 @@ func (h *StatsHandler) GetLLMResourceUsageStats(c *gin.Context) {
 
 	// 即使没有数据也返回空数组，而不是错误
 	c.JSON(http.StatusOK, gin.H{"data": usageList})
+}
+
+// GetMonitorStats 获取监控数据（时间序列，供 ECharts 使用）
+func (h *StatsHandler) GetMonitorStats(c *gin.Context) {
+	period := c.DefaultQuery("period", "1h")
+	limit := 100000 // 获取足够多的请求记录
+
+	requests, err := h.storage.ListRequests(&storage.RequestQueryParams{Limit: limit})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get requests"})
+		return
+	}
+
+	// 解析时间范围
+	var duration time.Duration
+	switch period {
+	case "1h":
+		duration = 1 * time.Hour
+	case "6h":
+		duration = 6 * time.Hour
+	case "24h":
+		duration = 24 * time.Hour
+	case "7d":
+		duration = 7 * 24 * time.Hour
+	default:
+		duration = 1 * time.Hour
+	}
+
+	now := time.Now()
+	windowStart := now.Add(-duration)
+
+	// 过滤在时间窗口内的请求
+	var filteredRequests []*storage.Request
+	for _, req := range requests {
+		if req.CreatedAt.After(windowStart) {
+			filteredRequests = append(filteredRequests, req)
+		}
+	}
+
+	// 按时间粒度聚合数据
+	interval := h.calculateInterval(duration)
+	timeBuckets := make(map[int64]*TimeBucket)
+
+	for _, req := range filteredRequests {
+		bucketKey := req.CreatedAt.Truncate(interval).UnixMilli()
+		if _, exists := timeBuckets[bucketKey]; !exists {
+			timeBuckets[bucketKey] = &TimeBucket{
+				Timestamp:    time.UnixMilli(bucketKey).Format(time.RFC3339),
+				TotalReqs:    0,
+				SuccessReqs:  0,
+				FailedReqs:   0,
+				TotalTokens:  0,
+				TotalDurMs:   0,
+				EndpointHits: make(map[string]int),
+			}
+		}
+		bucket := timeBuckets[bucketKey]
+		bucket.TotalReqs++
+		bucket.TotalTokens += req.Tokens
+		bucket.TotalDurMs += req.Duration
+		if req.Status == "success" {
+			bucket.SuccessReqs++
+		} else {
+			bucket.FailedReqs++
+		}
+		if req.Endpoint != "" {
+			bucket.EndpointHits[req.Endpoint]++
+		}
+	}
+
+	// 转换为有序数组
+	var timeline []TimeBucket
+	for _, bucket := range timeBuckets {
+		if bucket.TotalReqs > 0 {
+			bucket.AvgDurMs = bucket.TotalDurMs / int64(bucket.TotalReqs)
+			bucket.SuccessRate = float64(bucket.SuccessReqs) / float64(bucket.TotalReqs) * 100
+		}
+		timeline = append(timeline, *bucket)
+	}
+
+	// 按时间排序
+	for i := 0; i < len(timeline); i++ {
+		for j := i + 1; j < len(timeline); j++ {
+			if timeline[i].Timestamp > timeline[j].Timestamp {
+				timeline[i], timeline[j] = timeline[j], timeline[i]
+			}
+		}
+	}
+
+	// 填充缺失的时间点（让图表更平滑）
+	timeline = h.fillMissingBuckets(timeline, windowStart, now, interval)
+
+	// 获取限流器统计
+	var rateLimiterStats map[string]interface{}
+	if middleware.GlobalRateLimiter != nil {
+		rateLimiterStats = middleware.GlobalRateLimiter.GetStats()
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"period":        period,
+			"interval_ms":   interval.Milliseconds(),
+			"timeline":      timeline,
+			"rate_limiter":  rateLimiterStats,
+			"total_points":  len(timeline),
+			"total_requests": len(filteredRequests),
+		},
+	})
+}
+
+// TimeBucket 时间聚合桶
+type TimeBucket struct {
+	Timestamp    string         `json:"timestamp"`
+	TotalReqs    int            `json:"total_requests"`
+	SuccessReqs  int            `json:"success_requests"`
+	FailedReqs   int            `json:"failed_requests"`
+	SuccessRate  float64        `json:"success_rate"`
+	TotalTokens  int            `json:"total_tokens"`
+	TotalDurMs   int64          `json:"total_duration_ms"`
+	AvgDurMs     int64          `json:"avg_duration_ms"`
+	EndpointHits map[string]int `json:"endpoint_hits"`
+}
+
+// TopEndpoint 高频端点
+type TopEndpoint struct {
+	Endpoint string `json:"endpoint"`
+	Count    int    `json:"count"`
+}
+
+func (h *StatsHandler) calculateInterval(duration time.Duration) time.Duration {
+	switch {
+	case duration <= time.Hour:
+		return 1 * time.Minute
+	case duration <= 6*time.Hour:
+		return 5 * time.Minute
+	case duration <= 24*time.Hour:
+		return 15 * time.Minute
+	default:
+		return 1 * time.Hour
+	}
+}
+
+func (h *StatsHandler) fillMissingBuckets(timeline []TimeBucket, windowStart, now time.Time, interval time.Duration) []TimeBucket {
+	if len(timeline) == 0 {
+		return timeline
+	}
+
+	filled := make([]TimeBucket, 0)
+	bucketSet := make(map[int64]bool)
+	for _, b := range timeline {
+		t, _ := time.Parse(time.RFC3339, b.Timestamp)
+		bucketSet[t.UnixMilli()] = true
+	}
+
+	start := windowStart.Truncate(interval)
+	end := now.Truncate(interval)
+
+	for t := start; !t.After(end); t = t.Add(interval) {
+		key := t.UnixMilli()
+		if !bucketSet[key] {
+			filled = append(filled, TimeBucket{
+				Timestamp:   t.Format(time.RFC3339),
+				TotalReqs:   0,
+				SuccessReqs: 0,
+				FailedReqs:  0,
+				SuccessRate: 0,
+				TotalTokens: 0,
+				AvgDurMs:    0,
+			})
+		}
+	}
+
+	filled = append(filled, timeline...)
+
+	// 重新排序
+	for i := 0; i < len(filled); i++ {
+		for j := i + 1; j < len(filled); j++ {
+			if filled[i].Timestamp > filled[j].Timestamp {
+				filled[i], filled[j] = filled[j], filled[i]
+			}
+		}
+	}
+
+	return filled
 }

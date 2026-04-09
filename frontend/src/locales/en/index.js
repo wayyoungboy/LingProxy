@@ -47,7 +47,8 @@ export default {
     logs: 'Logs',
     models: 'Model Management',
     users: 'User Management',
-    endpoints: 'Endpoint Management'
+    endpoints: 'Endpoint Management',
+    monitoring: 'Monitoring'
   },
   login: {
     title: 'Login',
@@ -741,5 +742,32 @@ export default {
     badGateway: 'Bad gateway',
     serviceUnavailable: 'Service unavailable',
     gatewayTimeout: 'Gateway timeout'
+  },
+  monitoring: {
+    title: 'Monitoring',
+    timeRange: 'Time Range',
+    oneHour: '1 Hour',
+    sixHours: '6 Hours',
+    twentyFourHours: '24 Hours',
+    sevenDays: '7 Days',
+    requestsOverTime: 'Request Volume Trend',
+    successRateOverTime: 'Success Rate Trend',
+    avgDurationOverTime: 'Average Response Time Trend',
+    tokensOverTime: 'Token Consumption Trend',
+    rateLimiterStatus: 'Rate Limiter Status',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    rpmLimit: 'RPM Limit',
+    refillRate: 'Refill Rate',
+    concurrency: 'Concurrency',
+    activeClients: 'Active Clients',
+    totalRequests: 'Total Requests',
+    totalDataPoints: 'Data Points',
+    successRequests: 'Success Requests',
+    failedRequests: 'Failed Requests',
+    successRate: 'Success Rate',
+    avgResponseTime: 'Avg Response Time',
+    totalTokens: 'Total Tokens',
+    noData: 'No monitoring data'
   }
 }

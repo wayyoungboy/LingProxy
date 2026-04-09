@@ -116,6 +116,14 @@ export const menuItems = [
     meta: {
       titleKey: 'menu.endpoints'
     }
+  },
+  {
+    index: '/monitoring',
+    titleKey: 'menu.monitoring',
+    icon: DataLine,
+    meta: {
+      titleKey: 'menu.monitoring'
+    }
   }
 ]
 
