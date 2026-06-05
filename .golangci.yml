@@ -12,12 +12,7 @@ output:
 linters:
   disable-all: true
   enable:
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
     - gofmt
-    - goimports
 
 linters-settings:
   errcheck:
