@@ -4,9 +4,34 @@
 
 # LingProxy - AI API Gateway
 
-LingProxy is a high-performance AI API gateway designed for managing and proxying API calls to various AI service providers. It offers OpenAI compatible interfaces, load balancing, circuit breaking, and more.
+LingProxy is a high-performance AI API gateway for managing, routing, observing, and protecting calls to multiple AI service providers through OpenAI-compatible interfaces.
+
+[![Go](https://img.shields.io/badge/Go-backend-00ADD8?style=flat-square&logo=go&logoColor=white)](#architecture-design)
+[![Vue](https://img.shields.io/badge/Vue-admin%20UI-42B883?style=flat-square&logo=vuedotjs&logoColor=white)](#management-features)
+[![OpenAI Compatible](https://img.shields.io/badge/API-OpenAI%20compatible-111827?style=flat-square)](#api-usage-guide)
+[![SQLite](https://img.shields.io/badge/storage-SQLite-07405E?style=flat-square&logo=sqlite&logoColor=white)](#configuration)
 
 </div>
+
+## At a Glance
+
+| Area | What LingProxy provides |
+|---|---|
+| **Gateway** | OpenAI-compatible chat, image, embedding, rerank, audio, and video routing. |
+| **Routing** | Random, round-robin, weighted, model-match, regex-match, priority, and failover policies. |
+| **Reliability** | Streaming, retries, circuit breaking, request tracing, and resource health tests. |
+| **Control plane** | Admin dashboard for API keys, models, resources, policies, logs, settings, and usage. |
+| **Storage** | Memory mode for development and SQLite mode for persistent production deployments. |
+
+```text
+client SDK / OpenAI-compatible app
+        |
+        v
+LingProxy gateway -> policy engine -> LLM resource pool -> provider APIs
+        |
+        v
+admin UI / request logs / usage statistics / system monitoring
+```
 
 ## Features
 
