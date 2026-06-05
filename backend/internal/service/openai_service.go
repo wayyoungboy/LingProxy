@@ -803,7 +803,7 @@ func (s *OpenAIService) TestRerankResource(ctx context.Context, resource *storag
 	// 使用 HTTP 客户端直接调用 rerank API
 	// 因为 OpenAI SDK 可能不直接支持 rerank，我们使用通用的 HTTP 请求
 	startTime := time.Now()
-	
+
 	modelToUse := resource.Model
 	if modelToUse == "" {
 		modelToUse = "rerank-model" // 默认模型

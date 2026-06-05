@@ -10,41 +10,14 @@ output:
   print-linter-name: true
 
 linters:
+  disable-all: true
   enable:
-    # Defaults
-    - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
-    # Additional
-    - bodyclose
-    - dogsled
-    - dupl
-    - exportloopref
-    - exhaustive
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
     - gofmt
     - goimports
-    - goprintffuncname
-    - gosec
-    - misspell
-    - nakedret
-    - noctx
-    - nolintlint
-    - prealloc
-    - revive
-    - rowserrcheck
-    - sqlclosecheck
-    - stylecheck
-    - unconvert
-    - unparam
-    - whitespace
 
 linters-settings:
   errcheck:

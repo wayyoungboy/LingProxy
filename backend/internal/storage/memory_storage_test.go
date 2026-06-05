@@ -175,13 +175,13 @@ func TestMemoryStorage_ListUsers(t *testing.T) {
 func TestMemoryStorage_CreateLLMResource(t *testing.T) {
 	storage := NewMemoryStorage()
 	resource := &LLMResource{
-		Name:     "test-resource",
-		Type:     "chat",
-		Driver: "openai",
-		Model:    "gpt-3.5-turbo",
-		BaseURL:  "https://api.openai.com/v1",
-		APIKey:   "test-api-key",
-		Status:   "active",
+		Name:    "test-resource",
+		Type:    "chat",
+		Driver:  "openai",
+		Model:   "gpt-3.5-turbo",
+		BaseURL: "https://api.openai.com/v1",
+		APIKey:  "test-api-key",
+		Status:  "active",
 	}
 
 	err := storage.CreateLLMResource(resource)
@@ -206,13 +206,13 @@ func TestMemoryStorage_CreateLLMResource(t *testing.T) {
 func TestMemoryStorage_GetLLMResource(t *testing.T) {
 	storage := NewMemoryStorage()
 	resource := &LLMResource{
-		Name:     "test-resource",
-		Type:     "chat",
-		Driver: "openai",
-		Model:    "gpt-3.5-turbo",
-		BaseURL:  "https://api.openai.com/v1",
-		APIKey:   "test-api-key",
-		Status:   "active",
+		Name:    "test-resource",
+		Type:    "chat",
+		Driver:  "openai",
+		Model:   "gpt-3.5-turbo",
+		BaseURL: "https://api.openai.com/v1",
+		APIKey:  "test-api-key",
+		Status:  "active",
 	}
 
 	// 创建资源
@@ -247,13 +247,13 @@ func TestMemoryStorage_ListLLMResources(t *testing.T) {
 	createdIDs := make([]string, 3)
 	for i := 0; i < 3; i++ {
 		resource := &LLMResource{
-			Name:     "resource" + string(rune('0'+i)),
-			Type:     "chat",
-			Driver: "openai",
-			Model:    "gpt-3.5-turbo",
-			BaseURL:  "https://api.openai.com/v1",
-			APIKey:   "api-key-" + string(rune('0'+i)),
-			Status:   "active",
+			Name:    "resource" + string(rune('0'+i)),
+			Type:    "chat",
+			Driver:  "openai",
+			Model:   "gpt-3.5-turbo",
+			BaseURL: "https://api.openai.com/v1",
+			APIKey:  "api-key-" + string(rune('0'+i)),
+			Status:  "active",
 		}
 
 		if err := storage.CreateLLMResource(resource); err != nil {

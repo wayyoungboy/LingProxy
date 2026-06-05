@@ -87,13 +87,13 @@ func TestGormStorage(t *testing.T) {
 	t.Run("LLM Resource Management", func(t *testing.T) {
 		// 创建LLM资源
 		resource := &LLMResource{
-			Name:     "Test Resource",
-			Type:     "chat",
-			Driver: "openai",
-			Model:    "gpt-3.5-turbo",
-			BaseURL:  "https://api.openai.com/v1",
-			APIKey:   "test-api-key",
-			Status:   "active",
+			Name:    "Test Resource",
+			Type:    "chat",
+			Driver:  "openai",
+			Model:   "gpt-3.5-turbo",
+			BaseURL: "https://api.openai.com/v1",
+			APIKey:  "test-api-key",
+			Status:  "active",
 		}
 
 		if err := storage.CreateLLMResource(resource); err != nil {

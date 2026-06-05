@@ -24,10 +24,10 @@ func NewMemoryCache(ttl time.Duration) *MemoryCache {
 		items: make(map[string]CacheItem),
 		ttl:   ttl,
 	}
-	
+
 	// 启动清理goroutine
 	go cache.cleanup()
-	
+
 	return cache
 }
 
@@ -35,7 +35,7 @@ func NewMemoryCache(ttl time.Duration) *MemoryCache {
 func (c *MemoryCache) Set(key string, value interface{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.items[key] = CacheItem{
 		Value:      value,
 		Expiration: time.Now().Add(c.ttl),
@@ -46,17 +46,17 @@ func (c *MemoryCache) Set(key string, value interface{}) {
 func (c *MemoryCache) Get(key string) (interface{}, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	item, found := c.items[key]
 	if !found {
 		return nil, false
 	}
-	
+
 	if time.Now().After(item.Expiration) {
 		delete(c.items, key)
 		return nil, false
 	}
-	
+
 	return item.Value, true
 }
 
@@ -64,7 +64,7 @@ func (c *MemoryCache) Get(key string) (interface{}, bool) {
 func (c *MemoryCache) Delete(key string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	delete(c.items, key)
 }
 
@@ -72,7 +72,7 @@ func (c *MemoryCache) Delete(key string) {
 func (c *MemoryCache) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.items = make(map[string]CacheItem)
 }
 
@@ -80,7 +80,7 @@ func (c *MemoryCache) Clear() {
 func (c *MemoryCache) Size() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	return len(c.items)
 }
 
@@ -88,7 +88,7 @@ func (c *MemoryCache) Size() int {
 func (c *MemoryCache) cleanup() {
 	ticker := time.NewTicker(c.ttl)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		c.mu.Lock()
 		now := time.Now()

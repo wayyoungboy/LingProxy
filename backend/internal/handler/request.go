@@ -36,7 +36,7 @@ func NewRequestHandler(storage *storage.StorageFacade) *RequestHandler {
 // @Router /api/v1/requests [get]
 func (h *RequestHandler) ListRequests(c *gin.Context) {
 	params := &storage.RequestQueryParams{}
-	
+
 	// 解析 limit 参数
 	limitStr := c.Query("limit")
 	params.Limit = 100 // 默认值
@@ -45,7 +45,7 @@ func (h *RequestHandler) ListRequests(c *gin.Context) {
 			params.Limit = l
 		}
 	}
-	
+
 	// 解析时间范围参数
 	startTimeStr := c.Query("start_time")
 	if startTimeStr != "" {
@@ -53,17 +53,17 @@ func (h *RequestHandler) ListRequests(c *gin.Context) {
 			params.StartTime = &t
 		}
 	}
-	
+
 	endTimeStr := c.Query("end_time")
 	if endTimeStr != "" {
 		if t, err := time.Parse(time.RFC3339, endTimeStr); err == nil {
 			params.EndTime = &t
 		}
 	}
-	
+
 	// 解析请求路径参数
 	params.Endpoint = c.Query("endpoint")
-	
+
 	// 解析状态参数
 	params.Status = c.Query("status")
 

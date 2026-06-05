@@ -26,7 +26,7 @@ type LLMResourceRequest struct {
 	storage.LLMResource
 	EmbeddingConfig *storage.EmbeddingConfig `json:"embedding_config,omitempty"`
 	RerankConfig    *storage.RerankConfig    `json:"rerank_config,omitempty"`
-	ChatConfig      *storage.ChatConfig       `json:"chat_config,omitempty"`
+	ChatConfig      *storage.ChatConfig      `json:"chat_config,omitempty"`
 	ImageConfig     map[string]interface{}   `json:"image_config,omitempty"`
 	AudioConfig     map[string]interface{}   `json:"audio_config,omitempty"`
 }
@@ -160,13 +160,13 @@ func (h *LLMResourceHandler) ListLLMResources(c *gin.Context) {
 		return
 	}
 	logger.Info("获取LLM资源列表成功", logger.F("count", len(resources)))
-	
+
 	// 丰富响应数据，包含类型特定配置
 	enrichedResources := make([]map[string]interface{}, len(resources))
 	for i, resource := range resources {
 		enrichedResources[i] = h.enrichResourceResponse(resource)
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"data": enrichedResources})
 }
 
@@ -189,7 +189,7 @@ func (h *LLMResourceHandler) GetLLMResource(c *gin.Context) {
 		return
 	}
 	logger.Info("获取LLM资源成功", logger.F("id", id), logger.F("name", resource.Name))
-	
+
 	// 丰富响应数据，包含类型特定配置
 	responseData := h.enrichResourceResponse(resource)
 	c.JSON(http.StatusOK, gin.H{"data": responseData})
@@ -213,7 +213,7 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	resource := req.LLMResource
 
 	// 验证必填字段
@@ -291,7 +291,7 @@ func (h *LLMResourceHandler) CreateLLMResource(c *gin.Context) {
 	}
 
 	logger.Info("创建LLM资源成功", logger.F("id", resource.ID), logger.F("name", resource.Name), logger.F("model", resource.Model))
-	
+
 	// 返回时丰富响应数据
 	responseData := h.enrichResourceResponse(&resource)
 	c.JSON(http.StatusCreated, gin.H{"data": responseData})
@@ -318,7 +318,7 @@ func (h *LLMResourceHandler) UpdateLLMResource(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	resource := req.LLMResource
 	resource.ID = id
 
@@ -394,7 +394,7 @@ func (h *LLMResourceHandler) UpdateLLMResource(c *gin.Context) {
 	}
 
 	logger.Info("更新LLM资源成功", logger.F("id", id), logger.F("name", resource.Name), logger.F("model", resource.Model))
-	
+
 	// 返回时丰富响应数据
 	responseData := h.enrichResourceResponse(&resource)
 	c.JSON(http.StatusOK, gin.H{"data": responseData})
@@ -992,15 +992,15 @@ func (h *LLMResourceHandler) DownloadImportTemplate(c *gin.Context) {
 // BailianImportRequest 百炼平台导入请求格式
 // 一个 provider (base_url + api_key) + 多个模型
 type BailianImportRequest struct {
-	BaseURL string                `json:"base_url"`
-	APIKey  string                `json:"api_key"`
-	Models  []BailianModelConfig  `json:"models"`
+	BaseURL string               `json:"base_url"`
+	APIKey  string               `json:"api_key"`
+	Models  []BailianModelConfig `json:"models"`
 }
 
 // BailianModelConfig 百炼平台模型配置
 type BailianModelConfig struct {
-	Name        string `json:"name"`        // 模型标识，如 qwen-turbo
-	Type        string `json:"type"`        // 模型类型: chat, embedding, rerank 等
+	Name        string `json:"name"`         // 模型标识，如 qwen-turbo
+	Type        string `json:"type"`         // 模型类型: chat, embedding, rerank 等
 	DisplayName string `json:"display_name"` // 显示名称（可选）
 }
 

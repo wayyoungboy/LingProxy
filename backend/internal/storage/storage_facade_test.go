@@ -85,13 +85,13 @@ func TestStorageFacade(t *testing.T) {
 	t.Run("LLM Resource Management", func(t *testing.T) {
 		// 创建LLM资源
 		resource := &LLMResource{
-			Name:     "Facade Test Resource",
-			Type:     "chat",
-			Driver: "openai",
-			Model:    "gpt-3.5-turbo",
-			BaseURL:  "https://api.openai.com/v1",
-			APIKey:   "facade-test-api-key",
-			Status:   "active",
+			Name:    "Facade Test Resource",
+			Type:    "chat",
+			Driver:  "openai",
+			Model:   "gpt-3.5-turbo",
+			BaseURL: "https://api.openai.com/v1",
+			APIKey:  "facade-test-api-key",
+			Status:  "active",
 		}
 
 		if err := facade.CreateLLMResource(resource); err != nil {

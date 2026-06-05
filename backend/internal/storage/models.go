@@ -28,25 +28,25 @@ type User struct {
 // 一个LLM资源代表一个可调用的AI服务配置，包含base_url、api_key和model三个核心要素
 // 这三个要素共同构成一个完整的可调用资源
 type LLMResource struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	Type       string    `json:"type"`        // 模型类别: chat(对话), image(生图), embedding(嵌入), rerank(重排序), audio(语音), video(视频)
-	Driver     string    `json:"driver"`      // 驱动: openai（目前仅支持openai）
-	Model      string    `json:"model"`       // 模型标识：此资源对应的模型标识（如gpt-4, gpt-3.5-turbo），与base_url和api_key共同构成可调用资源
-	BaseURL    string    `json:"base_url"`    // API基础URL：此资源的API端点地址
-	APIKey     string    `json:"api_key"`     // API密钥：此资源的认证密钥
-	Status     string    `json:"status"`      // 资源状态: active(活跃), inactive(禁用)
-	TestStatus string    `json:"test_status"` // 测试状态: untested(未测试), passed(测试通过), failed(测试失败)
-	
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Type       string `json:"type"`        // 模型类别: chat(对话), image(生图), embedding(嵌入), rerank(重排序), audio(语音), video(视频)
+	Driver     string `json:"driver"`      // 驱动: openai（目前仅支持openai）
+	Model      string `json:"model"`       // 模型标识：此资源对应的模型标识（如gpt-4, gpt-3.5-turbo），与base_url和api_key共同构成可调用资源
+	BaseURL    string `json:"base_url"`    // API基础URL：此资源的API端点地址
+	APIKey     string `json:"api_key"`     // API密钥：此资源的认证密钥
+	Status     string `json:"status"`      // 资源状态: active(活跃), inactive(禁用)
+	TestStatus string `json:"test_status"` // 测试状态: untested(未测试), passed(测试通过), failed(测试失败)
+
 	// 类型特定配置（临时使用 JSON 字段存储，重构后将迁移到扩展表）
 	EmbeddingConfig string `json:"embedding_config,omitempty" gorm:"type:text"` // JSON格式的embedding配置
 	RerankConfig    string `json:"rerank_config,omitempty" gorm:"type:text"`    // JSON格式的rerank配置
-	ChatConfig      string `json:"chat_config,omitempty" gorm:"type:text"`       // JSON格式的chat配置
-	ImageConfig     string `json:"image_config,omitempty" gorm:"type:text"`      // JSON格式的image配置
-	AudioConfig     string `json:"audio_config,omitempty" gorm:"type:text"`      // JSON格式的audio配置
-	
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ChatConfig      string `json:"chat_config,omitempty" gorm:"type:text"`      // JSON格式的chat配置
+	ImageConfig     string `json:"image_config,omitempty" gorm:"type:text"`     // JSON格式的image配置
+	AudioConfig     string `json:"audio_config,omitempty" gorm:"type:text"`     // JSON格式的audio配置
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // EmbeddingConfig Embedding类型配置结构
@@ -67,11 +67,11 @@ type RerankConfig struct {
 
 // ChatConfig Chat类型配置结构
 type ChatConfig struct {
-	MaxTokens            *int   `json:"max_tokens,omitempty"`
-	ContextWindow        *int   `json:"context_window,omitempty"`
-	SupportsStreaming    bool   `json:"supports_streaming"`
+	MaxTokens               *int `json:"max_tokens,omitempty"`
+	ContextWindow           *int `json:"context_window,omitempty"`
+	SupportsStreaming       bool `json:"supports_streaming"`
 	SupportsFunctionCalling bool `json:"supports_function_calling"`
-	SupportsVision       bool   `json:"supports_vision"`
+	SupportsVision          bool `json:"supports_vision"`
 }
 
 // Endpoint 端点模型
@@ -100,11 +100,11 @@ type Request struct {
 
 // RequestQueryParams 请求查询参数
 type RequestQueryParams struct {
-	Limit     int       // 限制返回数量
+	Limit     int        // 限制返回数量
 	StartTime *time.Time // 开始时间（可选）
 	EndTime   *time.Time // 结束时间（可选）
-	Endpoint  string    // 请求路径（可选，支持模糊匹配）
-	Status    string    // 状态（可选）
+	Endpoint  string     // 请求路径（可选，支持模糊匹配）
+	Status    string     // 状态（可选）
 }
 
 // Response 响应模型
@@ -149,24 +149,24 @@ type Statistics struct {
 
 // APIKey API Key模型（用于API请求认证）
 type APIKey struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`                // API Key名称/描述
-	APIKey     string     `json:"api_key"`             // API Key值
-	Prefix     string     `json:"prefix"`             // API Key前缀（用于显示）
-	Status     string     `json:"status"`             // active/inactive
-	PolicyID   string     `json:"policy_id,omitempty"` // 关联的策略ID（向后兼容，已废弃，使用按类型策略）
-	
+	ID       string `json:"id"`
+	Name     string `json:"name"`                // API Key名称/描述
+	APIKey   string `json:"api_key"`             // API Key值
+	Prefix   string `json:"prefix"`              // API Key前缀（用于显示）
+	Status   string `json:"status"`              // active/inactive
+	PolicyID string `json:"policy_id,omitempty"` // 关联的策略ID（向后兼容，已废弃，使用按类型策略）
+
 	// 模型许可：允许使用的模型ID列表（空列表表示允许所有模型）
 	AllowedModels string `json:"allowed_models,omitempty" gorm:"type:text"` // JSON数组格式: ["gpt-4", "gpt-3.5-turbo"]
-	
+
 	// 按类型配置的策略（优先级高于 PolicyID）
-	ChatPolicyID     string `json:"chat_policy_id,omitempty"`     // Chat类型模型的策略ID
+	ChatPolicyID      string `json:"chat_policy_id,omitempty"`      // Chat类型模型的策略ID
 	EmbeddingPolicyID string `json:"embedding_policy_id,omitempty"` // Embedding类型模型的策略ID
-	RerankPolicyID    string `json:"rerank_policy_id,omitempty"`   // Rerank类型模型的策略ID
+	RerankPolicyID    string `json:"rerank_policy_id,omitempty"`    // Rerank类型模型的策略ID
 	ImagePolicyID     string `json:"image_policy_id,omitempty"`     // Image类型模型的策略ID
 	AudioPolicyID     string `json:"audio_policy_id,omitempty"`     // Audio类型模型的策略ID
-	VideoPolicyID     string `json:"video_policy_id,omitempty"`    // Video类型模型的策略ID
-	
+	VideoPolicyID     string `json:"video_policy_id,omitempty"`     // Video类型模型的策略ID
+
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`

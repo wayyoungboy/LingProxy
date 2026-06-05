@@ -36,9 +36,9 @@ type CreateTokenRequest struct {
 	Name          string   `json:"name" binding:"required"`
 	ExpiresAt     string   `json:"expires_at,omitempty"`     // ISO 8601格式
 	AllowedModels []string `json:"allowed_models,omitempty"` // 允许使用的模型ID列表（空列表表示允许所有模型）
-	
+
 	// 按类型配置的策略
-	ChatPolicyID     string `json:"chat_policy_id,omitempty"`
+	ChatPolicyID      string `json:"chat_policy_id,omitempty"`
 	EmbeddingPolicyID string `json:"embedding_policy_id,omitempty"`
 	RerankPolicyID    string `json:"rerank_policy_id,omitempty"`
 	ImagePolicyID     string `json:"image_policy_id,omitempty"`
@@ -51,9 +51,9 @@ type UpdateTokenRequest struct {
 	Name          *string  `json:"name,omitempty"`
 	Status        *string  `json:"status,omitempty"`         // active/inactive
 	AllowedModels []string `json:"allowed_models,omitempty"` // 允许使用的模型ID列表
-	
+
 	// 按类型配置的策略
-	ChatPolicyID     *string `json:"chat_policy_id,omitempty"`
+	ChatPolicyID      *string `json:"chat_policy_id,omitempty"`
 	EmbeddingPolicyID *string `json:"embedding_policy_id,omitempty"`
 	RerankPolicyID    *string `json:"rerank_policy_id,omitempty"`
 	ImagePolicyID     *string `json:"image_policy_id,omitempty"`
@@ -152,7 +152,7 @@ func (h *APIKeyHandler) CreateAPIKey(c *gin.Context) {
 		if req.VideoPolicyID != "" {
 			videoPolicyID = &req.VideoPolicyID
 		}
-		
+
 		apiKey, err = h.apiKeyService.UpdateAPIKeyFull(
 			apiKey.ID,
 			nil, // name 不变
@@ -175,20 +175,20 @@ func (h *APIKeyHandler) CreateAPIKey(c *gin.Context) {
 	logger.Info("创建API Key成功", logger.F("id", apiKey.ID), logger.F("name", apiKey.Name))
 	c.JSON(http.StatusCreated, gin.H{
 		"data": gin.H{
-			"id":                apiKey.ID,
-			"name":              apiKey.Name,
-			"api_key":           apiKey.APIKey, // 只在创建时返回完整API Key
-			"prefix":            apiKey.Prefix,
-			"status":            apiKey.Status,
-			"allowed_models":   apiKey.GetAllowedModels(),
-			"chat_policy_id":    apiKey.ChatPolicyID,
+			"id":                  apiKey.ID,
+			"name":                apiKey.Name,
+			"api_key":             apiKey.APIKey, // 只在创建时返回完整API Key
+			"prefix":              apiKey.Prefix,
+			"status":              apiKey.Status,
+			"allowed_models":      apiKey.GetAllowedModels(),
+			"chat_policy_id":      apiKey.ChatPolicyID,
 			"embedding_policy_id": apiKey.EmbeddingPolicyID,
-			"rerank_policy_id":   apiKey.RerankPolicyID,
-			"image_policy_id":    apiKey.ImagePolicyID,
-			"audio_policy_id":    apiKey.AudioPolicyID,
-			"video_policy_id":    apiKey.VideoPolicyID,
-			"expires_at":        apiKey.ExpiresAt,
-			"created_at":        apiKey.CreatedAt,
+			"rerank_policy_id":    apiKey.RerankPolicyID,
+			"image_policy_id":     apiKey.ImagePolicyID,
+			"audio_policy_id":     apiKey.AudioPolicyID,
+			"video_policy_id":     apiKey.VideoPolicyID,
+			"expires_at":          apiKey.ExpiresAt,
+			"created_at":          apiKey.CreatedAt,
 		},
 	})
 }
@@ -219,21 +219,21 @@ func (h *APIKeyHandler) ListAPIKeys(c *gin.Context) {
 	apiKeyList := make([]gin.H, 0, len(apiKeys))
 	for _, apiKey := range apiKeys {
 		apiKeyList = append(apiKeyList, gin.H{
-			"id":                apiKey.ID,
-			"name":              apiKey.Name,
-			"prefix":            apiKey.Prefix, // 显示前缀
-			"status":            apiKey.Status,
-			"policy_id":         apiKey.PolicyID, // 向后兼容
-			"allowed_models":    apiKey.GetAllowedModels(),
-			"chat_policy_id":    apiKey.ChatPolicyID,
+			"id":                  apiKey.ID,
+			"name":                apiKey.Name,
+			"prefix":              apiKey.Prefix, // 显示前缀
+			"status":              apiKey.Status,
+			"policy_id":           apiKey.PolicyID, // 向后兼容
+			"allowed_models":      apiKey.GetAllowedModels(),
+			"chat_policy_id":      apiKey.ChatPolicyID,
 			"embedding_policy_id": apiKey.EmbeddingPolicyID,
-			"rerank_policy_id":   apiKey.RerankPolicyID,
-			"image_policy_id":    apiKey.ImagePolicyID,
-			"audio_policy_id":    apiKey.AudioPolicyID,
-			"video_policy_id":    apiKey.VideoPolicyID,
-			"last_used_at":      apiKey.LastUsedAt,
-			"expires_at":        apiKey.ExpiresAt,
-			"created_at":        apiKey.CreatedAt,
+			"rerank_policy_id":    apiKey.RerankPolicyID,
+			"image_policy_id":     apiKey.ImagePolicyID,
+			"audio_policy_id":     apiKey.AudioPolicyID,
+			"video_policy_id":     apiKey.VideoPolicyID,
+			"last_used_at":        apiKey.LastUsedAt,
+			"expires_at":          apiKey.ExpiresAt,
+			"created_at":          apiKey.CreatedAt,
 		})
 	}
 
@@ -257,7 +257,7 @@ func (h *APIKeyHandler) ListTokens(c *gin.Context) {
 		tokenList = append(tokenList, gin.H{
 			"id":           apiKey.ID,
 			"name":         apiKey.Name,
-			"prefix":      apiKey.Prefix, // 显示前缀
+			"prefix":       apiKey.Prefix, // 显示前缀
 			"status":       apiKey.Status,
 			"policy_id":    apiKey.PolicyID,
 			"last_used_at": apiKey.LastUsedAt,
@@ -305,22 +305,22 @@ func (h *APIKeyHandler) GetAPIKey(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":                apiKey.ID,
-			"name":              apiKey.Name,
-			"api_key":           apiKey.APIKey, // 返回完整API Key（管理员权限）
-			"prefix":            apiKey.Prefix, // 同时返回前缀用于显示
-			"status":            apiKey.Status,
-			"policy_id":         apiKey.PolicyID, // 向后兼容
-			"allowed_models":    apiKey.GetAllowedModels(),
-			"chat_policy_id":    apiKey.ChatPolicyID,
+			"id":                  apiKey.ID,
+			"name":                apiKey.Name,
+			"api_key":             apiKey.APIKey, // 返回完整API Key（管理员权限）
+			"prefix":              apiKey.Prefix, // 同时返回前缀用于显示
+			"status":              apiKey.Status,
+			"policy_id":           apiKey.PolicyID, // 向后兼容
+			"allowed_models":      apiKey.GetAllowedModels(),
+			"chat_policy_id":      apiKey.ChatPolicyID,
 			"embedding_policy_id": apiKey.EmbeddingPolicyID,
-			"rerank_policy_id":   apiKey.RerankPolicyID,
-			"image_policy_id":    apiKey.ImagePolicyID,
-			"audio_policy_id":    apiKey.AudioPolicyID,
-			"video_policy_id":    apiKey.VideoPolicyID,
-			"last_used_at":      apiKey.LastUsedAt,
-			"expires_at":        apiKey.ExpiresAt,
-			"created_at":        apiKey.CreatedAt,
+			"rerank_policy_id":    apiKey.RerankPolicyID,
+			"image_policy_id":     apiKey.ImagePolicyID,
+			"audio_policy_id":     apiKey.AudioPolicyID,
+			"video_policy_id":     apiKey.VideoPolicyID,
+			"last_used_at":        apiKey.LastUsedAt,
+			"expires_at":          apiKey.ExpiresAt,
+			"created_at":          apiKey.CreatedAt,
 		},
 	})
 }
@@ -405,21 +405,21 @@ func (h *APIKeyHandler) UpdateAPIKey(c *gin.Context) {
 	logger.Info("更新API Key成功", logger.F("id", id), logger.F("name", apiKey.Name))
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":                apiKey.ID,
-			"name":              apiKey.Name,
-			"prefix":            apiKey.Prefix,
-			"status":            apiKey.Status,
-			"policy_id":         apiKey.PolicyID, // 向后兼容
-			"allowed_models":    apiKey.GetAllowedModels(),
-			"chat_policy_id":    apiKey.ChatPolicyID,
+			"id":                  apiKey.ID,
+			"name":                apiKey.Name,
+			"prefix":              apiKey.Prefix,
+			"status":              apiKey.Status,
+			"policy_id":           apiKey.PolicyID, // 向后兼容
+			"allowed_models":      apiKey.GetAllowedModels(),
+			"chat_policy_id":      apiKey.ChatPolicyID,
 			"embedding_policy_id": apiKey.EmbeddingPolicyID,
-			"rerank_policy_id":   apiKey.RerankPolicyID,
-			"image_policy_id":    apiKey.ImagePolicyID,
-			"audio_policy_id":    apiKey.AudioPolicyID,
-			"video_policy_id":    apiKey.VideoPolicyID,
-			"last_used_at":      apiKey.LastUsedAt,
-			"expires_at":        apiKey.ExpiresAt,
-			"updated_at":        apiKey.UpdatedAt,
+			"rerank_policy_id":    apiKey.RerankPolicyID,
+			"image_policy_id":     apiKey.ImagePolicyID,
+			"audio_policy_id":     apiKey.AudioPolicyID,
+			"video_policy_id":     apiKey.VideoPolicyID,
+			"last_used_at":        apiKey.LastUsedAt,
+			"expires_at":          apiKey.ExpiresAt,
+			"updated_at":          apiKey.UpdatedAt,
 		},
 	})
 }

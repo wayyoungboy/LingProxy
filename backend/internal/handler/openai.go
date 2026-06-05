@@ -102,7 +102,7 @@ func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string,
 
 	// 使用API Key的策略选择资源
 	logger.Debug("Executing policy for API key", logger.F("component", "handler"), logger.F("request_id", middleware.GetRequestID(c)), logger.F("token_id", token.ID), logger.F("policy_id", policyID), logger.F("model", modelName), logger.F("resource_type", resourceType))
-	
+
 	// 对于 embedding 类型，需要检查是否有 dimensions 参数
 	var dimensions *int
 	if resourceType == "embedding" {
@@ -113,7 +113,7 @@ func (h *OpenAIHandler) findLLMResourceByModel(c *gin.Context, modelName string,
 			}
 		}
 	}
-	
+
 	resource, err := h.policyService.ExecutePolicyWithDimensions(policyID, modelName, typeFiltered, dimensions)
 	if err != nil {
 		// 策略执行失败，降级到默认策略
@@ -461,7 +461,7 @@ func (h *OpenAIHandler) CreateChatCompletion(c *gin.Context) {
 	serviceResp, err := h.openaiService.CreateChatCompletion(ctx, llmResource, serviceReq)
 	var duration int64
 	var openaiResponse *openaiSDK.ChatCompletion
-	
+
 	if serviceResp != nil {
 		duration = serviceResp.Duration.Milliseconds()
 		openaiResponse = serviceResp.Response
@@ -602,7 +602,7 @@ func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx contex
 	stream, err := h.openaiService.CreateChatCompletionStream(ctx, llmResource, req)
 	if err != nil {
 		logger.Error("Failed to create streaming chat completion", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
-		
+
 		// 记录失败的请求
 		duration := time.Since(startTime)
 		requestRecord := &storage.Request{
@@ -618,7 +618,7 @@ func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx contex
 		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
 			logger.Error("Failed to save failed streaming request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
 		}
-		
+
 		c.SSEvent("error", gin.H{
 			"error": map[string]interface{}{
 				"message": "Failed to create streaming chat completion: " + err.Error(),
@@ -678,7 +678,7 @@ func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx contex
 	// 检查流式响应错误
 	if err := stream.Err(); err != nil {
 		logger.Error("Stream iteration error", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", err.Error()))
-		
+
 		// 记录失败的请求
 		duration := time.Since(startTime)
 		requestRecord := &storage.Request{
@@ -697,7 +697,7 @@ func (h *OpenAIHandler) handleStreamingChatCompletion(c *gin.Context, ctx contex
 		if saveErr := h.storage.CreateRequest(requestRecord); saveErr != nil {
 			logger.Error("Failed to save failed streaming request record", logger.F("component", "handler"), logger.F("request_id", requestID), logger.F("error", saveErr.Error()))
 		}
-		
+
 		errorJSON, _ := json.Marshal(gin.H{
 			"error": map[string]interface{}{
 				"message": "Stream error: " + err.Error(),
@@ -920,7 +920,7 @@ func (h *OpenAIHandler) CreateCompletion(c *gin.Context) {
 	serviceResp, err := h.openaiService.CreateCompletion(ctx, llmResource, serviceReq)
 	var duration int64
 	var openaiResponse *openaiSDK.Completion
-	
+
 	if serviceResp != nil {
 		duration = serviceResp.Duration.Milliseconds()
 		openaiResponse = serviceResp.Response
@@ -1581,7 +1581,7 @@ func (h *OpenAIHandler) CreateEmbedding(c *gin.Context) {
 	response := EmbeddingResponse{
 		Object: string(embeddingResponse.Object),
 		Model:  string(embeddingResponse.Model),
-		Data:   make([]struct {
+		Data: make([]struct {
 			Object    string    `json:"object"`
 			Embedding []float64 `json:"embedding"`
 			Index     int       `json:"index"`

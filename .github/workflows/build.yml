@@ -83,9 +83,9 @@ jobs:
       - name: Run go fmt
         working-directory: ./backend
         run: |
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          if [ "$(gofmt -s -l $(find . -name '*.go' -not -name '*.orig') | wc -l)" -gt 0 ]; then
             echo "Code is not formatted. Run 'go fmt ./...'"
-            gofmt -s -d .
+            gofmt -s -d $(find . -name '*.go' -not -name '*.orig')
             exit 1
           fi
 
@@ -325,8 +325,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./website
+          file: ./website/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

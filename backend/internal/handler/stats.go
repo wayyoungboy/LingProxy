@@ -149,14 +149,14 @@ func (h *StatsHandler) GetLLMResourceUsageStats(c *gin.Context) {
 				continue // 资源不存在，跳过
 			}
 			usageMap[resourceID] = map[string]interface{}{
-				"resource_id":      resourceID,
-				"resource_name":    resource.Name,
-				"resource_type":    resource.Type,
-				"model":            resource.Model,
-				"total_tokens":     0,
-				"total_requests":   0,
-				"success_requests": 0,
-				"failed_requests": 0,
+				"resource_id":       resourceID,
+				"resource_name":     resource.Name,
+				"resource_type":     resource.Type,
+				"model":             resource.Model,
+				"total_tokens":      0,
+				"total_requests":    0,
+				"success_requests":  0,
+				"failed_requests":   0,
 				"last_request_time": nil,
 			}
 		}
@@ -308,11 +308,11 @@ func (h *StatsHandler) GetMonitorStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"period":        period,
-			"interval_ms":   interval.Milliseconds(),
-			"timeline":      timeline,
-			"rate_limiter":  rateLimiterStats,
-			"total_points":  len(timeline),
+			"period":         period,
+			"interval_ms":    interval.Milliseconds(),
+			"timeline":       timeline,
+			"rate_limiter":   rateLimiterStats,
+			"total_points":   len(timeline),
 			"total_requests": len(filteredRequests),
 		},
 	})

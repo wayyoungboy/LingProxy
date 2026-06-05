@@ -33,7 +33,7 @@ func (s *CachedUserService) GetUser(id string) (*storage.User, error) {
 	if user, found := s.cache.GetUser(id); found {
 		return user, nil
 	}
-	
+
 	user, err := s.storage.GetUser(id)
 	if err == nil {
 		s.cache.CacheUser(user)
@@ -46,7 +46,7 @@ func (s *CachedUserService) GetUserByAPIKey(apiKey string) (*storage.User, error
 	if user, found := s.cache.GetUserByAPIKey(apiKey); found {
 		return user, nil
 	}
-	
+
 	user, err := s.storage.GetUserByAPIKey(apiKey)
 	if err == nil {
 		s.cache.CacheUser(user)

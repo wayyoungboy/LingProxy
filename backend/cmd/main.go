@@ -225,7 +225,7 @@ func parseMySQLDSN(dsn string) (dbName string, serverDSN string, err error) {
 
 	// 提取数据库名和查询参数部分
 	dbPart := dsn[lastSlash+1:]
-	
+
 	// 分离数据库名和查询参数
 	queryStart := strings.Index(dbPart, "?")
 	var queryParams string

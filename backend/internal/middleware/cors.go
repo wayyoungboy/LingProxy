@@ -10,7 +10,7 @@ import (
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-		
+
 		// 处理 CORS：当 credentials 为 true 时，不能使用 *，必须明确指定 origin
 		// 对于 file:// 协议，origin 可能为空或 "null"
 		if origin == "" || origin == "null" {
@@ -21,7 +21,7 @@ func CORS() gin.HandlerFunc {
 			// 对于有 Origin 的请求，直接使用该 Origin
 			c.Header("Access-Control-Allow-Origin", origin)
 		}
-		
+
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Requested-With")
 		c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
@@ -44,13 +44,13 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")
 		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		c.Header("Content-Security-Policy", 
-			"default-src 'self'; " +
-			"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-			"style-src 'self' 'unsafe-inline'; " +
-			"img-src 'self' data:; " +
-			"font-src 'self'; " +
-			"connect-src 'self'")
+		c.Header("Content-Security-Policy",
+			"default-src 'self'; "+
+				"script-src 'self' 'unsafe-inline' 'unsafe-eval'; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data:; "+
+				"font-src 'self'; "+
+				"connect-src 'self'")
 		c.Next()
 	}
 }
