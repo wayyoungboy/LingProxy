@@ -219,6 +219,23 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
   }'
 ```
 
+### Codex 集成
+
+LingProxy 可以作为 Codex 的 OpenAI 兼容网关。在用户级 Codex 配置中设置：
+
+```toml
+openai_base_url = "http://localhost:8080/llm/v1"
+```
+
+启动 Codex 前使用 LingProxy 请求端 API Key：
+
+```bash
+export OPENAI_API_KEY="ling-xxxxxxxxxxxxx"
+codex
+```
+
+Claude Code 默认不是 OpenAI 兼容模型客户端，因此直接代理 Claude Code 模型请求需要先为 LingProxy 增加 Anthropic/Claude driver。详见 [智能体集成](docs/zh/07-agent-integrations.md)。
+
 ### API 端点参考
 
 #### 认证与管理员

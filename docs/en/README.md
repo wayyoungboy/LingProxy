@@ -17,6 +17,7 @@ Welcome to the LingProxy documentation! This documentation provides comprehensiv
 ### Configuration & Usage
 - [Configuration Guide](./configuration) - Detailed configuration options
 - [API Reference](./api-reference) - Complete API documentation (includes streaming support)
+- [Agent Integrations](./07-agent-integrations.md) - Claude Code and Codex integration notes
 
 ### Architecture & Development
 - [Architecture Guide](./architecture) - System architecture and design
@@ -34,7 +35,8 @@ Welcome to the LingProxy documentation! This documentation provides comprehensiv
 1. **New Users**: Start with the [Quick Start Guide](./quick-start)
 2. **Configuration**: See the [Configuration Guide](./configuration)
 3. **API Usage**: Check the [API Reference](./api-reference)
-4. **Developers**: Read the [Development Guide](./development)
+4. **Agent Integrations**: Connect Codex or review Claude Code boundaries in [Agent Integrations](./07-agent-integrations.md)
+5. **Developers**: Read the [Development Guide](./development)
 
 ## Contributing
 

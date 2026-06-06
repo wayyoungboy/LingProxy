@@ -245,6 +245,23 @@ curl -X POST http://localhost:8080/llm/v1/chat/completions \
   }'
 ```
 
+### Codex Integration
+
+LingProxy can be used as the OpenAI-compatible gateway for Codex by setting the user-level Codex base URL:
+
+```toml
+openai_base_url = "http://localhost:8080/llm/v1"
+```
+
+Start Codex with a LingProxy request-side API key:
+
+```bash
+export OPENAI_API_KEY="ling-xxxxxxxxxxxxx"
+codex
+```
+
+Claude Code is not an OpenAI-compatible model client by default, so direct Claude Code model routing requires adding an Anthropic/Claude driver first. See [Agent Integrations](docs/en/07-agent-integrations.md).
+
 ### API Endpoint Reference
 
 #### Authentication & Admin

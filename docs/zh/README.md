@@ -17,6 +17,7 @@
 ### 配置与使用
 - [配置指南](./configuration) - 详细配置选项
 - [API 参考文档](./api-reference) - 完整 API 文档（包含流式响应支持）
+- [智能体集成](./07-agent-integrations.md) - Claude Code 与 Codex 集成说明
 
 ### 架构与开发
 - [架构指南](./architecture) - 系统架构和设计
@@ -34,7 +35,8 @@
 1. **新用户**：从 [快速开始指南](./quick-start) 开始
 2. **配置**：查看 [配置指南](./configuration)
 3. **API 使用**：查看 [API 参考文档](./api-reference)
-4. **开发者**：阅读 [开发指南](./development)
+4. **智能体集成**：查看 [智能体集成](./07-agent-integrations.md)
+5. **开发者**：阅读 [开发指南](./development)
 
 ## 贡献
 

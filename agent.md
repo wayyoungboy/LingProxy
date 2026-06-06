@@ -445,6 +445,13 @@ frontend/
   - `POST /llm/v1/chat/completions`
   - `GET /llm/v1/models`
 
+## Claude Code / Codex 集成边界
+
+- Codex 可以通过用户级 `~/.codex/config.toml` 的 `openai_base_url = "http://localhost:8080/llm/v1"` 接入 LingProxy，并通过 `OPENAI_API_KEY` 使用请求端 API Key。
+- Codex 项目级 `.codex/config.toml` 不适合放 provider/base_url 覆盖；这类配置应保留在用户级配置或环境变量中。
+- Claude Code 默认不是 OpenAI 兼容模型客户端。当前 LingProxy 仅有 OpenAI driver，不能把它描述成 Claude Code 原生模型网关。
+- 如需 Claude 模型流量接入，需要先新增 Anthropic/Claude driver、请求格式映射和前端资源配置选项。
+
 ## 工具与命令
 
 ### 开发命令
