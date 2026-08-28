@@ -1,37 +1,40 @@
-# LingProxy 配置文件示例
-# 复制此文件为 config.yaml 并根据实际情况修改配置
-# 未配置的项将使用默认值，详见 internal/config/config.go
+# LingProxy example config
+# Copy to config.yaml if you want a local override:
+#   cp configs/config.yaml.example configs/config.yaml
+#
+# A fresh clone can boot with this file as-is (no extra database, no provider keys).
+# Admin login after first start: username=admin  password=admin123
+# Change the password in the admin UI after login.
+#
+# LLM provider API keys are NOT stored here. Add them in Admin UI → LLM Resources
+# using placeholders such as sk-your-openai-key (never commit real keys).
 
 app:
   environment: "development"  # development, staging, production
   port: 8080
-  # name 和 version 有默认值，通常不需要配置
-  # host 有默认值 "0.0.0.0"，通常不需要配置
+  host: "0.0.0.0"
 
 storage:
-  type: "gorm"  # memory 或 gorm
+  type: "gorm"  # memory or gorm
   gorm:
-    driver: "seekdb"  # sqlite, mysql, seekdb
-    # 本地开发：使用 localhost:2881 连接 Docker 中的 SeekDB
-    # Docker 环境：使用 config.yaml.docker（已配置为 seekdb:2881）
-    dsn: "root:@tcp(localhost:2881)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+    # SQLite works out of the box (pure Go, no extra service).
+    driver: "sqlite"  # sqlite, mysql, seekdb
+    dsn: "lingproxy.db"
 
-    # MySQL 示例（兼容 MySQL 协议）
+    # MySQL example (optional)
     # driver: "mysql"
-    # dsn: "root:@tcp(localhost:3306)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+    # dsn: "root:YOUR_DB_PASSWORD@tcp(localhost:3306)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
 
-    # SQLite 示例（用于本地开发，无需数据库服务）
-    # driver: "sqlite"
-    # dsn: "lingproxy.db"
+    # SeekDB / OceanBase example (optional; requires a running SeekDB)
+    # driver: "seekdb"
+    # dsn: "root:@tcp(localhost:2881)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
 
 log:
   level: "info"  # debug, info, warn, error, fatal
   format: "json"  # text, json
-  output: "both"  # stdout, file, both（推荐both，同时输出到控制台和文件）
-  file_path: "./logs/lingproxy.log"  # 当output为file或both时生效
-  # max_size, max_backups, max_age, compress 有默认值，通常不需要配置
+  output: "both"  # stdout, file, both
+  file_path: "./logs/lingproxy.log"
 
 security:
   auth:
-    enabled: true  # 是否启用认证，false时所有API（除登录外）都不需要认证
-  # cors, rate_limit, jwt 等配置可通过管理界面修改，通常不需要在此配置
+    enabled: true  # false = APIs except login skip authentication

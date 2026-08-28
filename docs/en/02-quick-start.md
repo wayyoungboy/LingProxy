@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Backend**: Go 1.21 or higher
+- **Backend**: Go 1.24 or higher
 - **Frontend**: Node.js 18+ and npm/yarn
 - **Database**: SQLite (included) or MySQL/PostgreSQL (optional)
 
@@ -11,8 +11,8 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/lingproxy.git
-cd lingproxy
+git clone https://github.com/wayyoungboy/LingProxy.git
+cd LingProxy
 ```
 
 ### 2. Backend Setup
@@ -40,10 +40,10 @@ cp configs/config.yaml.example configs/config.yaml
 
 ```bash
 # Development mode
-go run cmd/main.go
+go run ./cmd/main.go
 
 # Or build and run
-go build -o lingproxy cmd/main.go
+go build -o lingproxy ./cmd/main.go
 ./lingproxy
 ```
 

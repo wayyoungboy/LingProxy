@@ -76,7 +76,7 @@ admin UI / request logs / usage statistics / system monitoring
 ## Quick Start
 
 ### Requirements
-- **Backend**: Go 1.21 or higher, SQLite (for data storage)
+- **Backend**: Go 1.24 or higher (see backend/go.mod); SQLite is built-in
 - **Frontend**: Node.js 18+, npm or yarn
 
 ### Installation & Running
@@ -85,29 +85,39 @@ admin UI / request logs / usage statistics / system monitoring
 
 1. **Clone the Project**
 ```bash
-git clone https://github.com/wayyoungboy/lingproxy.git
-cd lingproxy
+git clone https://github.com/wayyoungboy/LingProxy.git
+cd LingProxy
 ```
+
 
 2. **Install Go Dependencies**
 ```bash
+cd backend
 go mod tidy
 ```
-
-3. **Configuration File**
-Copy and edit the configuration file:
+3. **Configuration File** (optional)
+A fresh clone boots from `backend/configs/config.yaml.example` (SQLite, no provider API keys).
+To customize:
 ```bash
+cd backend
 cp configs/config.yaml.example configs/config.yaml
-# Edit configs/config.yaml to configure as needed
-# ⚠️ IMPORTANT: Change the admin password in config.yaml before starting!
+# Optional: edit configs/config.yaml
 ```
+Default admin after first start: username `admin` / password `admin123`. Change it in the admin UI.
 
 4. **Build and Run the Backend**
 ```bash
-go run cmd/main.go
+cd backend
+go run ./cmd/main.go
 ```
 
 The backend service will start at `http://localhost:8080`
+
+Health check:
+```bash
+curl http://localhost:8080/api/v1/health
+```
+
 
 #### Frontend Setup
 
@@ -126,13 +136,13 @@ The frontend will be available at `http://localhost:3000`
 
 ### Docker Deployment
 
-The project uses a **frontend-backend separation** architecture. Docker deployment includes only the backend service.
+The project uses a **frontend-backend separation** architecture. Docker Compose starts backend + admin UI. Default storage is SQLite (no extra database container).
 
 #### Using Docker Compose (Recommended)
 
 1. **Start Backend Services**
 ```bash
-# Build and start backend + database (from project root)
+# Build and start backend + frontend (from project root)
 docker-compose -f docker/docker-compose.yml up -d
 
 # View logs
@@ -154,7 +164,7 @@ npm run dev
 **Frontend**: http://localhost:3000 (API requests are proxied to backend)
 
 **Note**: 
-- Docker deployment uses `docker/backend.Dockerfile` (backend-only)
+- Docker Compose uses docker/backend.Dockerfile and docker/frontend.Dockerfile
 - Database is automatically created on backend startup
 - Uses `config.yaml.docker` for Docker-specific configuration
 - See [Quick Start Guide](docs/en/02-quick-start.md#docker-deployment) for detailed instructions
@@ -167,18 +177,22 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
-    "password": "YOUR_PASSWORD"
+    "password": "admin123"
   }'
 ```
 
 Response example:
 ```json
 {
-  "token": "your_jwt_token_here",
-  "user": {
-    "id": "...",
-    "username": "admin",
-    "api_key": "..."
+  "message": "login successful",
+  "data": {
+    "token": "<admin-api-key-from-login>",
+    "user": {
+      "id": "...",
+      "username": "admin",
+      "role": "admin",
+      "status": "active"
+    }
   }
 }
 ```
@@ -466,39 +480,19 @@ log:
 
 ### Project Structure
 ```
-lingproxy/
-├── cmd/                    # Application entry
-├── configs/               # Configuration files
-├── docs/                  # API documentation
-├── frontend/              # Frontend application
-│   ├── public/             # Public assets
-│   ├── src/                # Source code
-│   │   ├── api/            # API client
-│   │   ├── assets/         # Static assets
-│   │   ├── components/     # Vue components
-│   │   ├── router/         # Vue router
-│   │   ├── views/           # Vue views
-│   │   ├── App.vue         # Root component
-│   │   └── main.js         # Entry point
-│   ├── package.json        # npm configuration
-│   └── vite.config.js      # Vite configuration
-├── internal/              # Internal packages
-│   ├── cache/             # Caching implementation
-│   ├── client/            # AI service clients
-│   │   ├── embedding/     # Embedding clients
-│   │   └── openai/        # OpenAI clients
-│   ├── config/            # Configuration management
-│   ├── handler/           # HTTP handlers
-│   ├── middleware/        # HTTP middleware
-│   ├── pkg/               # Internal packages
-│   │   └── balancer/      # Load balancing
-│   ├── router/            # Routing
-│   ├── service/           # Business logic
-│   └── storage/           # Storage implementation
-├── pkg/                   # Public packages
-│   └── logger/            # Logging
-└── docker-compose.yml     # Docker configuration
+LingProxy/
+├── backend/                 # Go module (go.mod lives here)
+│   ├── cmd/main.go         # Application entry
+│   ├── configs/            # config.yaml.example / config.yaml.docker
+│   └── internal/           # handlers, router, storage, services
+├── frontend/               # Vue 3 + Vite admin UI
+├── docker/                 # Dockerfiles and docker-compose.yml
+├── docs/                   # English / Chinese docs
+├── clients/                # Python / JavaScript / Go clients
+├── Makefile
+└── LICENSE                 # MIT
 ```
+
 
 ### Data Models
 
@@ -683,13 +677,13 @@ Add the new driver option in the frontend LLM resource management interface
 
 ```bash
 # Run all tests
-go test ./...
+cd backend && go test ./...
 
 # Run specific package tests
-go test ./internal/pkg/balancer
+cd backend && go test ./internal/pkg/balancer
 
 # Run tests with coverage
-go test -cover ./...
+cd backend && go test -cover ./...
 ```
 
 ## Contributing
@@ -706,8 +700,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support & Contact
 
-- **Issues**: [GitHub Issues](https://github.com/wayyoungboy/lingproxy/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/wayyoungboy/lingproxy/discussions)
+- **Issues**: [GitHub Issues](https://github.com/wayyoungboy/LingProxy/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/wayyoungboy/LingProxy/discussions)
 - **Email**: support@lingproxy.com
 
 ## Changelog

@@ -2,7 +2,7 @@
 
 ## 前置要求
 
-- **后端**：Go 1.21 或更高版本
+- **后端**：Go 1.24 或更高版本
 - **前端**：Node.js 18+ 和 npm/yarn
 - **数据库**：SQLite（已包含）或 MySQL/PostgreSQL（可选）
 
@@ -11,8 +11,8 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/your-org/lingproxy.git
-cd lingproxy
+git clone https://github.com/wayyoungboy/LingProxy.git
+cd LingProxy
 ```
 
 ### 2. 后端设置
@@ -40,10 +40,10 @@ cp configs/config.yaml.example configs/config.yaml
 
 ```bash
 # 开发模式
-go run cmd/main.go
+go run ./cmd/main.go
 
 # 或构建后运行
-go build -o lingproxy cmd/main.go
+go build -o lingproxy ./cmd/main.go
 ./lingproxy
 ```
 

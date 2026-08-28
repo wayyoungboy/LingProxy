@@ -123,11 +123,39 @@ var (
 	C *Config
 )
 
-// Init 初始化配置
-func Init(configPath string) error {
+// resolveConfigPath picks the first existing config file.
+// LINGPROXY_CONFIG wins; otherwise we try config.yaml then the example file
+// so a fresh clone can boot without a manual copy.
+func resolveConfigPath(configPath string) string {
+	if envPath := os.Getenv("LINGPROXY_CONFIG"); envPath != "" {
+		return envPath
+	}
 	if configPath == "" {
 		configPath = "configs/config.yaml"
 	}
+	candidates := []string{
+		configPath,
+		"configs/config.yaml",
+		"backend/configs/config.yaml",
+		"configs/config.yaml.example",
+		"backend/configs/config.yaml.example",
+	}
+	seen := map[string]bool{}
+	for _, candidate := range candidates {
+		if candidate == "" || seen[candidate] {
+			continue
+		}
+		seen[candidate] = true
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return configPath
+}
+
+// Init 初始化配置
+func Init(configPath string) error {
+	configPath = resolveConfigPath(configPath)
 
 	// 设置配置文件路径
 	viper.SetConfigFile(configPath)
@@ -135,20 +163,22 @@ func Init(configPath string) error {
 
 	// 设置环境变量前缀
 	viper.SetEnvPrefix("LINGPROXY")
-	// 设置环境变量键名替换器，将下划线替换为点号，以便支持嵌套结构
+	// 设置环境变量键名替换器，将点号替换为下划线，以便支持嵌套结构
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	// 设置默认值
 	setDefaults()
 
-	// 读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Printf("配置文件 %s 未找到，使用默认配置", configPath)
-		} else {
-			return fmt.Errorf("读取配置文件失败: %w", err)
-		}
+	// SetConfigFile + missing file is a regular os.PathError, not ConfigFileNotFoundError.
+	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
+		log.Printf("配置文件 %s 未找到，使用默认配置", configPath)
+	} else if statErr != nil {
+		return fmt.Errorf("检查配置文件失败: %w", statErr)
+	} else if err := viper.ReadInConfig(); err != nil {
+		return fmt.Errorf("读取配置文件失败: %w", err)
+	} else {
+		log.Printf("使用配置文件: %s", configPath)
 	}
 
 	// 解析配置

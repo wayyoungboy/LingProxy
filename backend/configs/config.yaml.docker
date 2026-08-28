@@ -1,5 +1,4 @@
-# LingProxy Docker 配置文件
-# 此文件用于 Docker 环境，使用 Docker 网络中的服务名连接数据库
+# LingProxy Docker config (SQLite, no extra database container required)
 
 app:
   name: "LingProxy"
@@ -11,23 +10,22 @@ app:
 storage:
   type: "gorm"
   gorm:
-    driver: "seekdb"  # SeekDB 兼容 MySQL 协议
-    # Docker 环境中使用 Docker 网络服务名 seekdb
-    dsn: "root:@tcp(seekdb:2881)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+    driver: "sqlite"
+    dsn: "./data/lingproxy.db"
 
 log:
   level: "info"
   format: "json"
-  output: "both"  # stdout: 仅控制台, file: 仅文件, both: 同时输出到控制台和文件（推荐，实现持久化）
+  output: "both"
   file_path: "./logs/lingproxy.log"
-  max_size: 100      # 单个日志文件最大大小（MB）
-  max_backups: 3     # 保留的备份文件数量
-  max_age: 28        # 日志文件保留天数
-  compress: true     # 是否压缩旧日志文件
+  max_size: 100
+  max_backups: 3
+  max_age: 28
+  compress: true
 
 security:
   auth:
-    enabled: true  # 是否启用认证，false时所有API（除登录外）都不需要认证
+    enabled: true
   cors:
     enabled: true
     allow_origins:

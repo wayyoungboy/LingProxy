@@ -1,26 +1,4 @@
 services:
-  seekdb:
-    image: oceanbase/seekdb:latest
-    container_name: seekdb
-    ports:
-      - "2881:2881"  # MySQL 兼容端口
-      - "2886:2886"  # OceanBase 协议端口
-    environment:
-      - TZ=Asia/Shanghai
-    volumes:
-      # SeekDB 数据目录（使用 Docker volume）
-      - seekdb-data:/var/lib/oceanbase
-    restart: unless-stopped
-    healthcheck:
-      # 使用 MySQL 客户端检查（SeekDB 兼容 MySQL 协议）
-      test: ["CMD-SHELL", "mysql -h127.0.0.1 -uroot -P2881 -e 'SELECT 1' > /dev/null 2>&1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    networks:
-      - lingproxy-network
-
   lingproxy-backend:
     build:
       context: ..
@@ -28,18 +6,14 @@ services:
     image: lingproxy-backend:latest
     container_name: lingproxy-backend
     ports:
-      - "8080:8080"  # 后端 API 端口
+      - "8080:8080"
     environment:
       - GIN_MODE=release
       - TZ=Asia/Shanghai
     volumes:
-      # 日志目录
       - ../logs:/app/logs
-      # 运行目录（PID文件等）
       - ../run:/app/run
-    depends_on:
-      seekdb:
-        condition: service_healthy
+      - lingproxy-data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
@@ -57,7 +31,7 @@ services:
     image: lingproxy-frontend:latest
     container_name: lingproxy-frontend
     ports:
-      - "3000:80"  # 前端 Web 端口
+      - "3000:80"
     depends_on:
       lingproxy-backend:
         condition: service_healthy
@@ -71,7 +45,26 @@ services:
     networks:
       - lingproxy-network
 
+  # Optional MySQL-compatible database. Not required for the default SQLite setup.
+  # Start with: docker compose --profile seekdb -f docker/docker-compose.yml up -d
+  seekdb:
+    profiles: ["seekdb"]
+    image: oceanbase/seekdb:latest
+    container_name: seekdb
+    ports:
+      - "2881:2881"
+      - "2886:2886"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - seekdb-data:/var/lib/oceanbase
+    restart: unless-stopped
+    networks:
+      - lingproxy-network
+
 volumes:
+  lingproxy-data:
+    driver: local
   seekdb-data:
     driver: local
 
