@@ -15,7 +15,7 @@ LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.Bu
 # Go 相关变量
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
-GOPROXY ?= https://goproxy.cn,direct
+GOPROXY ?= $(shell go env GOPROXY)
 GO_CMD=go
 
 # 目录定义
@@ -63,7 +63,7 @@ build-frontend:
 		exit 1; \
 	fi
 	@cd frontend && \
-		if [ ! -f "package.json" ]; then \
+		if [ ! -d "node_modules" ]; then \
 			echo "Installing frontend dependencies..."; \
 			npm install; \
 		fi && \
@@ -348,7 +348,7 @@ run:
 ## 仅运行后端（前台运行）
 run-backend:
 	@echo "Running backend service..."
-	@echo "Note: For local development, set LINGPROXY_STORAGE_GORM_DSN=root:@tcp(localhost:2881)/lingproxy?charset=utf8mb4&parseTime=True&loc=Local"
+	@echo "Default storage is SQLite. Admin login: admin / admin123"
 	@cd backend && $(GO_CMD) run ./cmd/main.go
 
 ## 仅运行前端（前台运行）
@@ -396,7 +396,7 @@ docker-compose-check:
 	@if [ ! -f "backend/configs/config.yaml" ]; then \
 		echo "Warning: Config file not found, creating from example..."; \
 		cp backend/configs/config.yaml.example backend/configs/config.yaml; \
-		echo "Warning: Please edit backend/configs/config.yaml and configure SeekDB connection"; \
+		echo "Warning: Please edit backend/configs/config.yaml and use MySQL or SeekDB if needed"; \
 	fi
 	@if [ ! -d "logs" ]; then mkdir -p logs; fi
 	@if [ ! -d "run" ]; then mkdir -p run; fi
@@ -413,17 +413,13 @@ docker-compose-init-db:
 
 ## 使用 Docker Compose 启动（完整流程）
 docker-compose-up: docker-compose-check
-	@echo "Starting services with Docker Compose..."
+	@echo "Starting services with Docker Compose (SQLite, no extra DB)..."
 	@$(DOCKER_COMPOSE) -f docker/docker-compose.yml up -d --build
 	@echo "Services started"
-	@echo "Waiting for SeekDB to be ready..."
-	@sleep 15
-	@$(MAKE) docker-compose-init-db
-	@echo "Services are running"
 	@echo "Access URLs:"
 	@echo "  Backend API: http://localhost:8080/api/v1"
 	@echo "  Health Check: http://localhost:8080/api/v1/health"
-	@echo "Note: Frontend should be run separately with 'cd frontend && npm run dev'"
+	@echo "  Admin UI: http://localhost:3000  (admin / admin123)"
 
 ## 停止 Docker Compose 服务
 docker-compose-down:

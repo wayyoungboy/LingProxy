@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/lingproxy/lingproxy/internal/config"
 	"github.com/lingproxy/lingproxy/internal/pkg/logger"
 	"github.com/lingproxy/lingproxy/internal/pkg/password"
@@ -18,7 +19,6 @@ import (
 	"github.com/lingproxy/lingproxy/internal/service"
 	"github.com/lingproxy/lingproxy/internal/storage"
 	mysql "gorm.io/driver/mysql"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -65,10 +65,10 @@ func main() {
 
 		switch cfg.Storage.GORM.Driver {
 		case "sqlite":
-			// SQLite 数据库文件会在连接时自动创建
+			// Pure-Go SQLite (no CGO). The DB file is created on first connect.
 			db, err = gorm.Open(sqlite.Open(cfg.Storage.GORM.DSN), &gorm.Config{})
 			if err != nil {
-				logger.Fatal("Failed to connect to database", logger.F("error", err))
+				logger.Fatal("Failed to connect to database", logger.F("error", err.Error()))
 			}
 		case "mysql", "seekdb":
 			// MySQL/SeekDB: 如果数据库不存在，先创建数据库

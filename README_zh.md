@@ -50,7 +50,7 @@ LingProxy 是一个高性能的AI API网关，专为管理和代理各种AI服�
 ## 快速开始
 
 ### 环境要求
-- **后端**: Go 1.21 或更高版本，SQLite (用于数据存储)
+- **后端**: Go 1.24 或更高版本（见 backend/go.mod）；SQLite 内置，无需额外数据库
 - **前端**: Node.js 18+，npm 或 yarn
 
 ### 安装与运行
@@ -59,26 +59,37 @@ LingProxy 是一个高性能的AI API网关，专为管理和代理各种AI服�
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/wayyoungboy/lingproxy.git
-cd lingproxy
+git clone https://github.com/wayyoungboy/LingProxy.git
+cd LingProxy
 ```
 
 2. **安装 Go 依赖**
 ```bash
+cd backend
 go mod tidy
 ```
 
-3. **配置文件**
-复制并编辑配置文件：
+3. **配置文件**（可选）
+新克隆会直接使用 `backend/configs/config.yaml.example`（SQLite，不含供应商 API Key）。
+如需自定义：
 ```bash
+cd backend
 cp configs/config.yaml.example configs/config.yaml
-# 编辑 configs/config.yaml 根据需要进行配置
-# ⚠️ 重要：启动前请修改 config.yaml 中的管理员密码！
+# 可选：编辑 configs/config.yaml
 ```
+首次启动默认管理员：用户名 `admin` / 密码 `admin123`。请在管理后台修改密码。
 
 4. **构建并运行后端**
 ```bash
-go run cmd/main.go
+cd backend
+go run ./cmd/main.go
+```
+
+后端服务将在 `http://localhost:8080` 启动
+
+健康检查：
+```bash
+curl http://localhost:8080/api/v1/health
 ```
 
 后端服务将在 `http://localhost:8080` 启动
@@ -100,13 +111,13 @@ npm run dev
 
 ### Docker 部署
 
-项目采用**前后端分离**架构。Docker 部署仅包含后端服务。
+项目采用**前后端分离**架构。Docker Compose 会启动后端和管理后台。默认使用 SQLite，无需额外数据库容器。
 
 #### 使用 Docker Compose（推荐）
 
 1. **启动后端服务**
 ```bash
-# 构建并启动后端 + 数据库（在项目根目录执行）
+# 构建并启动后端 + 前端（在项目根目录执行）
 docker-compose -f docker/docker-compose.yml up -d
 
 # 查看日志
@@ -141,22 +152,25 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
-    "password": "YOUR_PASSWORD"
+    "password": "admin123"
   }'
 ```
 
 响应示例：
 ```json
 {
-  "token": "your_jwt_token_here",
-  "user": {
-    "id": "...",
-    "username": "admin",
-    "api_key": "..."
+  "message": "login successful",
+  "data": {
+    "token": "<admin-api-key-from-login>",
+    "user": {
+      "id": "...",
+      "username": "admin",
+      "role": "admin",
+      "status": "active"
+    }
   }
 }
 ```
-
 ### 2. 创建请求端API Key
 ```bash
 curl -X POST http://localhost:8080/api/v1/api-keys \
@@ -492,39 +506,19 @@ log:
 
 ### 项目结构
 ```
-lingproxy/
-├── cmd/                    # 应用入口
-├── configs/               # 配置文件
-├── docs/                  # API文档
-├── frontend/              # 前端应用
-│   ├── public/             # 公共资源
-│   ├── src/                # 源代码
-│   │   ├── api/            # API客户端
-│   │   ├── assets/         # 静态资源
-│   │   ├── components/     # Vue组件
-│   │   ├── router/         # Vue路由
-│   │   ├── views/           # Vue视图
-│   │   ├── App.vue         # 根组件
-│   │   └── main.js         # 入口文件
-│   ├── package.json        # npm配置
-│   └── vite.config.js      # Vite配置
-├── internal/              # 内部包
-│   ├── cache/             # 缓存实现
-│   ├── client/            # AI服务客户端
-│   │   ├── embedding/     # 嵌入客户端
-│   │   └── openai/        # OpenAI客户端
-│   ├── config/            # 配置管理
-│   ├── handler/           # HTTP处理器
-│   ├── middleware/        # HTTP中间件
-│   ├── pkg/               # 内部包
-│   │   └── balancer/      # 负载均衡
-│   ├── router/            # 路由
-│   ├── service/           # 业务逻辑
-│   └── storage/           # 存储实现
-├── pkg/                   # 公共包
-│   └── logger/            # 日志
-└── docker-compose.yml     # Docker配置
+LingProxy/
+├── backend/                 # Go 模块（go.mod 在此目录）
+│   ├── cmd/main.go         # 应用入口
+│   ├── configs/            # config.yaml.example / config.yaml.docker
+│   └── internal/           # handler、router、storage、service
+├── frontend/               # Vue 3 + Vite 管理后台
+├── docker/                 # Dockerfile 与 docker-compose.yml
+├── docs/                   # 中英文文档
+├── clients/                # Python / JavaScript / Go 客户端
+├── Makefile
+└── LICENSE                 # MIT
 ```
+
 
 ### 数据模型
 
@@ -709,13 +703,13 @@ type Storage interface {
 
 ```bash
 # 运行所有测试
-go test ./...
+cd backend && go test ./...
 
 # 运行特定包测试
-go test ./internal/pkg/balancer
+cd backend && go test ./internal/pkg/balancer
 
 # 运行带覆盖率测试
-go test -cover ./...
+cd backend && go test -cover ./...
 ```
 
 ## 贡献指南
@@ -732,8 +726,8 @@ go test -cover ./...
 
 ## 支持与联系
 
-- **Issues**: [GitHub Issues](https://github.com/wayyoungboy/lingproxy/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/wayyoungboy/lingproxy/discussions)
+- **Issues**: [GitHub Issues](https://github.com/wayyoungboy/LingProxy/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/wayyoungboy/LingProxy/discussions)
 - **Email**: support@lingproxy.com
 
 ## 更新日志

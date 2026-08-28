@@ -71,8 +71,8 @@ COPY --from=builder /app/configs /app/configs
 # 在 Docker 环境中使用 Docker 专用配置文件
 RUN cp /app/configs/config.yaml.docker /app/configs/config.yaml
 
-# 创建必要的目录
-RUN mkdir -p /app/logs /app/run && \
+# 创建必要的目录（SQLite 默认写到 /app/data）
+RUN mkdir -p /app/logs /app/run /app/data && \
     chown -R lingproxy:lingproxy /app
 
 # 设置时区
